@@ -6,5 +6,8 @@ dependencyResolutionManagement {
     }
 }
 
-include(":backend")
 include(":fraggle")
+include(":fraggle-signal")
+include(":fraggle-skills")
+include(":backend")
+include(":app")

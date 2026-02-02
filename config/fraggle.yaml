@@ -1,0 +1,68 @@
+# Fraggle Configuration
+# See documentation for all available options
+
+fraggle:
+  # LLM Provider settings
+  provider:
+    type: lmstudio                    # lmstudio, openai, anthropic
+    url: http://localhost:1234/v1     # API endpoint
+    model: ""                         # Model name (optional for LM Studio)
+    # api_key: ""                     # Required for OpenAI/Anthropic
+
+  # Chat bridge settings
+  bridges:
+    # Signal messenger integration
+    signal:
+      enabled: true
+      phone: ""                       # Your Signal phone number (e.g., "+1234567890")
+      config_dir: ~/.config/fraggle/signal
+      trigger: "@fraggle"             # Prefix to trigger the bot in groups (null for all messages)
+      # signal_cli_path: /usr/local/bin/signal-cli  # Optional: path to signal-cli
+      respond_to_direct_messages: true
+      show_typing_indicator: true
+
+    # Future bridges:
+    # discord:
+    #   enabled: false
+    #   token: ""
+    #   ...
+    # telegram:
+    #   enabled: false
+    #   bot_token: ""
+    #   ...
+
+  # Memory storage settings
+  memory:
+    base_dir: ./data/memory
+
+  # Sandbox settings
+  sandbox:
+    type: permissive                  # permissive, docker, gvisor
+    work_dir: ./data/workspace
+
+  # Agent settings
+  agent:
+    # system_prompt: "Custom system prompt here"
+    temperature: 0.7
+    max_tokens: 4096
+    max_iterations: 10
+    max_history_messages: 20
+
+  # Registered chats (optional - if empty, responds to all)
+  chats:
+    registered: []
+    # - id: "group-abc123"
+    #   name: "Dev Team"
+    #   trigger_override: "@bot"
+    #   enabled: true
+
+  # Web fetching settings
+  web:
+    # Playwright settings for JavaScript-heavy pages (optional)
+    # playwright:
+    #   ws_endpoint: ws://localhost:3000/playwright  # Playwright server WebSocket endpoint
+    #   navigation_timeout: 30000                     # Page load timeout (ms)
+    #   wait_after_load: 2000                         # Extra wait for JS to settle (ms)
+    #   viewport_width: 1280                          # Browser viewport width
+    #   viewport_height: 720                          # Browser viewport height
+    #   user_agent: ""                                # Custom user agent (optional)

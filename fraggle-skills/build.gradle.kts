@@ -11,11 +11,12 @@ kotlin {
 }
 
 dependencies {
-    // Ktor Client for LLM API calls
+    implementation(project(":fraggle"))
+
+    // Ktor Client for web skills
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.cio)
     implementation(libs.ktor.client.content.negotiation)
-    implementation(libs.ktor.client.logging)
     implementation(libs.ktor.serialization.kotlinx.json)
 
     // Kotlinx
@@ -24,6 +25,9 @@ dependencies {
 
     // Logging
     implementation(libs.logback.classic)
+
+    // Browser Automation
+    implementation(libs.playwright)
 
     testImplementation(libs.kotlin.test.junit)
 }

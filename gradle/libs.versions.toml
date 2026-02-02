@@ -1,8 +1,12 @@
 [versions]
 kotlin = "2.3.0"
-koog = "0.6.1"
 ktor = "3.4.0"
-logback = "1.4.14"
+logback = "1.5.13"
+kotlinx-coroutines = "1.9.0"
+kotlinx-serialization = "1.7.3"
+kaml = "0.61.0"
+clikt = "5.0.3"
+playwright = "1.49.0"
 
 [libraries]
 # Ktor Server
@@ -27,16 +31,29 @@ ktor-server-test-host = { module = "io.ktor:ktor-server-test-host", version.ref 
 
 # Ktor Client
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
 ktor-client-apache = { module = "io.ktor:ktor-client-apache", version.ref = "ktor" }
+ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-client-logging = { module = "io.ktor:ktor-client-logging", version.ref = "ktor" }
 
 # Ktor Serialization
 ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
 
+# Kotlinx
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+
+# YAML Configuration
+kaml = { module = "com.charleskorn.kaml:kaml", version.ref = "kaml" }
+
+# CLI
+clikt = { module = "com.github.ajalt.clikt:clikt", version.ref = "clikt" }
+
 # Logging
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 
-# Koog AI Agents
-koog-agents = { module = "ai.koog:koog-agents", version.ref = "koog" }
+# Browser Automation
+playwright = { module = "com.microsoft.playwright:playwright", version.ref = "playwright" }
 
 # Testing
 kotlin-test-junit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }

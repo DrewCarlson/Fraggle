@@ -1,55 +1,310 @@
 # Fraggle
 
-This project was created using the [Ktor Project Generator](https://start.ktor.io).
-
-Here are some useful links to get you started:
-
-- [Ktor Documentation](https://ktor.io/docs/home.html)
-- [Ktor GitHub page](https://github.com/ktorio/ktor)
-- The [Ktor Slack chat](https://app.slack.com/client/T09229ZC6/C0A974TJ9). You'll need
-  to [request an invite](https://surveys.jetbrains.com/s3/kotlin-slack-sign-up) to join.
+An AI-powered assistant that integrates with Signal messaging, featuring tool use capabilities, persistent memory, and sandboxed execution.
 
 ## Features
 
-Here's a list of features included in this project:
+- **Signal Integration** - Receive and respond to Signal messages (direct and group chats)
+- **LLM Provider Support** - Connect to LM Studio, OpenAI, or Anthropic APIs
+- **Tool/Skill System** - Extensible skills for file operations, web fetching, shell execution, and task scheduling
+- **Persistent Memory** - Per-conversation memory storage
+- **Sandboxed Execution** - Safe execution environment for file and shell operations
+- **Interactive Mode** - Test the agent without Signal integration
 
-| Name                                                                   | Description                                                                        |
-|------------------------------------------------------------------------|------------------------------------------------------------------------------------|
-| [CORS](https://start.ktor.io/p/cors)                                   | Enables Cross-Origin Resource Sharing (CORS)                                       |
-| [Routing](https://start.ktor.io/p/routing)                             | Provides a structured routing DSL                                                  |
-| [OpenAPI](https://start.ktor.io/p/openapi)                             | Serves OpenAPI documentation                                                       |
-| [Swagger](https://start.ktor.io/p/swagger)                             | Serves Swagger UI for your project                                                 |
-| [Authentication](https://start.ktor.io/p/auth)                         | Provides extension point for handling the Authorization header                     |
-| [Authentication OAuth](https://start.ktor.io/p/auth-oauth)             | Handles OAuth Bearer authentication scheme                                         |
-| [Authentication JWT](https://start.ktor.io/p/auth-jwt)                 | Handles JSON Web Token (JWT) bearer authentication scheme                          |
-| [CSRF](https://start.ktor.io/p/csrf)                                   | Cross-site request forgery mitigation                                              |
-| [Content Negotiation](https://start.ktor.io/p/content-negotiation)     | Provides automatic content conversion according to Content-Type and Accept headers |
-| [kotlinx.serialization](https://start.ktor.io/p/kotlinx-serialization) | Handles JSON serialization using kotlinx.serialization library                     |
-| [Sessions](https://start.ktor.io/p/ktor-sessions)                      | Adds support for persistent sessions through cookies or headers                    |
-| [AutoHeadResponse](https://start.ktor.io/p/auto-head-response)         | Provides automatic responses for HEAD requests                                     |
-| [Static Content](https://start.ktor.io/p/static-content)               | Serves static files from defined locations                                         |
-| [Call Logging](https://start.ktor.io/p/call-logging)                   | Logs client requests                                                               |
-| [Call ID](https://start.ktor.io/p/callid)                              | Allows to identify a request/call.                                                 |
-| [WebSockets](https://start.ktor.io/p/ktor-websockets)                  | Adds WebSocket protocol support for bidirectional client connections               |
-
-## Building & Running
-
-To build or run the project, use one of the following tasks:
-
-| Task                                    | Description                                                          |
-|-----------------------------------------|----------------------------------------------------------------------|
-| `./gradlew test`                        | Run the tests                                                        |
-| `./gradlew build`                       | Build everything                                                     |
-| `./gradlew buildFatJar`                 | Build an executable JAR of the server with all dependencies included |
-| `./gradlew buildImage`                  | Build the docker image to use with the fat JAR                       |
-| `./gradlew publishImageToLocalRegistry` | Publish the docker image locally                                     |
-| `./gradlew run`                         | Run the server                                                       |
-| `./gradlew runDocker`                   | Run using the local docker image                                     |
-
-If the server starts successfully, you'll see the following output:
+## Project Structure
 
 ```
-2024-12-04 14:32:45.584 [main] INFO  Application - Application started in 0.303 seconds.
-2024-12-04 14:32:45.682 [main] INFO  Application - Responding at http://0.0.0.0:8080
+Fraggle/
+├── app/                    # Main application entry point
+├── fraggle/                # Core agent, provider, and skill abstractions
+├── fraggle-signal/         # Signal messaging integration
+├── fraggle-skills/         # Built-in skill implementations
+├── backend/                # Backend API server (optional)
+├── config/                 # Example configuration files
+└── runtime-dev/            # Development runtime directory
 ```
 
+## Requirements
+
+- JDK 21+
+- [signal-cli](https://github.com/AsamK/signal-cli) (for Signal integration)
+- An LLM provider (LM Studio, OpenAI API, or Anthropic API)
+
+## Quick Start
+
+### 1. Clone and Build
+
+```bash
+git clone <repository-url>
+cd Fraggle
+./gradlew build
+```
+
+### 2. Configure
+
+Copy the example configuration and customize it:
+
+```bash
+mkdir -p runtime-dev/config
+cp config/fraggle.yaml runtime-dev/config/fraggle.yaml
+```
+
+Edit `runtime-dev/config/fraggle.yaml` to configure your LLM provider and Signal settings.
+
+### 3. Run
+
+See the [Running](#running) section below for available commands.
+
+## Configuration
+
+Fraggle uses a YAML configuration file. By default, it looks for `$FRAGGLE_ROOT/config/fraggle.yaml`.
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `FRAGGLE_ROOT` | Root directory for all runtime files (config, data, logs) | Current directory |
+
+### Configuration File
+
+```yaml
+fraggle:
+  # LLM Provider settings
+  provider:
+    type: lmstudio                    # lmstudio, openai, anthropic
+    url: http://localhost:1234/v1     # API endpoint
+    model: ""                         # Model name (optional for LM Studio)
+    # api_key: ""                     # Required for OpenAI/Anthropic
+
+  # Signal integration settings
+  signal:
+    phone: "+1234567890"              # Your Signal phone number
+    config_dir: ~/.config/fraggle/signal
+    trigger: "@fraggle"               # Prefix to trigger bot in groups
+    # signal_cli_path: /usr/local/bin/signal-cli
+    respond_to_direct_messages: true
+
+  # Memory storage settings
+  memory:
+    base_dir: ./data/memory
+
+  # Sandbox settings
+  sandbox:
+    type: permissive                  # permissive, docker, gvisor
+    work_dir: ./data/workspace
+
+  # Agent settings
+  agent:
+    # system_prompt: "Custom system prompt"
+    temperature: 0.7
+    max_tokens: 4096
+    max_iterations: 10
+    max_history_messages: 20
+
+  # Registered chats (optional)
+  chats:
+    registered: []
+    # - id: "group-abc123"
+    #   name: "Dev Team"
+    #   trigger_override: "@bot"
+    #   enabled: true
+```
+
+## Running
+
+### Development Mode
+
+The default Gradle run task sets `FRAGGLE_ROOT` to `runtime-dev/` for development:
+
+```bash
+# Run the full service with Signal integration
+./gradlew :app:run --args="run"
+
+# Run with a custom config file
+./gradlew :app:run --args="run -c /path/to/config.yaml"
+```
+
+### Interactive Chat Mode
+
+Test the agent without Signal integration:
+
+```bash
+# Interactive chat with default config
+./gradlew :app:run --args="chat"
+
+# Interactive chat with custom config
+./gradlew :app:run --args="chat -c /path/to/config.yaml"
+
+# Interactive chat with model override
+./gradlew :app:run --args="chat -m gpt-4"
+```
+
+### Test Signal Connection
+
+Verify your Signal configuration:
+
+```bash
+./gradlew :app:run --args="test-signal"
+
+# With custom config
+./gradlew :app:run --args="test-signal -c /path/to/config.yaml"
+```
+
+### Production Mode
+
+For production, set `FRAGGLE_ROOT` to your desired location:
+
+```bash
+export FRAGGLE_ROOT=/opt/fraggle
+java -jar app/build/libs/app.jar run
+```
+
+Or build a distribution:
+
+```bash
+./gradlew :app:installDist
+FRAGGLE_ROOT=/opt/fraggle ./app/build/install/app/bin/app run
+```
+
+## Directory Structure
+
+When running, Fraggle creates the following directory structure under `FRAGGLE_ROOT`:
+
+```
+$FRAGGLE_ROOT/
+├── config/
+│   └── fraggle.yaml        # Configuration file
+├── data/
+│   ├── memory/             # Conversation memory storage
+│   └── workspace/          # Sandbox working directory
+└── logs/
+    └── fraggle.log         # Application logs
+```
+
+## Built-in Skills
+
+Fraggle comes with several built-in skill groups:
+
+### Filesystem Skills
+- `read_file` - Read file contents
+- `write_file` - Write content to a file
+- `append_file` - Append content to a file
+- `list_files` - List directory contents
+- `search_files` - Search for files by pattern
+- `file_exists` - Check if a file exists
+- `delete_file` - Delete a file
+
+### Web Skills
+- `fetch_url` - Fetch content from a URL (sandboxed)
+- `fetch_url_raw` - Fetch URL without sandbox restrictions
+- `send_image` - Download an image from a URL and send it to the chat
+- `fetch_rendered_page` - Fetch a page using Playwright (requires Playwright config)
+- `screenshot_page` - Take a screenshot of a web page (requires Playwright config)
+
+### Shell Skills
+- `execute_command` - Execute shell commands (sandboxed)
+
+### Scheduling Skills
+- Task scheduling for delayed/recurring operations
+
+## Signal Integration
+
+### Setup signal-cli
+
+1. Install [signal-cli](https://github.com/AsamK/signal-cli)
+2. Register or link your phone number:
+   ```bash
+   signal-cli -u +1234567890 register
+   signal-cli -u +1234567890 verify CODE
+   ```
+3. Configure the phone number in `fraggle.yaml`
+
+### Trigger Behavior
+
+- **Direct messages**: Fraggle responds to all direct messages (if `respond_to_direct_messages: true`)
+- **Group messages**: Fraggle responds only when the message starts with the trigger prefix (default: `@fraggle`)
+
+### Text Formatting
+
+Fraggle supports Signal's text formatting. The LLM can use simple markdown-like syntax which is automatically converted to Signal's native formatting:
+
+| Syntax              | Result                        |
+|---------------------|-------------------------------|
+| `**bold**`          | **Bold**                      |
+| `*italic*`          | *Italic*                      |
+| `~~strikethrough~~` | ~~Strikethrough~~             |
+| `\|\|spoiler\|\|`   | Spoiler (hidden until tapped) |
+| `` `monospace` ``   | `Monospace`                   |
+
+Note: Markdown links and images are NOT supported - images must be sent as attachments.
+
+### Registered Chats
+
+You can configure specific chats with custom settings:
+
+```yaml
+chats:
+  registered:
+    - id: "group-abc123"
+      name: "Dev Team"
+      trigger_override: "@bot"    # Custom trigger for this chat
+      enabled: true
+```
+
+## Playwright Integration (Optional)
+
+For JavaScript-heavy websites, Fraggle can use Playwright to render pages in a real browser before extracting content. This enables:
+- Fetching content from single-page applications (React, Vue, Angular)
+- Taking screenshots of fully-rendered pages
+- Working with lazy-loaded content
+
+### Setup
+
+1. Run a Playwright-compatible browser server. Options include:
+
+   **Using Browserless (recommended for Docker):**
+   ```bash
+   docker run -p 3000:3000 browserless/chrome
+   ```
+
+   **Using Playwright's built-in server:**
+   ```bash
+   npx playwright run-server --port 3000
+   ```
+
+2. Configure the WebSocket endpoint in `fraggle.yaml`:
+   ```yaml
+   fraggle:
+     web:
+       playwright:
+         ws_endpoint: ws://localhost:3000/playwright
+         navigation_timeout: 30000
+         wait_after_load: 2000
+   ```
+
+### Configuration Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `ws_endpoint` | WebSocket URL for the Playwright server | (required) |
+| `navigation_timeout` | Page load timeout in milliseconds | 30000 |
+| `wait_after_load` | Extra wait time for JS to settle (ms) | 2000 |
+| `viewport_width` | Browser viewport width | 1280 |
+| `viewport_height` | Browser viewport height | 720 |
+| `user_agent` | Custom user agent string | (browser default) |
+
+### Skills Enabled
+
+When Playwright is configured, these additional skills become available:
+- `fetch_rendered_page` - Fetch a page with full JavaScript rendering
+- `screenshot_page` - Capture a screenshot of a rendered page
+
+## Logging
+
+Logs are written to `$FRAGGLE_ROOT/logs/fraggle.log` with daily rotation (30 days retained).
+
+Log levels can be adjusted in `app/src/main/resources/logback.xml`.
+
+## License
+
+[Add license information]
