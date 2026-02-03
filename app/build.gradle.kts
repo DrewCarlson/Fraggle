@@ -33,7 +33,16 @@ dependencies {
     // Logging
     implementation(libs.logback.classic)
 
-    testImplementation(libs.kotlin.test.junit)
+    // Testing
+    testImplementation(libs.kotlin.test.junit5)
+    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testRuntimeOnly(libs.junit.jupiter.engine)
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 tasks.named<JavaExec>("run") {
