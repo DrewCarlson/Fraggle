@@ -1,0 +1,235 @@
+package org.drewcarlson.fraggle.signal
+
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.drewcarlson.fraggle.chat.BridgeInitializer
+import org.drewcarlson.fraggle.chat.InitStepResult
+import org.slf4j.LoggerFactory
+import java.util.concurrent.TimeUnit
+import kotlin.io.path.exists
+
+/**
+ * Initializer for Signal bridge registration.
+ *
+ * Handles the two-step registration process for signal-cli:
+ * 1. Register with captcha token to receive verification code
+ * 2. Verify with the received code
+ *
+ * The phone number is read from configuration. Users need to provide:
+ * - A captcha token from https://signalcaptchas.org/registration/generate
+ * - The verification code received via SMS/voice
+ */
+class SignalBridgeInitializer(
+    private val config: SignalConfig,
+) : BridgeInitializer {
+
+    private val logger = LoggerFactory.getLogger(SignalBridgeInitializer::class.java)
+
+    override val bridgeName = "signal"
+    override val description = "Register Signal account with phone verification"
+
+    private enum class State {
+        CHECK_STATUS,
+        AWAITING_CAPTCHA,
+        REGISTERING,
+        AWAITING_VERIFICATION,
+        VERIFYING,
+        COMPLETE,
+    }
+
+    private var state = State.CHECK_STATUS
+    private var lastError: String? = null
+
+    override suspend fun isInitialized(): Boolean {
+        // Check if signal-cli data directory exists with account data
+        val configPath = config.configDirPath()
+        val dataDir = configPath.resolve("data")
+        val accountsDir = dataDir.resolve("accounts.json")
+
+        if (!accountsDir.exists()) {
+            return false
+        }
+
+        // Try to run a simple command to verify the account is working
+        return try {
+            val result = runSignalCli("listGroups")
+            result.exitCode == 0
+        } catch (e: Exception) {
+            logger.debug("Signal account check failed: ${e.message}")
+            false
+        }
+    }
+
+    override suspend fun initialize(userInput: String?): InitStepResult {
+        return when (state) {
+            State.CHECK_STATUS -> {
+                if (config.phoneNumber.isBlank()) {
+                    return InitStepResult.Error(
+                        "No phone number configured. Please set 'fraggle.bridges.signal.phone' in your configuration.",
+                        recoverable = false
+                    )
+                }
+
+                if (isInitialized()) {
+                    state = State.COMPLETE
+                    return InitStepResult.Complete("Signal account is already registered and ready to use.")
+                }
+
+                // Ensure config directory exists
+                val configPath = config.configDirPath()
+                configPath.toFile().mkdirs()
+
+                state = State.AWAITING_CAPTCHA
+                InitStepResult.PromptRequired(
+                    prompt = "Enter captcha token",
+                    helpText = """
+                        |To register your Signal account, you need a captcha token.
+                        |
+                        |1. Open https://signalcaptchas.org/registration/generate in your browser
+                        |2. Complete the captcha challenge
+                        |3. Copy the token that appears (starts with 'signalcaptcha://')
+                        |
+                        |Phone number: ${config.phoneNumber}
+                    """.trimMargin(),
+                    sensitive = false
+                )
+            }
+
+            State.AWAITING_CAPTCHA -> {
+                val captcha = userInput?.trim()
+                if (captcha.isNullOrBlank()) {
+                    return InitStepResult.PromptRequired(
+                        prompt = "Enter captcha token",
+                        helpText = "Captcha token cannot be empty. Get one from https://signalcaptchas.org/registration/generate"
+                    )
+                }
+
+                state = State.REGISTERING
+                doRegistration(captcha)
+            }
+
+            State.REGISTERING -> {
+                // This shouldn't happen as registration transitions directly
+                InitStepResult.Error("Unexpected state during registration")
+            }
+
+            State.AWAITING_VERIFICATION -> {
+                val code = userInput?.trim()?.replace("-", "")?.replace(" ", "")
+                if (code.isNullOrBlank()) {
+                    return InitStepResult.PromptRequired(
+                        prompt = "Enter verification code",
+                        helpText = "Please enter the 6-digit code sent to ${config.phoneNumber}"
+                    )
+                }
+
+                if (!code.matches(Regex("^\\d{6}$"))) {
+                    return InitStepResult.PromptRequired(
+                        prompt = "Enter verification code",
+                        helpText = "Invalid code format. Please enter the 6-digit code."
+                    )
+                }
+
+                state = State.VERIFYING
+                doVerification(code)
+            }
+
+            State.VERIFYING -> {
+                // This shouldn't happen as verification transitions directly
+                InitStepResult.Error("Unexpected state during verification")
+            }
+
+            State.COMPLETE -> {
+                InitStepResult.Complete("Signal account is registered and ready to use.")
+            }
+        }
+    }
+
+    private suspend fun doRegistration(captcha: String): InitStepResult {
+        logger.info("Starting Signal registration for ${config.phoneNumber}")
+
+        val result = runSignalCli("register", "--captcha", captcha)
+
+        return if (result.exitCode == 0) {
+            state = State.AWAITING_VERIFICATION
+            InitStepResult.PromptRequired(
+                prompt = "Enter the 6-digit code",
+                helpText = """
+                    |Registration request sent successfully.
+                    |A verification code has been sent to ${config.phoneNumber} via SMS.
+                """.trimMargin()
+            )
+        } else {
+            state = State.AWAITING_CAPTCHA
+            lastError = result.stderr
+            InitStepResult.Error(
+                message = "Registration failed: ${result.stderr.ifBlank { result.stdout }}",
+                recoverable = true
+            )
+        }
+    }
+
+    private suspend fun doVerification(code: String): InitStepResult {
+        logger.info("Verifying Signal registration for ${config.phoneNumber}")
+
+        val result = runSignalCli("verify", code)
+
+        return if (result.exitCode == 0) {
+            state = State.COMPLETE
+            logger.info("Signal registration completed successfully")
+            InitStepResult.Complete(
+                "Signal account registered successfully! You can now use the Signal bridge."
+            )
+        } else {
+            state = State.AWAITING_VERIFICATION
+            lastError = result.stderr
+            InitStepResult.Error(
+                message = "Verification failed: ${result.stderr.ifBlank { result.stdout }}",
+                recoverable = true
+            )
+        }
+    }
+
+    override fun reset() {
+        state = State.CHECK_STATUS
+        lastError = null
+    }
+
+    private suspend fun runSignalCli(vararg args: String): CommandResult {
+        return withContext(Dispatchers.IO) {
+            val cli = config.signalCliPath ?: "signal-cli"
+            val command = listOf(
+                cli,
+                "-a", config.phoneNumber,
+                "--config", config.configDirPath().toString(),
+            ) + args.toList()
+
+            logger.debug("Running: ${command.joinToString(" ")}")
+
+            try {
+                val process = ProcessBuilder(command)
+                    .redirectErrorStream(false)
+                    .start()
+
+                val stdout = process.inputStream.bufferedReader().readText()
+                val stderr = process.errorStream.bufferedReader().readText()
+
+                val completed = process.waitFor(60, TimeUnit.SECONDS)
+                if (!completed) {
+                    process.destroyForcibly()
+                    return@withContext CommandResult(-1, "", "Command timed out")
+                }
+
+                CommandResult(process.exitValue(), stdout.trim(), stderr.trim())
+            } catch (e: Exception) {
+                logger.error("Failed to run signal-cli: ${e.message}")
+                CommandResult(-1, "", e.message ?: "Unknown error")
+            }
+        }
+    }
+
+    private data class CommandResult(
+        val exitCode: Int,
+        val stdout: String,
+        val stderr: String,
+    )
+}

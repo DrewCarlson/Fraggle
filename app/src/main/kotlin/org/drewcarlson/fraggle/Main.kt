@@ -3,8 +3,15 @@ package org.drewcarlson.fraggle
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.main
 import com.github.ajalt.clikt.core.subcommands
+import com.github.ajalt.clikt.parameters.arguments.argument
+import com.github.ajalt.clikt.parameters.arguments.optional
 import com.github.ajalt.clikt.parameters.options.option
 import kotlinx.coroutines.runBlocking
+import org.drewcarlson.fraggle.chat.BridgeInitializer
+import org.drewcarlson.fraggle.chat.BridgeInitializerRegistry
+import org.drewcarlson.fraggle.chat.InitStepResult
+import org.drewcarlson.fraggle.signal.SignalBridgeInitializer
+import org.drewcarlson.fraggle.signal.SignalConfig
 import org.slf4j.LoggerFactory
 import kotlin.io.path.Path
 import kotlin.io.path.exists
@@ -13,7 +20,7 @@ import kotlin.io.path.exists
  * Main entry point for Fraggle.
  */
 fun main(args: Array<String>) = Fraggle()
-    .subcommands(RunCommand(), ChatCommand(), TestSignalCommand())
+    .subcommands(RunCommand(), ChatCommand(), InitBridgeCommand(), TestSignalCommand())
     .main(args)
 
 class Fraggle : CliktCommand(name = "fraggle") {
@@ -231,7 +238,7 @@ class TestSignalCommand : CliktCommand(name = "test-signal") {
 
         // Try to connect
         try {
-            val signalConfig = org.drewcarlson.fraggle.signal.SignalConfig(
+            val signalConfig = SignalConfig(
                 phoneNumber = signalBridgeConfig.phone,
                 configDir = signalBridgeConfig.configDir,
                 triggerPrefix = signalBridgeConfig.trigger,
@@ -260,6 +267,215 @@ class TestSignalCommand : CliktCommand(name = "test-signal") {
             println("  1. signal-cli is installed and in your PATH")
             println("  2. signal-cli is registered with the phone number")
             println("  3. The config directory exists and is readable")
+        }
+    }
+}
+
+/**
+ * Initialize a chat bridge interactively.
+ *
+ * Some bridges require interactive setup (phone verification, OAuth, etc.)
+ * that cannot be done through configuration alone.
+ */
+class InitBridgeCommand : CliktCommand(name = "init-bridge") {
+    private val logger = LoggerFactory.getLogger(InitBridgeCommand::class.java)
+
+    private val configPath by option(
+        "-c", "--config",
+        help = "Path to configuration file (default: \$FRAGGLE_ROOT/config/fraggle.yaml)"
+    )
+
+    private val bridgeName by argument(
+        name = "bridge",
+        help = "Name of the bridge to initialize (e.g., 'signal')"
+    ).optional()
+
+    override fun run() = runBlocking {
+        println("Fraggle Bridge Initialization")
+        println("==============================")
+        println()
+
+        // Load configuration
+        val config = loadConfig() ?: return@runBlocking
+
+        // Build registry of available initializers
+        val registry = buildInitializerRegistry(config)
+
+        if (registry.names().isEmpty()) {
+            println("No bridges are configured for initialization.")
+            println("Please configure a bridge in your configuration file first.")
+            return@runBlocking
+        }
+
+        // If a specific bridge is requested, initialize just that one
+        if (bridgeName != null) {
+            val initializer = registry.get(bridgeName!!)
+            if (initializer == null) {
+                println("Unknown bridge: $bridgeName")
+                println("Available bridges: ${registry.names().joinToString(", ")}")
+                return@runBlocking
+            }
+            runInitialization(initializer)
+            return@runBlocking
+        }
+
+        // No bridge specified - find all that need initialization
+        val needsInit = registry.all().filter { !it.isInitialized() }
+
+        if (needsInit.isEmpty()) {
+            println("All configured bridges are already initialized.")
+            println()
+            println("Configured bridges:")
+            registry.all().forEach { bridge ->
+                println("  - ${bridge.bridgeName}: initialized")
+            }
+            return@runBlocking
+        }
+
+        println("The following bridges need initialization:")
+        println()
+        needsInit.forEach { bridge ->
+            println("  - ${bridge.bridgeName}: ${bridge.description}")
+        }
+        println()
+
+        // Initialize each bridge that needs it
+        for (initializer in needsInit) {
+            println("─".repeat(50))
+            val success = runInitialization(initializer)
+            if (!success) {
+                print("\nContinue with remaining bridges? (y/n): ")
+                val cont = readlnOrNull()?.trim()?.lowercase()
+                if (cont != "y" && cont != "yes") {
+                    println("Initialization stopped.")
+                    return@runBlocking
+                }
+            }
+            println()
+        }
+
+        println("─".repeat(50))
+        println("Bridge initialization complete.")
+    }
+
+    private fun loadConfig(): FraggleConfig? {
+        val path = if (configPath != null) {
+            Path(configPath!!).toAbsolutePath()
+        } else {
+            FraggleEnvironment.defaultConfigPath
+        }
+
+        return if (path.exists()) {
+            println("Config: $path")
+            println()
+            ConfigLoader.load(path)
+        } else {
+            println("Configuration file not found: $path")
+            println("Please create a configuration file first or specify one with --config")
+            null
+        }
+    }
+
+    private fun buildInitializerRegistry(config: FraggleConfig): BridgeInitializerRegistry {
+        val registry = BridgeInitializerRegistry()
+
+        // Register Signal initializer if configured
+        config.fraggle.bridges.signal?.let { signalConfig ->
+            if (signalConfig.enabled && signalConfig.phone.isNotBlank()) {
+                val signalInitConfig = SignalConfig(
+                    phoneNumber = signalConfig.phone,
+                    configDir = signalConfig.configDir,
+                    triggerPrefix = signalConfig.trigger,
+                    signalCliPath = signalConfig.signalCliPath,
+                )
+                registry.register("signal", SignalBridgeInitializer(signalInitConfig))
+            }
+        }
+
+        // Future bridges would be registered here:
+        // config.fraggle.bridges.discord?.let { ... }
+        // config.fraggle.bridges.telegram?.let { ... }
+
+        return registry
+    }
+
+    private suspend fun runInitialization(initializer: BridgeInitializer): Boolean {
+        println("Initializing ${initializer.bridgeName}...")
+        println(initializer.description)
+        println()
+
+        var userInput: String? = null
+
+        while (true) {
+            val result = initializer.initialize(userInput)
+            userInput = null
+
+            when (result) {
+                is InitStepResult.Success -> {
+                    result.message?.let { println(it) }
+                    // Continue to next step
+                }
+
+                is InitStepResult.PromptRequired -> {
+                    result.helpText?.let {
+                        println()
+                        println(it)
+                        println()
+                    }
+
+                    print("${result.prompt}: ")
+                    System.out.flush()
+
+                    userInput = if (result.sensitive) {
+                        // For sensitive input, try to use console for hidden input
+                        val console = System.console()
+                        if (console != null) {
+                            String(console.readPassword())
+                        } else {
+                            readlnOrNull()
+                        }
+                    } else {
+                        readlnOrNull()
+                    }
+
+                    if (userInput == null) {
+                        println("\nInitialization cancelled.")
+                        return false
+                    }
+
+                    if (userInput.lowercase() == "q" || userInput.lowercase() == "quit") {
+                        println("\nInitialization cancelled.")
+                        return false
+                    }
+                }
+
+                is InitStepResult.Error -> {
+                    println()
+                    println("Error: ${result.message}")
+                    println()
+
+                    if (!result.recoverable) {
+                        println("This error cannot be recovered from. Please fix the issue and try again.")
+                        return false
+                    }
+
+                    print("Try again? (y/n): ")
+                    val retry = readlnOrNull()?.trim()?.lowercase()
+                    if (retry != "y" && retry != "yes") {
+                        println("Initialization cancelled.")
+                        return false
+                    }
+
+                    initializer.reset()
+                }
+
+                is InitStepResult.Complete -> {
+                    println()
+                    println("Success: ${result.message}")
+                    println()
+                    return true
+                }
+            }
         }
     }
 }
