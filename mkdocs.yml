@@ -1,0 +1,65 @@
+site_name: Fraggle Docs
+site_description: A Kotlin-based AI assistant framework with messaging platform integration.
+site_url: https://drewcarlson.github.io/Fraggle/
+repo_url: https://github.com/drewcarlson/Fraggle
+remote_branch: gh-pages
+docs_dir: docs
+edit_uri: edit/main/docs/
+copyright: 'Copyright &copy; 2026 Fraggle Maintainers'
+
+theme:
+  name: material
+  icon:
+    repo: fontawesome/brands/github
+  features:
+    - content.action.edit
+    - navigation.sections
+    - navigation.expand
+
+extra_css:
+  - stylesheets/extra.css
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.tabbed:
+      alternate_style: true
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+  - mike
+  - markdownextradata: {}
+
+extra:
+  fraggle_version: !ENV [VERSION, '0.0.1-dev']
+  version:
+    provider: mike
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/DrewCarlson/Fraggle
+
+nav:
+  - Home: index.md
+  - Installation:
+      - Getting Started: installation/getting-started.md
+      - Configuration: installation/configuration.md
+      - Signal Setup: installation/signal-setup.md
+  - Architecture:
+      - Overview: architecture/overview.md
+      - Agent System: architecture/agent.md
+      - Skills: architecture/skills.md
+      - Memory: architecture/memory.md
+  - Development:
+      - Building: development/building.md
+      - Testing: development/testing.md
+      - Contributing: development/contributing.md

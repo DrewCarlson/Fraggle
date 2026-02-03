@@ -38,3 +38,7 @@ out/
 
 ### Fraggle Runtime ###
 runtime-dev/
+
+### MkDocs ###
+site/
+docs/venv/
