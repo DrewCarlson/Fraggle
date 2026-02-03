@@ -4,6 +4,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import org.drewcarlson.fraggle.chat.*
@@ -174,7 +175,16 @@ IMPORTANT LIMITATIONS:
         }
     }
 
-    override fun isConnected(): Boolean = signalCli.isRunning.value
+    override fun isConnected(): Boolean {
+        val state = signalCli.connectionState.value
+        return state is ConnectionState.Connected || state is ConnectionState.Reconnecting
+    }
+
+    /**
+     * Get the current connection state.
+     */
+    val connectionState: StateFlow<ConnectionState>
+        get() = signalCli.connectionState
 
     /**
      * Parse a chat ID into recipient and optional group ID.
