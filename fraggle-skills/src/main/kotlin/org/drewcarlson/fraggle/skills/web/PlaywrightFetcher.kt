@@ -1,6 +1,8 @@
 package org.drewcarlson.fraggle.skills.web
 
 import com.microsoft.playwright.*
+import com.microsoft.playwright.options.LoadState
+import com.microsoft.playwright.options.WaitUntilState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
@@ -148,8 +150,11 @@ class PlaywrightFetcher(
             logger.debug("Navigating to $url")
 
             // Navigate and capture response
-            val response = page.navigate(url, Page.NavigateOptions()
-                .setWaitUntil(parseLoadState(waitForLoadState)))
+            val response = page.navigate(
+                url,
+                Page.NavigateOptions()
+                    .setWaitUntil(WaitUntilState.valueOf(waitForLoadState))
+            )
 
             val statusCode = response?.status()
             val contentType = response?.headers()?.get("content-type")
@@ -157,8 +162,11 @@ class PlaywrightFetcher(
             // Wait for additional load state if needed
             if (waitForLoadState == "networkidle") {
                 try {
-                    page.waitForLoadState(com.microsoft.playwright.options.LoadState.NETWORKIDLE,
-                        Page.WaitForLoadStateOptions().setTimeout(config.navigationTimeout.toDouble()))
+                    page.waitForLoadState(
+                        LoadState.NETWORKIDLE,
+                        Page.WaitForLoadStateOptions()
+                            .setTimeout(config.navigationTimeout.toDouble())
+                    )
                 } catch (e: Exception) {
                     logger.debug("Network idle timeout, continuing anyway: ${e.message}")
                 }
@@ -172,8 +180,11 @@ class PlaywrightFetcher(
             // Wait for specific selector if requested (ignore null, empty, or literal "null" strings)
             if (!waitForSelector.isNullOrBlank() && waitForSelector.lowercase() != "null") {
                 try {
-                    page.waitForSelector(waitForSelector, Page.WaitForSelectorOptions()
-                        .setTimeout(config.navigationTimeout.toDouble()))
+                    page.waitForSelector(
+                        waitForSelector,
+                        Page.WaitForSelectorOptions()
+                            .setTimeout(config.navigationTimeout.toDouble())
+                    )
                 } catch (e: Exception) {
                     logger.warn("Selector '$waitForSelector' not found: ${e.message}")
                 }
@@ -230,8 +241,10 @@ class PlaywrightFetcher(
             page.setDefaultTimeout(config.navigationTimeout.toDouble())
             page.setDefaultNavigationTimeout(config.navigationTimeout.toDouble())
 
-            page.navigate(url, Page.NavigateOptions()
-                .setWaitUntil(com.microsoft.playwright.options.WaitUntilState.NETWORKIDLE))
+            page.navigate(
+                url, Page.NavigateOptions()
+                    .setWaitUntil(WaitUntilState.NETWORKIDLE)
+            )
 
             // Wait for JS to settle
             if (config.waitAfterLoad > 0) {
@@ -242,16 +255,6 @@ class PlaywrightFetcher(
         } finally {
             page.close()
             context.close()
-        }
-    }
-
-    private fun parseLoadState(state: String): com.microsoft.playwright.options.WaitUntilState {
-        return when (state.lowercase()) {
-            "load" -> com.microsoft.playwright.options.WaitUntilState.LOAD
-            "domcontentloaded" -> com.microsoft.playwright.options.WaitUntilState.DOMCONTENTLOADED
-            "networkidle" -> com.microsoft.playwright.options.WaitUntilState.NETWORKIDLE
-            "commit" -> com.microsoft.playwright.options.WaitUntilState.COMMIT
-            else -> com.microsoft.playwright.options.WaitUntilState.LOAD
         }
     }
 }
