@@ -297,4 +297,4 @@ Log levels can be adjusted in `app/src/main/resources/logback.xml`.
 
 ## License
 
-[Add license information]
+Published under the MIT License, see [LICENSE](LICENSE).
