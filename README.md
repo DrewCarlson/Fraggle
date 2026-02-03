@@ -267,7 +267,7 @@ For JavaScript-heavy websites, Fraggle can use Playwright to render pages in a r
    fraggle:
      web:
        playwright:
-         ws_endpoint: ws://localhost:3000/playwright
+         ws_endpoint: ws://localhost:3000
          navigation_timeout: 30000
          wait_after_load: 2000
    ```

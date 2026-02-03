@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory
 data class PlaywrightConfig(
     /**
      * WebSocket URL for connecting to a Playwright browser server.
-     * Example: ws://localhost:3000/playwright
+     * Example: ws://localhost:3000
      */
     val wsEndpoint: String,
 
