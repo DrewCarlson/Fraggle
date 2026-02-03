@@ -86,10 +86,11 @@ object WebSkills {
             required = true
         }
 
-        parameter<String>("wait_for_selector") {
+        // TODO: Disabled due to LLM misuse
+        /*parameter<String>("wait_for_selector") {
             description = "Optional CSS selector to wait for before extracting content. Only use when you know the specific selector exists on the target page."
             required = false
-        }
+        }*/
 
         execute { params ->
             val url = params.get<String>("url")
