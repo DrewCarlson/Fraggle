@@ -14,9 +14,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Interactive chat mode (for testing without Signal)
 ./gradlew :app:run --args="chat"
 
-# Test Signal connection
-./gradlew :app:run --args="test-signal"
-
 # Run all tests
 ./gradlew test
 

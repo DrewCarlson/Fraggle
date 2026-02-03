@@ -140,17 +140,6 @@ Test the agent without Signal integration:
 ./gradlew :app:run --args="chat -m gpt-4"
 ```
 
-### Test Signal Connection
-
-Verify your Signal configuration:
-
-```bash
-./gradlew :app:run --args="test-signal"
-
-# With custom config
-./gradlew :app:run --args="test-signal -c /path/to/config.yaml"
-```
-
 ### Production Mode
 
 For production, set `FRAGGLE_ROOT` to your desired location:
