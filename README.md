@@ -22,8 +22,7 @@ Fraggle/
 ├── fraggle-signal/         # Signal messaging integration
 ├── fraggle-skills/         # Built-in skill implementations
 ├── backend/                # Backend API server (optional)
-├── config/                 # Example configuration files
-└── runtime-dev/            # Development runtime directory
+└── config/                 # Example configuration files
 ```
 
 ## Requirements
@@ -37,7 +36,7 @@ Fraggle/
 ### 1. Clone and Build
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/DrewCarlson/Fraggle.git
 cd Fraggle
 ./gradlew build
 ```
@@ -63,8 +62,8 @@ Fraggle uses a YAML configuration file. By default, it looks for `$FRAGGLE_ROOT/
 
 ### Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
+| Variable       | Description                                               | Default           |
+|----------------|-----------------------------------------------------------|-------------------|
 | `FRAGGLE_ROOT` | Root directory for all runtime files (config, data, logs) | Current directory |
 
 ### Configuration File
@@ -286,14 +285,14 @@ For JavaScript-heavy websites, Fraggle can use Playwright to render pages in a r
 
 ### Configuration Options
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `ws_endpoint` | WebSocket URL for the Playwright server | (required) |
-| `navigation_timeout` | Page load timeout in milliseconds | 30000 |
-| `wait_after_load` | Extra wait time for JS to settle (ms) | 2000 |
-| `viewport_width` | Browser viewport width | 1280 |
-| `viewport_height` | Browser viewport height | 720 |
-| `user_agent` | Custom user agent string | (browser default) |
+| Option               | Description                             | Default           |
+|----------------------|-----------------------------------------|-------------------|
+| `ws_endpoint`        | WebSocket URL for the Playwright server | (required)        |
+| `navigation_timeout` | Page load timeout in milliseconds       | 30000             |
+| `wait_after_load`    | Extra wait time for JS to settle (ms)   | 2000              |
+| `viewport_width`     | Browser viewport width                  | 1280              |
+| `viewport_height`    | Browser viewport height                 | 720               |
+| `user_agent`         | Custom user agent string                | (browser default) |
 
 ### Skills Enabled
 
