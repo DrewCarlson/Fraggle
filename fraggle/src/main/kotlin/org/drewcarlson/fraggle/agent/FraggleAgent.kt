@@ -1,8 +1,9 @@
 package org.drewcarlson.fraggle.agent
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.JsonPrimitive
 import org.drewcarlson.fraggle.chat.ChatPlatform
 import org.drewcarlson.fraggle.chat.IncomingMessage
 import org.drewcarlson.fraggle.chat.MessageContent
@@ -282,21 +283,23 @@ class FraggleAgent(
 
                 jsonArgs.mapValues { (_, value) ->
                     // Convert JSON values to appropriate types
-                    when {
-                        value is kotlinx.serialization.json.JsonPrimitive && value.isString -> value.content
-                        value is kotlinx.serialization.json.JsonPrimitive -> {
+                    when (value) {
+                        is JsonPrimitive if value.isString -> value.content
+                        is JsonPrimitive -> {
                             value.content.toIntOrNull()
                                 ?: value.content.toLongOrNull()
                                 ?: value.content.toDoubleOrNull()
                                 ?: value.content.toBooleanStrictOrNull()
                                 ?: value.content
                         }
-                        value is kotlinx.serialization.json.JsonArray -> {
+
+                        is JsonArray -> {
                             value.map { elem ->
-                                if (elem is kotlinx.serialization.json.JsonPrimitive) elem.content
+                                if (elem is JsonPrimitive) elem.content
                                 else elem.toString()
                             }
                         }
+
                         else -> value.toString()
                     }
                 }
