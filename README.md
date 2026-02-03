@@ -1,5 +1,7 @@
 # Fraggle
 
+[![codecov](https://codecov.io/gh/DrewCarlson/Fraggle/graph/badge.svg?token=W77U2C9HUB)](https://codecov.io/gh/DrewCarlson/Fraggle)
+
 An AI-powered assistant that integrates with Signal messaging, featuring tool use capabilities, persistent memory, and sandboxed execution.
 
 ## Features
