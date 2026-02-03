@@ -9,6 +9,7 @@ clikt = "5.0.3"
 playwright = "1.49.0"
 mockk = "1.13.13"
 junit = "5.11.3"
+shadow = "9.3.1"
 
 [libraries]
 # Ktor Server
@@ -70,3 +71,4 @@ junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", vers
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ktor = { id = "io.ktor.plugin", version.ref = "ktor" }
+shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }

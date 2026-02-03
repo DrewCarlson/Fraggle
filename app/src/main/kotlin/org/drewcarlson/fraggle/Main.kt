@@ -69,13 +69,16 @@ class RunCommand : CliktCommand(name = "run") {
             FraggleEnvironment.defaultConfigPath
         }
 
-        return if (path.exists()) {
-            logger.info("Loading configuration from: $path")
-            ConfigLoader.load(path)
+        val existed = path.exists()
+        val config = ConfigLoader.loadOrCreateDefault(path)
+
+        if (existed) {
+            logger.info("Loaded configuration from: $path")
         } else {
-            logger.info("Configuration file not found at $path, using defaults")
-            ConfigLoader.default()
+            logger.info("Created default configuration at: $path")
         }
+
+        return config
     }
 }
 
@@ -162,12 +165,13 @@ class ChatCommand : CliktCommand(name = "chat") {
 
         println("Config path: $path")
 
-        val config = if (path.exists()) {
-            println("Loading configuration from file...")
-            ConfigLoader.load(path)
+        val existed = path.exists()
+        val config = ConfigLoader.loadOrCreateDefault(path)
+
+        if (existed) {
+            println("Loaded configuration from file...")
         } else {
-            println("Configuration file not found, using defaults")
-            ConfigLoader.default()
+            println("Created default configuration at: $path")
         }
 
         // Apply command-line overrides

@@ -1,0 +1,146 @@
+name: Publish Release
+
+on:
+  push:
+    branches:
+      - 'main'
+    tags:
+      - 'v*'
+
+concurrency:
+  group: release-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  file-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      any: ${{ steps.check.outputs.any_changed }}
+      docs: ${{ steps.docs.outputs.any_changed }}
+    steps:
+      - uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
+        with:
+          fetch-depth: 0
+      - name: Get changed files
+        id: check
+        uses: tj-actions/changed-files@7d5bbf4e8d5c63a42c94e1c1bff2394247117e96
+        with:
+          files: |
+            .github/workflows/release.yml
+            build.gradle.kts
+            gradle/libs.versions.toml
+            app/**
+            fraggle/**
+            fraggle-signal/**
+            fraggle-skills/**
+            Dockerfile
+      - name: Get changed files
+        id: docs
+        uses: tj-actions/changed-files@7d5bbf4e8d5c63a42c94e1c1bff2394247117e96
+        with:
+          files: |
+            .github/workflows/release.yml
+            docs/**/*.md
+            mkdocs.yml
+
+  publish-docs:
+    runs-on: ubuntu-latest
+    needs: [ file-changes ]
+    if: needs.file-changes.outputs.docs == 'true' || startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
+        with:
+          fetch-depth: 0
+      - name: Configure Git user
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+      - name: Set up Python
+        uses: actions/setup-python@bfe8cc55a7890e3d6672eda6460ef37bfcc70755
+        with:
+          python-version: '3.12'
+          architecture: x64
+          cache: 'pip'
+          cache-dependency-path: 'docs/requirements.txt'
+      - name: Install Python dependencies
+        run: python3 -m pip install -r ./docs/requirements.txt
+      - name: Deploy with mike (release)
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          VERSION=${GITHUB_REF_NAME#v} mike deploy --update-aliases --push ${{ github.ref_name }} latest
+      - name: Deploy with mike (snapshot)
+        if: startsWith(github.ref, 'refs/tags/v') == false
+        run: |
+          mike deploy --update-aliases --push snapshot dev-snapshot
+
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    needs: [ file-changes ]
+    if: needs.file-changes.outputs.any == 'true' || startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
+
+      - uses: actions/setup-java@d81c4e45f3ac973cc936d79104023e20054ba578
+        with:
+          distribution: 'zulu'
+          java-version: 21
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@576fcbecfed70890e466eeffd7c78d93b30b0472
+
+      - name: Build Shadow Distribution
+        run: >
+          ./gradlew
+          :app:installShadowDist
+          :app:shadowDistZip
+          :app:shadowDistTar
+
+      - name: Container registry Log in
+        uses: docker/login-action@0567fa5ae8c9a197cb207537dc5cbb43ca3d803f
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@ed95091677497158a9ff38b314264cd965388d5e
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=ref,event=branch,enable=${{ startsWith(github.ref, 'refs/tags/v') == false }}
+            type=semver,pattern={{version}},enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@64c9b141502b80dbbd71e008a0130ad330f480f8
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Upload build to Github Release
+        uses: softprops/action-gh-release@78237c54eb15310cb292a15480c4be010be47aeb
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          prerelease: ${{ contains(github.ref, '-') }}
+          files: |
+            app/build/distributions/*.zip
+            app/build/distributions/*.tar

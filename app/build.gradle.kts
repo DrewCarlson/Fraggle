@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.shadow)
     application
 }
 
@@ -9,6 +10,7 @@ version = "0.0.1"
 
 application {
     mainClass.set("org.drewcarlson.fraggle.MainKt")
+    applicationName = "fraggle"
 }
 
 kotlin {
@@ -49,4 +51,11 @@ tasks.named<JavaExec>("run") {
     standardInput = System.`in`
     workingDir = rootProject.projectDir
     environment("FRAGGLE_ROOT", rootProject.projectDir.resolve("runtime-dev").absolutePath)
+}
+
+tasks.shadowJar {
+    archiveBaseName.set("fraggle")
+    archiveClassifier.set("")
+    archiveVersion.set("")
+    mergeServiceFiles()
 }

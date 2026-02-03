@@ -7,8 +7,10 @@ import kotlinx.serialization.Serializable
 import org.drewcarlson.fraggle.signal.RegisteredChat
 import java.nio.file.Path
 import kotlin.io.path.Path
+import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 import kotlin.io.path.readText
+import kotlin.io.path.writeText
 
 /**
  * Environment configuration for Fraggle runtime directories.
@@ -325,6 +327,28 @@ object ConfigLoader {
      * Create default configuration.
      */
     fun default(): FraggleConfig = FraggleConfig()
+
+    /**
+     * Save configuration to a file path.
+     */
+    fun save(config: FraggleConfig, path: Path) {
+        path.parent?.createDirectories()
+        val content = yaml.encodeToString(FraggleConfig.serializer(), config)
+        path.writeText(content)
+    }
+
+    /**
+     * Load configuration from path, creating default if it doesn't exist.
+     */
+    fun loadOrCreateDefault(path: Path): FraggleConfig {
+        return if (path.exists()) {
+            load(path)
+        } else {
+            val defaultConfig = default()
+            save(defaultConfig, path)
+            defaultConfig
+        }
+    }
 }
 
 class ConfigurationException(message: String, cause: Throwable? = null) : Exception(message, cause)

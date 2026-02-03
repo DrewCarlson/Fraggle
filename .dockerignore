@@ -1,0 +1,32 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+*.iml
+*.iws
+*.ipr
+.vscode
+
+# Build outputs
+build/
+*/build/
+.gradle
+.kotlin
+
+# Runtime
+runtime-dev/
+site/
+
+# Documentation (not needed in container)
+docs/
+mkdocs.yml
+CLAUDE.md
+README.md
+*.md
+
+# Docker
+Dockerfile*
+.dockerignore
+docker-compose*.yml
