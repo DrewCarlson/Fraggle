@@ -20,7 +20,7 @@ import kotlin.io.path.exists
  * Main entry point for Fraggle.
  */
 fun main(args: Array<String>) = Fraggle()
-    .subcommands(RunCommand(), ChatCommand(), InitBridgeCommand(), TestSignalCommand())
+    .subcommands(RunCommand(), ChatCommand(), InitBridgeCommand())
     .main(args)
 
 class Fraggle : CliktCommand(name = "fraggle") {
@@ -35,7 +35,7 @@ class RunCommand : CliktCommand(name = "run") {
 
     private val configPath by option(
         "-c", "--config",
-        help = "Path to configuration file (default: \$FRAGGLE_ROOT/config/fraggle.yaml)"
+        help = $$"Path to configuration file (default: $FRAGGLE_ROOT/config/fraggle.yaml)"
     )
 
     override fun run() = runBlocking {
@@ -97,7 +97,7 @@ class ChatCommand : CliktCommand(name = "chat") {
 
     private val configPath by option(
         "-c", "--config",
-        help = "Path to configuration file (default: \$FRAGGLE_ROOT/config/fraggle.yaml)"
+        help = $$"Path to configuration file (default: $FRAGGLE_ROOT/config/fraggle.yaml)"
     )
 
     private val model by option(
@@ -195,83 +195,6 @@ class ChatCommand : CliktCommand(name = "chat") {
 }
 
 /**
- * Test Signal connection.
- */
-class TestSignalCommand : CliktCommand(name = "test-signal") {
-    private val logger = LoggerFactory.getLogger(TestSignalCommand::class.java)
-
-    private val configPath by option(
-        "-c", "--config",
-        help = "Path to configuration file (default: \$FRAGGLE_ROOT/config/fraggle.yaml)"
-    )
-
-    override fun run() = runBlocking {
-        println("Testing Signal connection...")
-        println("FRAGGLE_ROOT: ${FraggleEnvironment.root}")
-
-        // Load configuration
-        val path = if (configPath != null) {
-            Path(configPath!!).toAbsolutePath()
-        } else {
-            FraggleEnvironment.defaultConfigPath
-        }
-
-        val config = if (path.exists()) {
-            ConfigLoader.load(path)
-        } else {
-            println("Configuration file not found: $path")
-            return@runBlocking
-        }
-
-        // Get Signal bridge config
-        val signalBridgeConfig = config.fraggle.bridges.signal
-
-        if (signalBridgeConfig == null || !signalBridgeConfig.enabled || signalBridgeConfig.phone.isBlank()) {
-            println("Error: No phone number configured for Signal.")
-            println("Please configure fraggle.bridges.signal in your configuration file.")
-            return@runBlocking
-        }
-
-        println("Phone number: ${signalBridgeConfig.phone}")
-        println("Config dir: ${signalBridgeConfig.configDir}")
-        println("Trigger: ${signalBridgeConfig.trigger ?: "(none)"}")
-
-        // Try to connect
-        try {
-            val signalConfig = SignalConfig(
-                phoneNumber = signalBridgeConfig.phone,
-                configDir = signalBridgeConfig.configDir,
-                triggerPrefix = signalBridgeConfig.trigger,
-                signalCliPath = signalBridgeConfig.signalCliPath,
-            )
-
-            val bridge = org.drewcarlson.fraggle.signal.SignalBridge(signalConfig)
-            println("\nConnecting to Signal...")
-            bridge.connect()
-
-            println("Connected successfully!")
-            println("Listening for messages for 10 seconds...")
-
-            // Listen for a short time
-            kotlinx.coroutines.withTimeoutOrNull(10_000) {
-                bridge.messages().collect { message ->
-                    println("Received: ${message.content} from ${message.sender.id}")
-                }
-            }
-
-            bridge.disconnect()
-            println("\nTest complete.")
-        } catch (e: Exception) {
-            println("\nError connecting to Signal: ${e.message}")
-            println("\nMake sure:")
-            println("  1. signal-cli is installed and in your PATH")
-            println("  2. signal-cli is registered with the phone number")
-            println("  3. The config directory exists and is readable")
-        }
-    }
-}
-
-/**
  * Initialize a chat bridge interactively.
  *
  * Some bridges require interactive setup (phone verification, OAuth, etc.)
@@ -282,7 +205,7 @@ class InitBridgeCommand : CliktCommand(name = "init-bridge") {
 
     private val configPath by option(
         "-c", "--config",
-        help = "Path to configuration file (default: \$FRAGGLE_ROOT/config/fraggle.yaml)"
+        help = $$"Path to configuration file (default: $FRAGGLE_ROOT/config/fraggle.yaml)"
     )
 
     private val bridgeName by argument(
