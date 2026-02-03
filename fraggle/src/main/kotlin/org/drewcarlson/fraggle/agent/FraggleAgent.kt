@@ -10,6 +10,7 @@ import org.drewcarlson.fraggle.memory.Fact
 import org.drewcarlson.fraggle.memory.Memory
 import org.drewcarlson.fraggle.memory.MemoryScope
 import org.drewcarlson.fraggle.memory.MemoryStore
+import org.drewcarlson.fraggle.prompt.PromptManager
 import org.drewcarlson.fraggle.provider.*
 import org.drewcarlson.fraggle.sandbox.Sandbox
 import org.drewcarlson.fraggle.skill.SkillContext
@@ -27,7 +28,8 @@ class FraggleAgent(
     private val skills: SkillRegistry,
     private val memory: MemoryStore,
     private val sandbox: Sandbox,
-    private val config: AgentConfig = AgentConfig(),
+    private val config: AgentConfig,
+    private val promptManager: PromptManager,
 ) {
     private val logger = LoggerFactory.getLogger(FraggleAgent::class.java)
     private val json = Json { ignoreUnknownKeys = true }
@@ -61,7 +63,7 @@ class FraggleAgent(
         val tools = skills.toOpenAITools()
 
         // 5. Execute agent loop
-        var currentMessages = messages.toMutableList()
+        val currentMessages = messages.toMutableList()
         var iterations = 0
         val collectedAttachments = mutableListOf<ResponseAttachment>()
 
@@ -145,7 +147,9 @@ class FraggleAgent(
         platform: ChatPlatform?,
     ): String {
         return buildString {
-            appendLine(config.systemPrompt)
+            // Use prompt manager's full prompt (required for normal operation)
+            val basePrompt = promptManager.buildFullPrompt()
+            appendLine(basePrompt)
             appendLine()
 
             // Add platform/channel context
@@ -363,34 +367,12 @@ class FraggleAgent(
  */
 data class AgentConfig(
     val model: String = "",
-    val systemPrompt: String = DEFAULT_SYSTEM_PROMPT,
     val temperature: Double = 0.7,
     val maxTokens: Int = 4096,
     val maxIterations: Int = 10,
     val maxHistoryMessages: Int = 20,
     val autoMemory: Boolean = true,
-) {
-    companion object {
-        const val DEFAULT_SYSTEM_PROMPT = """You are Fraggle, a helpful AI assistant. You are friendly, concise, and helpful.
-
-CRITICAL: Focus ONLY on the current user message. Previous messages in the conversation are for context only - do NOT re-execute actions from previous exchanges.
-
-When using tools:
-- Only use tools to respond to the CURRENT user request
-- Never repeat tool calls from previous conversation turns
-- Briefly explain what you're doing when using tools
-- If a tool fails, explain the error and try an alternative approach
-
-When sending images or files:
-- Tools like send_image and screenshot_page automatically send attachments to the user
-- Do NOT include markdown image syntax like ![](url) in your response
-- Do NOT include raw URLs expecting them to display as images
-- Simply confirm the action was completed (e.g., "Here's the screenshot" or "I've sent the image")
-- The attachment appears automatically alongside your text message
-
-Be concise in your responses unless the user asks for detail."""
-    }
-}
+)
 
 /**
  * Conversation context.

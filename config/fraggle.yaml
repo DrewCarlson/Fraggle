@@ -25,11 +25,17 @@ fraggle:
     # discord:
     #   enabled: false
     #   token: ""
-    #   ...
     # telegram:
     #   enabled: false
     #   bot_token: ""
-    #   ...
+
+  # Prompt files configuration
+  # Prompt files (SYSTEM.md, IDENTITY.md, USER.md) are created from templates on first run.
+  # Edit these files to customize the assistant's personality and behavior.
+  prompts:
+    prompts_dir: ./config/prompts     # Directory for prompt files
+    max_file_chars: 20000             # Max chars per file before truncation
+    auto_create_missing: true         # Create missing files from templates
 
   # Memory storage settings
   memory:
@@ -42,7 +48,6 @@ fraggle:
 
   # Agent settings
   agent:
-    # system_prompt: "Custom system prompt here"
     temperature: 0.7
     max_tokens: 4096
     max_iterations: 10
@@ -60,9 +65,8 @@ fraggle:
   web:
     # Playwright settings for JavaScript-heavy pages (optional)
     # playwright:
-    #   ws_endpoint: ws://localhost:3000/playwright  # Playwright server WebSocket endpoint
-    #   navigation_timeout: 30000                     # Page load timeout (ms)
-    #   wait_after_load: 2000                         # Extra wait for JS to settle (ms)
-    #   viewport_width: 1280                          # Browser viewport width
-    #   viewport_height: 720                          # Browser viewport height
-    #   user_agent: ""                                # Custom user agent (optional)
+    #   ws_endpoint: ws://localhost:3000/playwright
+    #   navigation_timeout: 30000
+    #   wait_after_load: 2000
+    #   viewport_width: 1280
+    #   viewport_height: 720

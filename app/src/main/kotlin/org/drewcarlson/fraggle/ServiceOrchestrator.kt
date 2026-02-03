@@ -15,6 +15,8 @@ import org.drewcarlson.fraggle.sandbox.Sandbox
 import org.drewcarlson.fraggle.signal.MessageRouter
 import org.drewcarlson.fraggle.signal.SignalBridge
 import org.drewcarlson.fraggle.signal.SignalConfig
+import org.drewcarlson.fraggle.prompt.PromptConfig
+import org.drewcarlson.fraggle.prompt.PromptManager
 import org.drewcarlson.fraggle.skill.SkillRegistry
 import org.drewcarlson.fraggle.skills.DefaultSkills
 import org.drewcarlson.fraggle.skills.scheduling.TaskScheduler
@@ -38,6 +40,7 @@ class ServiceOrchestrator(
     private lateinit var provider: LLMProvider
     private lateinit var sandbox: Sandbox
     private lateinit var memory: MemoryStore
+    private lateinit var promptManager: PromptManager
     private lateinit var skills: SkillRegistry
     private lateinit var agent: FraggleAgent
     private lateinit var taskScheduler: TaskScheduler
@@ -70,6 +73,11 @@ class ServiceOrchestrator(
         // Initialize memory
         memory = createMemoryStore()
         logger.info("Memory store initialized")
+
+        // Initialize prompt manager
+        promptManager = createPromptManager()
+        promptManager.initialize()
+        logger.info("Prompt manager initialized")
 
         // Initialize chat bridge manager
         bridgeManager = ChatBridgeManager(scope)
@@ -262,7 +270,6 @@ class ServiceOrchestrator(
 
         val agentConfig = AgentConfig(
             model = config.fraggle.provider.model,
-            systemPrompt = settings.systemPrompt ?: AgentConfig.DEFAULT_SYSTEM_PROMPT,
             temperature = settings.temperature,
             maxTokens = settings.maxTokens,
             maxIterations = settings.maxIterations,
@@ -275,6 +282,20 @@ class ServiceOrchestrator(
             memory = memory,
             sandbox = sandbox,
             config = agentConfig,
+            promptManager = promptManager,
+        )
+    }
+
+    private fun createPromptManager(): PromptManager {
+        val settings = config.fraggle.prompts
+        val promptsDir = resolvePath(settings.promptsDir)
+
+        return PromptManager(
+            PromptConfig(
+                promptsDir = promptsDir,
+                maxFileChars = settings.maxFileChars,
+                autoCreateMissing = settings.autoCreateMissing,
+            )
         )
     }
 

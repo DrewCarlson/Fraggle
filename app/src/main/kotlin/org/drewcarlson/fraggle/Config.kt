@@ -69,6 +69,7 @@ data class FraggleConfig(
 data class FraggleSettings(
     val provider: ProviderConfig = ProviderConfig(),
     val bridges: BridgesConfig = BridgesConfig(),
+    val prompts: PromptsSettings = PromptsSettings(),
     val memory: MemorySettings = MemorySettings(),
     val sandbox: SandboxSettings = SandboxSettings(),
     val agent: AgentSettings = AgentSettings(),
@@ -184,8 +185,6 @@ enum class SandboxType {
 
 @Serializable
 data class AgentSettings(
-    @SerialName("system_prompt")
-    val systemPrompt: String? = null,
     val temperature: Double = 0.7,
     @SerialName("max_tokens")
     val maxTokens: Int = 4096,
@@ -193,6 +192,29 @@ data class AgentSettings(
     val maxIterations: Int = 10,
     @SerialName("max_history_messages")
     val maxHistoryMessages: Int = 20,
+)
+
+@Serializable
+data class PromptsSettings(
+    /**
+     * Directory where prompt files (SYSTEM.md, IDENTITY.md, USER.md) are stored.
+     * If files don't exist, they are created from default templates.
+     */
+    @SerialName("prompts_dir")
+    val promptsDir: String = "./config/prompts",
+
+    /**
+     * Maximum characters to include from each prompt file.
+     * Files exceeding this limit are truncated.
+     */
+    @SerialName("max_file_chars")
+    val maxFileChars: Int = 20_000,
+
+    /**
+     * Whether to auto-create missing prompt files from templates.
+     */
+    @SerialName("auto_create_missing")
+    val autoCreateMissing: Boolean = true,
 )
 
 @Serializable
