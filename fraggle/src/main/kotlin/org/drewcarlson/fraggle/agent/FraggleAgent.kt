@@ -212,7 +212,6 @@ class FraggleAgent(
             appendLine("# IMPORTANT: Conversation History")
             appendLine()
             appendLine("The conversation history above shows PREVIOUS exchanges that are ALREADY COMPLETED.")
-            appendLine("Do NOT re-execute actions from previous exchanges. Only respond to the CURRENT user message.")
             appendLine("Each user message is a separate request - focus only on what the user is asking NOW.")
         }
     }
