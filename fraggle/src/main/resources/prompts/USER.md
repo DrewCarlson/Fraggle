@@ -1,21 +1,12 @@
 # User Profile
 
-## Basic Information
+## General Details
 
 - **Name**:
 - **Preferred Name**:
 - **Pronouns**:
-
-## Preferences
-
-<!-- Add user preferences here -->
 - **Timezone**:
 - **Language**: English
-- **Communication Style**:
-
-## Context
-
-<!-- Add any relevant context about the user that the assistant should know -->
 
 ## Notes
 
