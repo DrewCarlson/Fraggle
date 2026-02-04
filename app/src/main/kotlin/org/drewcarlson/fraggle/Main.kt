@@ -20,7 +20,7 @@ import kotlin.io.path.exists
  * Main entry point for Fraggle.
  */
 fun main(args: Array<String>) = Fraggle()
-    .subcommands(RunCommand(), ChatCommand(), InitBridgeCommand())
+    .subcommands(RunCommand(), ChatCommand(), ConfigureCommand(), InitBridgeCommand())
     .main(args)
 
 class Fraggle : CliktCommand(name = "fraggle") {
