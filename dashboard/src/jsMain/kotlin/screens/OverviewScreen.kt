@@ -1,13 +1,17 @@
 package screens
 
+import ConnectionState
 import DataState
 import DashboardStyles
 import WebSocketService
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import kotlinx.coroutines.delay
 import org.drewcarlson.fraggle.models.SystemStatus
 import org.jetbrains.compose.web.css.*
 import org.jetbrains.compose.web.dom.*
+import rememberConnectionState
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 @Composable
 fun OverviewScreen(statusState: DataState<SystemStatus>, wsService: WebSocketService) {
@@ -15,11 +19,24 @@ fun OverviewScreen(statusState: DataState<SystemStatus>, wsService: WebSocketSer
         is DataState.Loading -> {
             LoadingCard("Loading status...")
         }
+
         is DataState.Error -> {
             ErrorCard(statusState.message)
         }
+
         is DataState.Success -> {
             val status = statusState.data
+            val connectionState by rememberConnectionState(wsService)
+
+            // Increment elapsed time every second when connected
+            val liveUptime by produceState(status.uptime, status, connectionState) {
+                if (connectionState == ConnectionState.CONNECTED) {
+                    while (true) {
+                        delay(1.seconds)
+                        value += 1.seconds
+                    }
+                }
+            }
 
             // Show subtle refresh indicator if refreshing
             if (statusState.isRefreshing) {
@@ -100,7 +117,7 @@ fun OverviewScreen(statusState: DataState<SystemStatus>, wsService: WebSocketSer
                     }) {
                         SystemInfoItem(
                             label = "Uptime",
-                            value = formatUptime(status.uptime),
+                            value = formatUptime(liveUptime),
                         )
                         SystemInfoItem(
                             label = "Heap Used",

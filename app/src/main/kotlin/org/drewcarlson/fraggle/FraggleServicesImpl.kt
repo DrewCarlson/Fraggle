@@ -43,7 +43,7 @@ class FraggleServicesImpl(
     override suspend fun getStatus(): SystemStatus {
         val runtime = Runtime.getRuntime()
         return SystemStatus(
-            uptime = startTime - Clock.System.now(),
+            uptime = Clock.System.now() - startTime,
             activeConversations = conversationMap.size,
             connectedBridges = bridges.registeredBridges().count { bridges.isConnected(it) },
             availableSkills = skills.all().size,
