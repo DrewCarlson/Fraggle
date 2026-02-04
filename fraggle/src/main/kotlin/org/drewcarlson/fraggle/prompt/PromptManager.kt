@@ -211,7 +211,9 @@ class PromptManager(
     private fun loadFromResources(filename: String): String? {
         val resourcePath = "$RESOURCE_PATH/$filename"
         return try {
-            javaClass.getResourceAsStream(resourcePath)?.bufferedReader()?.readText()
+            javaClass.getResourceAsStream(resourcePath)
+                ?.bufferedReader()
+                ?.use { it.readText() }
         } catch (e: Exception) {
             logger.error("Failed to load resource $resourcePath: ${e.message}")
             null
