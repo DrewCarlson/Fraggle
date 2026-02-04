@@ -3,6 +3,15 @@ rootProject.name = "Fraggle"
 dependencyResolutionManagement {
     repositories {
         mavenCentral()
+        google()
+    }
+}
+
+pluginManagement {
+    includeBuild("build-logic")
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
     }
 }
 
