@@ -77,6 +77,8 @@ data class FraggleSettings(
     val agent: AgentSettings = AgentSettings(),
     val chats: ChatsSettings = ChatsSettings(),
     val web: WebSettings = WebSettings(),
+    val api: ApiSettings = ApiSettings(),
+    val dashboard: DashboardSettings = DashboardSettings(),
 )
 
 @Serializable
@@ -227,6 +229,69 @@ data class ChatsSettings(
 @Serializable
 data class WebSettings(
     val playwright: PlaywrightSettings? = null,
+)
+
+/**
+ * REST API server configuration.
+ */
+@Serializable
+data class ApiSettings(
+    /**
+     * Whether the API server is enabled.
+     */
+    val enabled: Boolean = false,
+
+    /**
+     * Host to bind the API server to.
+     */
+    val host: String = "0.0.0.0",
+
+    /**
+     * Port for the API server.
+     */
+    val port: Int = 8080,
+
+    /**
+     * CORS configuration.
+     */
+    val cors: CorsSettings = CorsSettings(),
+)
+
+/**
+ * CORS settings for the API.
+ */
+@Serializable
+data class CorsSettings(
+    /**
+     * Whether CORS is enabled.
+     */
+    val enabled: Boolean = true,
+
+    /**
+     * Allowed origins for CORS requests.
+     * If empty and enabled, allows the dashboard origin.
+     */
+    @SerialName("allowed_origins")
+    val allowedOrigins: List<String> = emptyList(),
+)
+
+/**
+ * Dashboard web UI configuration.
+ */
+@Serializable
+data class DashboardSettings(
+    /**
+     * Whether the dashboard is enabled.
+     * Requires API to be enabled.
+     */
+    val enabled: Boolean = false,
+
+    /**
+     * Path to the built dashboard static files.
+     * If null, serves from classpath resources (embedded).
+     */
+    @SerialName("static_path")
+    val staticPath: String? = null,
 )
 
 @Serializable

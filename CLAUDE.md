@@ -26,6 +26,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # Run a specific test method (use full pattern)
 ./gradlew :fraggle:test --tests="*SkillTest.Execution*"
+
+# Build the dashboard for development (with vite, the KMP webpack tasks are not used)
+./gradlew :dashboard:jsBrowserDevelopmentDist
+
+# Build the dashboard for production (with vite, the KMP webpack tasks are not used)
+./gradlew :dashboard:jsBrowserProductionDist
 ```
 
 ## Project Architecture
@@ -39,6 +45,7 @@ Fraggle is a Kotlin-based AI assistant that integrates with messaging platforms 
 - **`fraggle-skills`** - Built-in skills: filesystem, web fetching, shell execution, task scheduling
 - **`app`** - CLI application using Clikt, configuration loading, service orchestration
 - **`backend`** - Optional Ktor REST API server
+- **`dashboard`** - Web dashboard built with Compose for HTML
 
 ### Key Architectural Patterns
 

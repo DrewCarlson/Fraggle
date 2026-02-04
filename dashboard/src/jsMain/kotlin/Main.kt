@@ -2,14 +2,20 @@ import androidx.compose.runtime.*
 import app.softwork.routingcompose.BrowserRouter
 import app.softwork.routingcompose.Router
 import io.ktor.client.*
+import io.ktor.client.call.*
 import io.ktor.client.engine.js.*
 import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.request.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.browser.document
+import kotlinx.browser.window
+import kotlinx.coroutines.delay
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.jetbrains.compose.web.css.*
 import org.jetbrains.compose.web.dom.*
 import org.jetbrains.compose.web.renderComposableInBody
+import kotlin.time.Duration
 
 /**
  * Shared HTTP client for API calls to the backend.
@@ -22,6 +28,43 @@ val apiClient = HttpClient(Js) {
             ignoreUnknownKeys = true
         })
     }
+}
+
+/**
+ * Get the API base URL from the current window location.
+ */
+fun getApiBaseUrl(): String {
+    val location = window.location
+    return "${location.protocol}//${location.host}/api/v1"
+}
+
+// ============================================================================
+// API Response Models
+// ============================================================================
+
+@Serializable
+data class SystemStatus(
+    val uptime: Duration,
+    val activeConversations: Int,
+    val connectedBridges: Int,
+    val availableSkills: Int,
+    val scheduledTasks: Int,
+    val memoryUsage: MemoryUsage,
+)
+
+@Serializable
+data class MemoryUsage(
+    val heapUsed: Long,
+    val heapMax: Long,
+)
+
+/**
+ * State holder for system status with loading and error states.
+ */
+sealed class StatusState {
+    data object Loading : StatusState()
+    data class Success(val status: SystemStatus) : StatusState()
+    data class Error(val message: String) : StatusState()
 }
 
 fun main() {
@@ -37,6 +80,20 @@ fun main() {
 @Composable
 fun App() {
     var sidebarCollapsed by remember { mutableStateOf(false) }
+    var statusState by remember { mutableStateOf<StatusState>(StatusState.Loading) }
+
+    // Fetch status periodically
+    LaunchedEffect(Unit) {
+        while (true) {
+            statusState = try {
+                val status = apiClient.get("${getApiBaseUrl()}/status").body<SystemStatus>()
+                StatusState.Success(status)
+            } catch (e: Exception) {
+                StatusState.Error(e.message ?: "Connection failed")
+            }
+            delay(5000) // Refresh every 5 seconds
+        }
+    }
 
     Div({
         classes(DashboardStyles.appContainer)
@@ -160,10 +217,26 @@ fun App() {
                         Div({
                             classes(DashboardStyles.statusIndicator)
                         }) {
-                            Span({
-                                classes(DashboardStyles.statusDot, DashboardStyles.statusOnline)
-                            })
-                            Text("Connected")
+                            when (statusState) {
+                                is StatusState.Loading -> {
+                                    Span({
+                                        classes(DashboardStyles.statusDot)
+                                    })
+                                    Text("Connecting...")
+                                }
+                                is StatusState.Success -> {
+                                    Span({
+                                        classes(DashboardStyles.statusDot, DashboardStyles.statusOnline)
+                                    })
+                                    Text("Connected")
+                                }
+                                is StatusState.Error -> {
+                                    Span({
+                                        classes(DashboardStyles.statusDot, DashboardStyles.statusError)
+                                    })
+                                    Text("Disconnected")
+                                }
+                            }
                         }
                     }
                 }
@@ -173,7 +246,7 @@ fun App() {
                     classes(DashboardStyles.pageContent)
                 }) {
                     route("/") {
-                        OverviewPage()
+                        OverviewPage(statusState)
                     }
                     route("/conversations") {
                         ConversationsPage()
@@ -258,61 +331,226 @@ private fun getPageTitle(path: String): String = when {
 // ============================================================================
 
 @Composable
-fun OverviewPage() {
-    Div({
-        classes(DashboardStyles.cardGrid)
-    }) {
-        StatCard(
-            title = "Active Conversations",
-            value = "3",
-            icon = "bi-chat-dots",
-            iconBgColor = "#6366f11a",
-            iconColor = "#6366f1",
-        )
-        StatCard(
-            title = "Connected Bridges",
-            value = "1",
-            icon = "bi-plug",
-            iconBgColor = "#22c55e1a",
-            iconColor = "#22c55e",
-        )
-        StatCard(
-            title = "Available Skills",
-            value = "12",
-            icon = "bi-tools",
-            iconBgColor = "#f59e0b1a",
-            iconColor = "#f59e0b",
-        )
-        StatCard(
-            title = "Scheduled Tasks",
-            value = "5",
-            icon = "bi-calendar-event",
-            iconBgColor = "#ec48991a",
-            iconColor = "#ec4899",
-        )
-    }
-
-    Section({
-        classes(DashboardStyles.section)
-    }) {
-        H2({
-            classes(DashboardStyles.sectionTitle)
-        }) {
-            Text("Recent Activity")
-        }
-        Div({
-            classes(DashboardStyles.card)
-        }) {
-            P({
+fun OverviewPage(statusState: StatusState) {
+    when (statusState) {
+        is StatusState.Loading -> {
+            Div({
+                classes(DashboardStyles.card)
                 style {
-                    color(Color("#71717a"))
+                    padding(48.px)
                     textAlign("center")
-                    padding(32.px)
                 }
             }) {
-                Text("No recent activity")
+                I({
+                    classes("bi", "bi-arrow-repeat")
+                    style {
+                        fontSize(32.px)
+                        color(Color("#6366f1"))
+                        property("animation", "spin 1s linear infinite")
+                    }
+                })
+                P({
+                    style {
+                        color(Color("#71717a"))
+                        marginTop(16.px)
+                    }
+                }) {
+                    Text("Loading status...")
+                }
             }
         }
+        is StatusState.Error -> {
+            Div({
+                classes(DashboardStyles.card)
+                style {
+                    padding(48.px)
+                    textAlign("center")
+                }
+            }) {
+                I({
+                    classes("bi", "bi-exclamation-triangle")
+                    style {
+                        fontSize(32.px)
+                        color(Color("#ef4444"))
+                    }
+                })
+                P({
+                    style {
+                        color(Color("#ef4444"))
+                        marginTop(16.px)
+                        fontWeight("600")
+                    }
+                }) {
+                    Text("Connection Error")
+                }
+                P({
+                    style {
+                        color(Color("#71717a"))
+                        marginTop(8.px)
+                    }
+                }) {
+                    Text(statusState.message)
+                }
+            }
+        }
+        is StatusState.Success -> {
+            val status = statusState.status
+
+            Div({
+                classes(DashboardStyles.cardGrid)
+            }) {
+                StatCard(
+                    title = "Active Conversations",
+                    value = status.activeConversations.toString(),
+                    icon = "bi-chat-dots",
+                    iconBgColor = "#6366f11a",
+                    iconColor = "#6366f1",
+                )
+                StatCard(
+                    title = "Connected Bridges",
+                    value = status.connectedBridges.toString(),
+                    icon = "bi-plug",
+                    iconBgColor = "#22c55e1a",
+                    iconColor = "#22c55e",
+                )
+                StatCard(
+                    title = "Available Skills",
+                    value = status.availableSkills.toString(),
+                    icon = "bi-tools",
+                    iconBgColor = "#f59e0b1a",
+                    iconColor = "#f59e0b",
+                )
+                StatCard(
+                    title = "Scheduled Tasks",
+                    value = status.scheduledTasks.toString(),
+                    icon = "bi-calendar-event",
+                    iconBgColor = "#ec48991a",
+                    iconColor = "#ec4899",
+                )
+            }
+
+            // System info section
+            Section({
+                classes(DashboardStyles.section)
+            }) {
+                H2({
+                    classes(DashboardStyles.sectionTitle)
+                }) {
+                    Text("System Information")
+                }
+                Div({
+                    classes(DashboardStyles.card)
+                }) {
+                    Div({
+                        style {
+                            padding(24.px)
+                            display(DisplayStyle.Grid)
+                            property("grid-template-columns", "repeat(auto-fit, minmax(200px, 1fr))")
+                            gap(24.px)
+                        }
+                    }) {
+                        SystemInfoItem(
+                            label = "Uptime",
+                            value = formatUptime(status.uptime),
+                        )
+                        SystemInfoItem(
+                            label = "Heap Used",
+                            value = formatBytes(status.memoryUsage.heapUsed),
+                        )
+                        SystemInfoItem(
+                            label = "Heap Max",
+                            value = formatBytes(status.memoryUsage.heapMax),
+                        )
+                        SystemInfoItem(
+                            label = "Memory Usage",
+                            value = "${((status.memoryUsage.heapUsed.toDouble() / status.memoryUsage.heapMax) * 100).toInt()}%",
+                        )
+                    }
+                }
+            }
+
+            Section({
+                classes(DashboardStyles.section)
+            }) {
+                H2({
+                    classes(DashboardStyles.sectionTitle)
+                }) {
+                    Text("Recent Activity")
+                }
+                Div({
+                    classes(DashboardStyles.card)
+                }) {
+                    P({
+                        style {
+                            color(Color("#71717a"))
+                            textAlign("center")
+                            padding(32.px)
+                        }
+                    }) {
+                        Text("No recent activity")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SystemInfoItem(label: String, value: String) {
+    Div({
+        style {
+            display(DisplayStyle.Flex)
+            flexDirection(FlexDirection.Column)
+            gap(4.px)
+        }
+    }) {
+        Span({
+            style {
+                fontSize(12.px)
+                color(Color("#71717a"))
+                property("text-transform", "uppercase")
+                letterSpacing(0.5.px)
+            }
+        }) {
+            Text(label)
+        }
+        Span({
+            style {
+                fontSize(18.px)
+                fontWeight("600")
+                color(Color("#e4e4e7"))
+            }
+        }) {
+            Text(value)
+        }
+    }
+}
+
+private fun formatUptime(uptime: Duration): String {
+    val absMillis = kotlin.math.abs(uptime.inWholeMilliseconds)
+    val seconds = absMillis / 1000
+    val minutes = seconds / 60
+    val hours = minutes / 60
+    val days = hours / 24
+
+    return when {
+        days > 0 -> "${days}d ${hours % 24}h"
+        hours > 0 -> "${hours}h ${minutes % 60}m"
+        minutes > 0 -> "${minutes}m ${seconds % 60}s"
+        else -> "${seconds}s"
+    }
+}
+
+private fun formatBytes(bytes: Long): String {
+    val kb = bytes / 1024.0
+    val mb = kb / 1024.0
+    val gb = mb / 1024.0
+
+    return when {
+        gb >= 1 -> "${gb.toInt()}GB"
+        mb >= 1 -> "${mb.toInt()}MB"
+        kb >= 1 -> "${kb.toInt()}KB"
+        else -> "${bytes}B"
     }
 }
 

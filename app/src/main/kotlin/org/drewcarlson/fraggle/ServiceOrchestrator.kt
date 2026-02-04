@@ -1,8 +1,13 @@
 package org.drewcarlson.fraggle
 
+import io.ktor.server.engine.*
+import io.ktor.server.netty.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collectLatest
 import org.drewcarlson.fraggle.agent.*
+import org.drewcarlson.fraggle.api.FraggleEvent
+import org.drewcarlson.fraggle.backend.ApiServerConfig
+import org.drewcarlson.fraggle.backend.createApiServer
 import org.drewcarlson.fraggle.chat.ChatBridgeManager
 import org.drewcarlson.fraggle.chat.MessageContent
 import org.drewcarlson.fraggle.chat.OutgoingMessage
@@ -25,7 +30,10 @@ import org.drewcarlson.fraggle.skills.web.PlaywrightFetcher
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.io.path.Path
 import kotlin.io.path.createDirectories
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 /**
  * Orchestrates all Fraggle services and manages their lifecycle.
@@ -55,6 +63,11 @@ class ServiceOrchestrator(
 
     // Conversation tracking
     private val conversations = ConcurrentHashMap<String, Conversation>()
+
+    // API server (optional)
+    private var apiServer: EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration>? = null
+    private var fraggleServices: FraggleServicesImpl? = null
+    private val startTime = Clock.System.now()
 
     /**
      * Initialize all services.
@@ -125,6 +138,9 @@ class ServiceOrchestrator(
         // Initialize chat bridges based on configuration
         initializeBridges()
 
+        // Initialize API server if enabled
+        initializeApiServer()
+
         logger.info("All services initialized successfully")
     }
 
@@ -133,6 +149,16 @@ class ServiceOrchestrator(
      */
     suspend fun start() {
         logger.info("Starting Fraggle services...")
+
+        // Start API server if configured
+        apiServer?.let { server ->
+            server.start(wait = false)
+            val apiConfig = config.fraggle.api
+            logger.info("API server started on http://${apiConfig.host}:${apiConfig.port}")
+            if (config.fraggle.dashboard.enabled) {
+                logger.info("Dashboard available at http://${apiConfig.host}:${apiConfig.port}/")
+            }
+        }
 
         // Connect all registered bridges
         if (bridgeManager.registeredBridges().isNotEmpty()) {
@@ -152,6 +178,10 @@ class ServiceOrchestrator(
      */
     suspend fun stop() {
         logger.info("Stopping Fraggle services...")
+
+        // Stop API server
+        apiServer?.stop(1000, 5000)
+        apiServer = null
 
         // Stop message processing
         messageJob?.cancelAndJoin()
@@ -338,6 +368,43 @@ class ServiceOrchestrator(
     }
 
     /**
+     * Initialize the API server if enabled in configuration.
+     */
+    private fun initializeApiServer() {
+        val apiConfig = config.fraggle.api
+        val dashboardConfig = config.fraggle.dashboard
+
+        if (!apiConfig.enabled) {
+            logger.info("API server disabled")
+            return
+        }
+
+        // Create the services implementation
+        fraggleServices = FraggleServicesImpl(
+            memory = memory,
+            skills = skills,
+            bridges = bridgeManager,
+            taskScheduler = taskScheduler,
+            conversationMap = conversations,
+            startTime = startTime,
+        )
+
+        // Build server config
+        val serverConfig = ApiServerConfig(
+            host = apiConfig.host,
+            port = apiConfig.port,
+            corsEnabled = apiConfig.cors.enabled,
+            corsAllowedOrigins = apiConfig.cors.allowedOrigins,
+            dashboardEnabled = dashboardConfig.enabled,
+            dashboardStaticPath = dashboardConfig.staticPath?.let { Path(it) },
+        )
+
+        // Create the server
+        apiServer = createApiServer(fraggleServices!!, serverConfig)
+        logger.info("API server initialized on ${apiConfig.host}:${apiConfig.port}")
+    }
+
+    /**
      * Start the unified message processing loop for all bridges.
      */
     private fun startMessageLoop() {
@@ -377,6 +444,16 @@ class ServiceOrchestrator(
                 }
 
                 try {
+                    // Emit message received event
+                    val messageText = (routedMessage.content as? MessageContent.Text)?.text ?: ""
+                    fraggleServices?.emitEvent(FraggleEvent.MessageReceived(
+                        timestamp = System.currentTimeMillis(),
+                        chatId = chatId,
+                        senderId = routedMessage.sender.id,
+                        senderName = routedMessage.sender.name,
+                        content = messageText,
+                    ))
+
                     // Get or create conversation
                     val conversation = conversations.getOrPut(chatId) {
                         Conversation(id = chatId, chatId = chatId)
@@ -393,6 +470,13 @@ class ServiceOrchestrator(
                     // Send response
                     val responseText = response.contentOrError()
                     bridgeManager.send(chatId, OutgoingMessage.Text(responseText))
+
+                    // Emit response sent event
+                    fraggleServices?.emitEvent(FraggleEvent.ResponseSent(
+                        timestamp = System.currentTimeMillis(),
+                        chatId = chatId,
+                        content = responseText,
+                    ))
 
                     // Send any attachments
                     for (attachment in response.collectAttachments()) {
@@ -417,7 +501,6 @@ class ServiceOrchestrator(
                     }
 
                     // Update conversation
-                    val messageText = (routedMessage.content as? MessageContent.Text)?.text ?: ""
                     conversations[chatId] = conversation.copy(
                         messages = conversation.messages + listOf(
                             ConversationMessage(ConversationRole.USER, messageText),
@@ -429,6 +512,14 @@ class ServiceOrchestrator(
                 } catch (e: Exception) {
                     logger.error("Error processing message: ${e.message}", e)
                     typingJob.cancel()
+
+                    // Emit error event
+                    fraggleServices?.emitEvent(FraggleEvent.Error(
+                        timestamp = System.currentTimeMillis(),
+                        source = "message_processing",
+                        message = e.message ?: "Unknown error",
+                    ))
+
                     try {
                         bridgeManager.setTyping(chatId, false)
                         bridgeManager.send(

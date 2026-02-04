@@ -22,6 +22,7 @@ dependencies {
     implementation(project(":fraggle"))
     implementation(project(":fraggle-signal"))
     implementation(project(":fraggle-skills"))
+    implementation(project(":backend"))
 
     // Kotlinx
     implementation(libs.kotlinx.coroutines.core)

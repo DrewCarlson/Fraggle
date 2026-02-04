@@ -9,6 +9,17 @@ fraggle:
     model: ""                         # Model name (optional for LM Studio)
     # api_key: ""                     # Required for OpenAI/Anthropic
 
+  # API serving settings
+  api:
+    enabled: true
+    host: "0.0.0.0"
+    port: 8080
+
+  # Web dashboard serving settings
+  dashboard:
+    enabled: true
+    static_path: null  # or path to built dashboard files
+
   # Chat bridge settings
   bridges:
     # Signal messenger integration
@@ -55,7 +66,7 @@ fraggle:
 
   # Registered chats (optional - if empty, responds to all)
   chats:
-    registered: []
+    registered: [ ]
     # - id: "group-abc123"
     #   name: "Dev Team"
     #   trigger_override: "@bot"
@@ -63,10 +74,10 @@ fraggle:
 
   # Web fetching settings
   web:
-    # Playwright settings for JavaScript-heavy pages (optional)
-    # playwright:
-    #   ws_endpoint: ws://localhost:3000
-    #   navigation_timeout: 30000
-    #   wait_after_load: 2000
-    #   viewport_width: 1280
-    #   viewport_height: 720
+  # Playwright settings for JavaScript-heavy pages (optional)
+  # playwright:
+  #   ws_endpoint: ws://localhost:3000
+  #   navigation_timeout: 30000
+  #   wait_after_load: 2000
+  #   viewport_width: 1280
+  #   viewport_height: 720
