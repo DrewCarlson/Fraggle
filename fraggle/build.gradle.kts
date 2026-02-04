@@ -4,9 +4,6 @@ plugins {
     alias(libs.plugins.kover)
 }
 
-group = "org.drewcarlson"
-version = "0.0.1"
-
 kotlin {
     jvmToolchain(21)
 }

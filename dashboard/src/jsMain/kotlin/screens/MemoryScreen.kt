@@ -1,41 +1,34 @@
 package screens
 
+import DataState
 import DashboardStyles
+import RefreshTrigger
+import WebSocketService
 import apiClient
 import androidx.compose.runtime.*
 import getApiBaseUrl
 import io.ktor.client.call.*
 import io.ktor.client.request.*
-import kotlinx.datetime.Instant
 import org.drewcarlson.fraggle.models.MemoryResponse
 import org.jetbrains.compose.web.css.*
 import org.jetbrains.compose.web.dom.*
-
-sealed class MemoryState {
-    data object Loading : MemoryState()
-    data class Success(val memory: MemoryResponse) : MemoryState()
-    data class Error(val message: String) : MemoryState()
-}
+import rememberRefreshableDataLoader
+import kotlin.time.Instant
 
 enum class MemoryScope(val label: String, val endpoint: String) {
     GLOBAL("Global", "/memory/global"),
 }
 
 @Composable
-fun MemoryScreen() {
+fun MemoryScreen(wsService: WebSocketService) {
     var selectedScope by remember { mutableStateOf(MemoryScope.GLOBAL) }
-    var state by remember { mutableStateOf<MemoryState>(MemoryState.Loading) }
-    var refreshTrigger by remember { mutableStateOf(0) }
 
-    // Fetch memory for selected scope
-    LaunchedEffect(selectedScope, refreshTrigger) {
-        state = MemoryState.Loading
-        state = try {
-            val memory = apiClient.get("${getApiBaseUrl()}${selectedScope.endpoint}").body<MemoryResponse>()
-            MemoryState.Success(memory)
-        } catch (e: Exception) {
-            MemoryState.Error(e.message ?: "Failed to load memory")
-        }
+    val (state, refresh) = rememberRefreshableDataLoader(
+        selectedScope,
+        wsService = wsService,
+        refreshOn = setOf(RefreshTrigger.Memory),
+    ) {
+        apiClient.get("${getApiBaseUrl()}${selectedScope.endpoint}").body<MemoryResponse>()
     }
 
     Section({
@@ -49,11 +42,20 @@ fun MemoryScreen() {
                 marginBottom(16.px)
             }
         }) {
-            H2({
-                classes(DashboardStyles.sectionTitle)
-                style { property("margin", "0") }
+            Div({
+                style {
+                    display(DisplayStyle.Flex)
+                    alignItems(AlignItems.Center)
+                    gap(12.px)
+                }
             }) {
-                Text("Memory Store")
+                H2({
+                    classes(DashboardStyles.sectionTitle)
+                    style { property("margin", "0") }
+                }) {
+                    Text("Memory Store")
+                }
+                DataStateLoadingSpinner(state)
             }
             Div({
                 style {
@@ -77,22 +79,22 @@ fun MemoryScreen() {
                 }
                 Button({
                     classes(DashboardStyles.button, DashboardStyles.buttonSmall, DashboardStyles.buttonOutline)
-                    onClick { refreshTrigger++ }
+                    onClick { refresh() }
                 }) {
                     I({ classes("bi", "bi-arrow-repeat") })
                 }
             }
         }
 
-        when (val currentState = state) {
-            is MemoryState.Loading -> {
+        when (state) {
+            is DataState.Loading -> {
                 LoadingCard("Loading memory...")
             }
-            is MemoryState.Error -> {
-                ErrorCard(currentState.message)
+            is DataState.Error -> {
+                ErrorCard(state.message)
             }
-            is MemoryState.Success -> {
-                val memory = currentState.memory
+            is DataState.Success -> {
+                val memory = state.data
                 if (memory.facts.isEmpty()) {
                     EmptyCard("No facts stored in ${memory.scope}", "bi-journal-bookmark")
                 } else {
@@ -126,9 +128,6 @@ fun MemoryScreen() {
                             }
                             Button({
                                 classes(DashboardStyles.button, DashboardStyles.buttonSmall, DashboardStyles.buttonDanger)
-                                onClick {
-                                    // Clear memory (would need confirmation)
-                                }
                             }) {
                                 I({ classes("bi", "bi-trash") })
                                 Text("Clear All")

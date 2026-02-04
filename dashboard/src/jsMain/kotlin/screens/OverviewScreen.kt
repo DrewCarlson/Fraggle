@@ -1,77 +1,49 @@
 package screens
 
+import DataState
 import DashboardStyles
-import StatusState
+import WebSocketService
 import androidx.compose.runtime.Composable
+import org.drewcarlson.fraggle.models.SystemStatus
 import org.jetbrains.compose.web.css.*
 import org.jetbrains.compose.web.dom.*
 import kotlin.time.Duration
 
 @Composable
-fun OverviewScreen(statusState: StatusState) {
+fun OverviewScreen(statusState: DataState<SystemStatus>, wsService: WebSocketService) {
     when (statusState) {
-        is StatusState.Loading -> {
-            Div({
-                classes(DashboardStyles.card)
-                style {
-                    padding(48.px)
-                    textAlign("center")
-                }
-            }) {
-                I({
-                    classes("bi", "bi-arrow-repeat")
+        is DataState.Loading -> {
+            LoadingCard("Loading status...")
+        }
+        is DataState.Error -> {
+            ErrorCard(statusState.message)
+        }
+        is DataState.Success -> {
+            val status = statusState.data
+
+            // Show subtle refresh indicator if refreshing
+            if (statusState.isRefreshing) {
+                Div({
                     style {
-                        fontSize(32.px)
+                        position(Position.Fixed)
+                        top(80.px)
+                        right(32.px)
+                        fontSize(12.px)
                         color(Color("#6366f1"))
-                        property("animation", "spin 1s linear infinite")
-                    }
-                })
-                P({
-                    style {
-                        color(Color("#71717a"))
-                        marginTop(16.px)
+                        display(DisplayStyle.Flex)
+                        alignItems(AlignItems.Center)
+                        gap(6.px)
                     }
                 }) {
-                    Text("Loading status...")
+                    I({
+                        classes("bi", "bi-arrow-repeat")
+                        style {
+                            property("animation", "spin 1s linear infinite")
+                        }
+                    })
+                    Text("Refreshing...")
                 }
             }
-        }
-        is StatusState.Error -> {
-            Div({
-                classes(DashboardStyles.card)
-                style {
-                    padding(48.px)
-                    textAlign("center")
-                }
-            }) {
-                I({
-                    classes("bi", "bi-exclamation-triangle")
-                    style {
-                        fontSize(32.px)
-                        color(Color("#ef4444"))
-                    }
-                })
-                P({
-                    style {
-                        color(Color("#ef4444"))
-                        marginTop(16.px)
-                        fontWeight("600")
-                    }
-                }) {
-                    Text("Connection Error")
-                }
-                P({
-                    style {
-                        color(Color("#71717a"))
-                        marginTop(8.px)
-                    }
-                }) {
-                    Text(statusState.message)
-                }
-            }
-        }
-        is StatusState.Success -> {
-            val status = statusState.status
 
             Div({
                 classes(DashboardStyles.cardGrid)

@@ -1,6 +1,7 @@
 package screens
 
 import DashboardStyles
+import DataState
 import androidx.compose.runtime.Composable
 import org.jetbrains.compose.web.css.*
 import org.jetbrains.compose.web.dom.*
@@ -93,5 +94,19 @@ fun EmptyCard(message: String, icon: String) {
         }) {
             Text(message)
         }
+    }
+}
+
+@Composable
+fun DataStateLoadingSpinner(state: DataState<*>) {
+    if (state is DataState.Success && state.isRefreshing) {
+        I({
+            classes("bi", "bi-arrow-repeat")
+            style {
+                fontSize(14.px)
+                color(Color("#6366f1"))
+                property("animation", "spin 1s linear infinite")
+            }
+        })
     }
 }

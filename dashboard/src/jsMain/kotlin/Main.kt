@@ -9,7 +9,6 @@ import io.ktor.client.request.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.browser.document
 import kotlinx.browser.window
-import kotlinx.coroutines.delay
 import kotlinx.serialization.json.Json
 import org.drewcarlson.fraggle.models.SystemStatus
 import org.jetbrains.compose.web.css.*
@@ -38,15 +37,6 @@ fun getApiBaseUrl(): String {
     return "${location.protocol}//${location.host}/api/v1"
 }
 
-/**
- * State holder for system status with loading and error states.
- */
-sealed class StatusState {
-    data object Loading : StatusState()
-    data class Success(val status: SystemStatus) : StatusState()
-    data class Error(val message: String) : StatusState()
-}
-
 fun main() {
     renderComposableInBody {
         Style(DashboardStyles)
@@ -60,19 +50,17 @@ fun main() {
 @Composable
 fun App() {
     var sidebarCollapsed by remember { mutableStateOf(false) }
-    var statusState by remember { mutableStateOf<StatusState>(StatusState.Loading) }
 
-    // Fetch status periodically
-    LaunchedEffect(Unit) {
-        while (true) {
-            statusState = try {
-                val status = apiClient.get("${getApiBaseUrl()}/status").body<SystemStatus>()
-                StatusState.Success(status)
-            } catch (e: Exception) {
-                StatusState.Error(e.message ?: "Connection failed")
-            }
-            delay(5000) // Refresh every 5 seconds
-        }
+    // Initialize WebSocket service
+    val wsService = rememberWebSocketService()
+    val connectionState by rememberConnectionState(wsService)
+
+    // Load status data with WebSocket refresh
+    val (statusState, refreshStatus) = rememberRefreshableDataLoader(
+        wsService = wsService,
+        refreshOn = setOf(RefreshTrigger.Status, RefreshTrigger.Bridges, RefreshTrigger.Conversations),
+    ) {
+        apiClient.get("${getApiBaseUrl()}/status").body<SystemStatus>()
     }
 
     Div({
@@ -105,8 +93,8 @@ fun App() {
                     Div({
                         classes(DashboardStyles.headerActions)
                     }) {
-                        // Status indicator
-                        ConnectionStatus(statusState)
+                        // Connection status indicator
+                        ConnectionStatus(connectionState)
                     }
                 }
 
@@ -115,22 +103,22 @@ fun App() {
                     classes(DashboardStyles.pageContent)
                 }) {
                     route("/") {
-                        OverviewScreen(statusState)
+                        OverviewScreen(statusState, wsService)
                     }
                     route("/conversations") {
-                        ConversationsScreen()
+                        ConversationsScreen(wsService)
                     }
                     route("/bridges") {
-                        BridgesScreen()
+                        BridgesScreen(wsService)
                     }
                     route("/skills") {
-                        SkillsScreen()
+                        SkillsScreen(wsService)
                     }
                     route("/memory") {
-                        MemoryScreen()
+                        MemoryScreen(wsService)
                     }
                     route("/scheduler") {
-                        SchedulerScreen()
+                        SchedulerScreen(wsService)
                     }
                     route("/settings") {
                         SettingsScreen()
@@ -286,28 +274,40 @@ private fun NavItem(
 }
 
 @Composable
-private fun ConnectionStatus(statusState: StatusState) {
+private fun ConnectionStatus(connectionState: ConnectionState) {
     Div({
         classes(DashboardStyles.statusIndicator)
     }) {
-        when (statusState) {
-            is StatusState.Loading -> {
+        when (connectionState) {
+            ConnectionState.DISCONNECTED -> {
+                Span({
+                    classes(DashboardStyles.statusDot, DashboardStyles.statusError)
+                })
+                Text("Disconnected")
+            }
+            ConnectionState.CONNECTING -> {
                 Span({
                     classes(DashboardStyles.statusDot)
+                    style {
+                        property("animation", "pulse 1.5s ease-in-out infinite")
+                    }
                 })
                 Text("Connecting...")
             }
-            is StatusState.Success -> {
+            ConnectionState.CONNECTED -> {
                 Span({
                     classes(DashboardStyles.statusDot, DashboardStyles.statusOnline)
                 })
                 Text("Connected")
             }
-            is StatusState.Error -> {
+            ConnectionState.RECONNECTING -> {
                 Span({
-                    classes(DashboardStyles.statusDot, DashboardStyles.statusError)
+                    classes(DashboardStyles.statusDot, DashboardStyles.statusWarning)
+                    style {
+                        property("animation", "pulse 1.5s ease-in-out infinite")
+                    }
                 })
-                Text("Disconnected")
+                Text("Reconnecting...")
             }
         }
     }

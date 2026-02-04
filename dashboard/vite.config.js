@@ -1,13 +1,18 @@
 export default {
     server: {
         port: 8840,
-        open: false,
+        open: true,
         hmr: true,
         proxy: {
             // Proxy API requests to the backend server
             '/api': {
                 target: 'http://localhost:8080',
                 changeOrigin: true,
+            },
+            // Proxy WebSocket connections
+            '/ws': {
+                target: 'ws://localhost:8080',
+                ws: true,
             },
         },
     },

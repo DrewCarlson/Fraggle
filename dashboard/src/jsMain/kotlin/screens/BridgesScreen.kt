@@ -1,69 +1,79 @@
 package screens
 
+import DataState
 import DashboardStyles
+import RefreshTrigger
+import WebSocketService
 import apiClient
 import androidx.compose.runtime.*
 import getApiBaseUrl
 import io.ktor.client.call.*
 import io.ktor.client.request.*
-import kotlinx.coroutines.delay
 import org.drewcarlson.fraggle.models.BridgeInfo
+import org.jetbrains.compose.web.css.*
 import org.jetbrains.compose.web.dom.*
-
-sealed class BridgesState {
-    data object Loading : BridgesState()
-    data class Success(val bridges: List<BridgeInfo>) : BridgesState()
-    data class Error(val message: String) : BridgesState()
-}
+import rememberRefreshableDataLoader
 
 @Composable
-fun BridgesScreen() {
-    var state by remember { mutableStateOf<BridgesState>(BridgesState.Loading) }
-    var refreshTrigger by remember { mutableStateOf(0) }
-
-    // Fetch bridges
-    LaunchedEffect(refreshTrigger) {
-        state = BridgesState.Loading
-        state = try {
-            val bridges = apiClient.get("${getApiBaseUrl()}/bridges").body<List<BridgeInfo>>()
-            BridgesState.Success(bridges)
-        } catch (e: Exception) {
-            BridgesState.Error(e.message ?: "Failed to load bridges")
-        }
-    }
-
-    // Auto-refresh every 5 seconds
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(5000)
-            refreshTrigger++
-        }
+fun BridgesScreen(wsService: WebSocketService) {
+    val (state, refresh) = rememberRefreshableDataLoader(
+        wsService = wsService,
+        refreshOn = setOf(RefreshTrigger.Bridges),
+    ) {
+        apiClient.get("${getApiBaseUrl()}/bridges").body<List<BridgeInfo>>()
     }
 
     Section({
         classes(DashboardStyles.section)
     }) {
-        H2({
-            classes(DashboardStyles.sectionTitle)
+        Div({
+            style {
+                display(DisplayStyle.Flex)
+                justifyContent(JustifyContent.SpaceBetween)
+                alignItems(AlignItems.Center)
+                marginBottom(16.px)
+            }
         }) {
-            Text("Chat Bridges")
+            Div({
+                style {
+                    display(DisplayStyle.Flex)
+                    alignItems(AlignItems.Center)
+                    gap(12.px)
+                }
+            }) {
+                H2({
+                    classes(DashboardStyles.sectionTitle)
+                    style { property("margin", "0") }
+                }) {
+                    Text("Chat Bridges")
+                }
+                DataStateLoadingSpinner(state)
+            }
+            Button({
+                classes(DashboardStyles.button, DashboardStyles.buttonSmall, DashboardStyles.buttonOutline)
+                onClick { refresh() }
+            }) {
+                I({ classes("bi", "bi-arrow-repeat") })
+                Text("Refresh")
+            }
         }
 
-        when (val currentState = state) {
-            is BridgesState.Loading -> {
+        when (state) {
+            is DataState.Loading -> {
                 LoadingCard("Loading bridges...")
             }
-            is BridgesState.Error -> {
-                ErrorCard(currentState.message)
+            is DataState.Error -> {
+                ErrorCard(state.message)
             }
-            is BridgesState.Success -> {
-                if (currentState.bridges.isEmpty()) {
+            is DataState.Success -> {
+                val bridges = state.data
+                if (bridges.isEmpty()) {
                     EmptyCard("No bridges configured", "bi-plug")
                 } else {
                     Div({
                         classes(DashboardStyles.cardList)
                     }) {
-                        currentState.bridges.forEach { bridge ->
+                        bridges.forEach { bridge ->
                             BridgeCard(
                                 name = bridge.name,
                                 platform = bridge.platform,

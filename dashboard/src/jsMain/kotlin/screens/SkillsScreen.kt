@@ -1,6 +1,9 @@
 package screens
 
+import DataState
 import DashboardStyles
+import RefreshTrigger
+import WebSocketService
 import apiClient
 import androidx.compose.runtime.*
 import getApiBaseUrl
@@ -9,52 +12,70 @@ import io.ktor.client.request.*
 import org.drewcarlson.fraggle.models.SkillInfo
 import org.jetbrains.compose.web.css.*
 import org.jetbrains.compose.web.dom.*
-
-sealed class SkillsState {
-    data object Loading : SkillsState()
-    data class Success(val skills: List<SkillInfo>) : SkillsState()
-    data class Error(val message: String) : SkillsState()
-}
+import rememberRefreshableDataLoader
 
 @Composable
-fun SkillsScreen() {
-    var state by remember { mutableStateOf<SkillsState>(SkillsState.Loading) }
+fun SkillsScreen(wsService: WebSocketService) {
     var expandedSkill by remember { mutableStateOf<String?>(null) }
 
-    // Fetch skills
-    LaunchedEffect(Unit) {
-        state = try {
-            val skills = apiClient.get("${getApiBaseUrl()}/skills").body<List<SkillInfo>>()
-            SkillsState.Success(skills)
-        } catch (e: Exception) {
-            SkillsState.Error(e.message ?: "Failed to load skills")
-        }
+    val (state, refresh) = rememberRefreshableDataLoader(
+        wsService = wsService,
+        refreshOn = setOf(RefreshTrigger.Skills),
+    ) {
+        apiClient.get("${getApiBaseUrl()}/skills").body<List<SkillInfo>>()
     }
 
     Section({
         classes(DashboardStyles.section)
     }) {
-        H2({
-            classes(DashboardStyles.sectionTitle)
+        Div({
+            style {
+                display(DisplayStyle.Flex)
+                justifyContent(JustifyContent.SpaceBetween)
+                alignItems(AlignItems.Center)
+                marginBottom(16.px)
+            }
         }) {
-            Text("Available Skills")
+            Div({
+                style {
+                    display(DisplayStyle.Flex)
+                    alignItems(AlignItems.Center)
+                    gap(12.px)
+                }
+            }) {
+                H2({
+                    classes(DashboardStyles.sectionTitle)
+                    style { property("margin", "0") }
+                }) {
+                    Text("Available Skills")
+                }
+                DataStateLoadingSpinner(state)
+            }
+            Button({
+                classes(DashboardStyles.button, DashboardStyles.buttonSmall, DashboardStyles.buttonOutline)
+                onClick { refresh() }
+            }) {
+                I({ classes("bi", "bi-arrow-repeat") })
+                Text("Refresh")
+            }
         }
 
-        when (val currentState = state) {
-            is SkillsState.Loading -> {
+        when (state) {
+            is DataState.Loading -> {
                 LoadingCard("Loading skills...")
             }
-            is SkillsState.Error -> {
-                ErrorCard(currentState.message)
+            is DataState.Error -> {
+                ErrorCard(state.message)
             }
-            is SkillsState.Success -> {
-                if (currentState.skills.isEmpty()) {
+            is DataState.Success -> {
+                val skills = state.data
+                if (skills.isEmpty()) {
                     EmptyCard("No skills available", "bi-tools")
                 } else {
                     Div({
                         classes(DashboardStyles.cardList)
                     }) {
-                        currentState.skills.forEach { skill ->
+                        skills.forEach { skill ->
                             SkillCard(
                                 skill = skill,
                                 isExpanded = expandedSkill == skill.name,

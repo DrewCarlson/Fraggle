@@ -1,45 +1,27 @@
 package screens
 
+import DataState
 import DashboardStyles
+import RefreshTrigger
+import WebSocketService
 import apiClient
 import androidx.compose.runtime.*
 import getApiBaseUrl
 import io.ktor.client.call.*
 import io.ktor.client.request.*
-import kotlinx.coroutines.delay
-import kotlinx.datetime.Instant
 import org.drewcarlson.fraggle.models.ScheduledTaskInfo
 import org.jetbrains.compose.web.css.*
 import org.jetbrains.compose.web.dom.*
-
-sealed class SchedulerState {
-    data object Loading : SchedulerState()
-    data class Success(val tasks: List<ScheduledTaskInfo>) : SchedulerState()
-    data class Error(val message: String) : SchedulerState()
-}
+import rememberRefreshableDataLoader
+import kotlin.time.Instant
 
 @Composable
-fun SchedulerScreen() {
-    var state by remember { mutableStateOf<SchedulerState>(SchedulerState.Loading) }
-    var refreshTrigger by remember { mutableStateOf(0) }
-
-    // Fetch tasks
-    LaunchedEffect(refreshTrigger) {
-        state = SchedulerState.Loading
-        state = try {
-            val tasks = apiClient.get("${getApiBaseUrl()}/scheduler/tasks").body<List<ScheduledTaskInfo>>()
-            SchedulerState.Success(tasks)
-        } catch (e: Exception) {
-            SchedulerState.Error(e.message ?: "Failed to load tasks")
-        }
-    }
-
-    // Auto-refresh every 10 seconds
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(10000)
-            refreshTrigger++
-        }
+fun SchedulerScreen(wsService: WebSocketService) {
+    val (state, refresh) = rememberRefreshableDataLoader(
+        wsService = wsService,
+        refreshOn = setOf(RefreshTrigger.Scheduler),
+    ) {
+        apiClient.get("${getApiBaseUrl()}/scheduler/tasks").body<List<ScheduledTaskInfo>>()
     }
 
     Section({
@@ -53,42 +35,49 @@ fun SchedulerScreen() {
                 marginBottom(16.px)
             }
         }) {
-            H2({
-                classes(DashboardStyles.sectionTitle)
-                style { property("margin", "0") }
+            Div({
+                style {
+                    display(DisplayStyle.Flex)
+                    alignItems(AlignItems.Center)
+                    gap(12.px)
+                }
             }) {
-                Text("Scheduled Tasks")
+                H2({
+                    classes(DashboardStyles.sectionTitle)
+                    style { property("margin", "0") }
+                }) {
+                    Text("Scheduled Tasks")
+                }
+                DataStateLoadingSpinner(state)
             }
             Button({
                 classes(DashboardStyles.button, DashboardStyles.buttonSmall, DashboardStyles.buttonOutline)
-                onClick { refreshTrigger++ }
+                onClick { refresh() }
             }) {
                 I({ classes("bi", "bi-arrow-repeat") })
                 Text("Refresh")
             }
         }
 
-        when (val currentState = state) {
-            is SchedulerState.Loading -> {
+        when (state) {
+            is DataState.Loading -> {
                 LoadingCard("Loading tasks...")
             }
-            is SchedulerState.Error -> {
-                ErrorCard(currentState.message)
+            is DataState.Error -> {
+                ErrorCard(state.message)
             }
-            is SchedulerState.Success -> {
-                if (currentState.tasks.isEmpty()) {
+            is DataState.Success -> {
+                val tasks = state.data
+                if (tasks.isEmpty()) {
                     EmptyCard("No scheduled tasks", "bi-calendar-event")
                 } else {
                     Div({
                         classes(DashboardStyles.cardList)
                     }) {
-                        currentState.tasks.forEach { task ->
+                        tasks.forEach { task ->
                             TaskCard(
                                 task = task,
-                                onCancel = {
-                                    // Would trigger cancel API call
-                                    refreshTrigger++
-                                }
+                                onCancel = { refresh() }
                             )
                         }
                     }

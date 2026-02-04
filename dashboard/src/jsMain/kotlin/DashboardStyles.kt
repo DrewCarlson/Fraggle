@@ -206,6 +206,10 @@ object DashboardStyles : StyleSheet() {
         backgroundColor(colorError)
     }
 
+    val statusWarning by style {
+        backgroundColor(colorWarning)
+    }
+
     val pageContent by style {
         flex(1)
         padding(32.px)
