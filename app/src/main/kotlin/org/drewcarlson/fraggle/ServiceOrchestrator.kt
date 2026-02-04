@@ -224,7 +224,7 @@ class ServiceOrchestrator(
                 name = senderName,
             ),
             content = MessageContent.Text(text),
-            timestamp = java.time.Instant.now(),
+            timestamp = Clock.System.now(),
         )
 
         // Process with agent
@@ -447,7 +447,7 @@ class ServiceOrchestrator(
                     // Emit message received event
                     val messageText = (routedMessage.content as? MessageContent.Text)?.text ?: ""
                     fraggleServices?.emitEvent(FraggleEvent.MessageReceived(
-                        timestamp = System.currentTimeMillis(),
+                        timestamp = Instant.fromEpochMilliseconds(System.currentTimeMillis()),
                         chatId = chatId,
                         senderId = routedMessage.sender.id,
                         senderName = routedMessage.sender.name,
@@ -473,7 +473,7 @@ class ServiceOrchestrator(
 
                     // Emit response sent event
                     fraggleServices?.emitEvent(FraggleEvent.ResponseSent(
-                        timestamp = System.currentTimeMillis(),
+                        timestamp = Instant.fromEpochMilliseconds(System.currentTimeMillis()),
                         chatId = chatId,
                         content = responseText,
                     ))
@@ -515,7 +515,7 @@ class ServiceOrchestrator(
 
                     // Emit error event
                     fraggleServices?.emitEvent(FraggleEvent.Error(
-                        timestamp = System.currentTimeMillis(),
+                        timestamp = Instant.fromEpochMilliseconds(System.currentTimeMillis()),
                         source = "message_processing",
                         message = e.message ?: "Unknown error",
                     ))

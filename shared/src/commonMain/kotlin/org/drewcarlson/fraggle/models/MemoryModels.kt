@@ -1,6 +1,7 @@
 package org.drewcarlson.fraggle.models
 
 import kotlinx.serialization.Serializable
+import kotlin.time.Instant
 
 /**
  * Response containing memory facts for a scope.
@@ -18,5 +19,5 @@ data class MemoryResponse(
 data class FactInfo(
     val content: String,
     val source: String?,
-    val createdAt: Long,
+    val createdAt: Instant,
 )

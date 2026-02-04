@@ -1,16 +1,41 @@
 package org.drewcarlson.fraggle.skills.scheduling
 
 import kotlinx.coroutines.*
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.format
+import kotlinx.datetime.format.DateTimeFormat
+import kotlinx.datetime.format.char
+import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.drewcarlson.fraggle.skill.*
 import org.slf4j.LoggerFactory
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
+import kotlin.time.Clock
+import kotlin.time.Duration
+import kotlin.time.DurationUnit
+import kotlin.time.Instant
+import kotlin.time.toDuration
+
+@Suppress("ObjectPropertyName")
+private val _fulleDateTimeFormat = LocalDateTime.Format {
+    year()
+    char('-')
+    monthNumber()
+    char('-')
+    day()
+    char(' ')
+    hour()
+    char(':')
+    minute()
+    char(':')
+    second()
+}
+@Suppress("UnusedReceiverParameter")
+val LocalDateTime.Formats.fullDataTime: DateTimeFormat<LocalDateTime>
+    get() = _fulleDateTimeFormat
 
 /**
  * Task scheduling skills for deferred and recurring operations.
@@ -61,14 +86,14 @@ object SchedulingSkills {
         execute { params ->
             val name = params.get<String>("name")
             val action = params.get<String>("action")
-            val delaySeconds = params.get<Long>("delay_seconds")
-            val repeatInterval = params.getOrDefault("repeat_interval_seconds", 0L)
+            val delay = params.get<Long>("delay_seconds").toDuration(DurationUnit.SECONDS)
+            val repeatInterval = params.getOrDefault("repeat_interval_seconds", 0L).toDuration(DurationUnit.SECONDS)
 
             // Get chatId from context - required for sending messages when task triggers
             val chatId = params.context?.chatId
                 ?: return@execute SkillResult.Error("Cannot schedule task: missing chat context")
 
-            if (delaySeconds < 0) {
+            if (delay < Duration.ZERO) {
                 return@execute SkillResult.Error("delay_seconds must be non-negative")
             }
 
@@ -76,21 +101,21 @@ object SchedulingSkills {
                 name = name,
                 action = action,
                 chatId = chatId,
-                delaySeconds = delaySeconds,
-                repeatIntervalSeconds = if (repeatInterval > 0) repeatInterval else null,
+                delay = delay,
+                repeatInterval = if (repeatInterval > Duration.ZERO) repeatInterval else null,
             )
 
-            val nextRun = Instant.ofEpochMilli(task.nextRunTime)
-                .atZone(ZoneId.systemDefault())
-                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+            val nextRun = task.nextRunTime
+                .toLocalDateTime(TimeZone.currentSystemDefault())
+                .format(LocalDateTime.Formats.fullDataTime)
 
             val message = buildString {
                 appendLine("Task scheduled successfully!")
                 appendLine("  ID: ${task.id}")
                 appendLine("  Name: ${task.name}")
                 appendLine("  Next run: $nextRun")
-                if (task.repeatIntervalSeconds != null) {
-                    appendLine("  Repeats every: ${formatDuration(task.repeatIntervalSeconds)} ")
+                if (task.repeatInterval != null) {
+                    appendLine("  Repeats every: ${task.repeatInterval} ")
                 }
             }
 
@@ -112,15 +137,15 @@ object SchedulingSkills {
             }
 
             val listing = tasks.map { task ->
-                val nextRun = Instant.ofEpochMilli(task.nextRunTime)
-                    .atZone(ZoneId.systemDefault())
-                    .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                val nextRun = task.nextRunTime
+                    .toLocalDateTime(TimeZone.currentSystemDefault())
+                    .format(LocalDateTime.Formats.fullDataTime)
 
                 buildString {
                     append("- [${task.id}] ${task.name}")
                     append(" (next: $nextRun)")
-                    if (task.repeatIntervalSeconds != null) {
-                        append(" [recurring: ${formatDuration(task.repeatIntervalSeconds)}]")
+                    if (task.repeatInterval != null) {
+                        append(" [recurring: ${task.repeatInterval}]")
                     }
                     if (task.status != TaskStatus.PENDING) {
                         append(" [${task.status}]")
@@ -173,13 +198,13 @@ object SchedulingSkills {
                 return@execute SkillResult.Error("Task $taskId not found.")
             }
 
-            val nextRun = Instant.ofEpochMilli(task.nextRunTime)
-                .atZone(ZoneId.systemDefault())
-                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+            val nextRun = task.nextRunTime
+                .toLocalDateTime(TimeZone.currentSystemDefault())
+                .format(LocalDateTime.Formats.fullDataTime)
 
-            val created = Instant.ofEpochMilli(task.createdAt)
-                .atZone(ZoneId.systemDefault())
-                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+            val created = task.createdAt
+                .toLocalDateTime(TimeZone.currentSystemDefault())
+                .format(LocalDateTime.Formats.fullDataTime)
 
             val message = buildString {
                 appendLine("Task Details:")
@@ -190,22 +215,13 @@ object SchedulingSkills {
                 appendLine("  Chat ID: ${task.chatId}")
                 appendLine("  Created: $created")
                 appendLine("  Next run: $nextRun")
-                if (task.repeatIntervalSeconds != null) {
-                    appendLine("  Repeat interval: ${formatDuration(task.repeatIntervalSeconds)}")
+                if (task.repeatInterval != null) {
+                    appendLine("  Repeat interval: ${task.repeatInterval}")
                 }
                 appendLine("  Run count: ${task.runCount}")
             }
 
             SkillResult.Success(message)
-        }
-    }
-
-    private fun formatDuration(seconds: Long): String {
-        return when {
-            seconds < 60 -> "${seconds}s"
-            seconds < 3600 -> "${seconds / 60}m"
-            seconds < 86400 -> "${seconds / 3600}h"
-            else -> "${seconds / 86400}d"
         }
     }
 }
@@ -231,11 +247,11 @@ class TaskScheduler(
         name: String,
         action: String,
         chatId: String,
-        delaySeconds: Long,
-        repeatIntervalSeconds: Long? = null,
+        delay: Duration,
+        repeatInterval: Duration? = null,
     ): ScheduledTask {
         val id = "task-${idCounter.incrementAndGet()}"
-        val now = System.currentTimeMillis()
+        val now = Clock.System.now()
 
         val task = ScheduledTask(
             id = id,
@@ -243,8 +259,8 @@ class TaskScheduler(
             action = action,
             chatId = chatId,
             createdAt = now,
-            nextRunTime = now + (delaySeconds * 1000),
-            repeatIntervalSeconds = repeatIntervalSeconds,
+            nextRunTime = now + delay,
+            repeatInterval = repeatInterval,
             status = TaskStatus.PENDING,
             runCount = 0,
         )
@@ -253,7 +269,7 @@ class TaskScheduler(
 
         // Schedule the job
         val job = scope.launch {
-            delay(delaySeconds * 1000)
+            delay(delay)
 
             while (isActive) {
                 val currentTask = tasks[id] ?: break
@@ -272,13 +288,13 @@ class TaskScheduler(
                 }
 
                 // Check if recurring
-                if (repeatIntervalSeconds != null && repeatIntervalSeconds > 0) {
+                if (repeatInterval != null && repeatInterval > Duration.ZERO) {
                     val updatedTask = tasks[id] ?: break
                     tasks[id] = updatedTask.copy(
                         status = TaskStatus.PENDING,
-                        nextRunTime = System.currentTimeMillis() + (repeatIntervalSeconds * 1000),
+                        nextRunTime = Clock.System.now() + repeatInterval,
                     )
-                    delay(repeatIntervalSeconds * 1000)
+                    delay(repeatInterval)
                 } else {
                     // One-time task, mark as completed
                     tasks[id] = tasks[id]?.copy(status = TaskStatus.COMPLETED) ?: break
@@ -288,7 +304,7 @@ class TaskScheduler(
         }
 
         jobs[id] = job
-        logger.info("Scheduled task: $name (id=$id, delay=${delaySeconds}s)")
+        logger.info("Scheduled task: $name (id=$id, delay=${delay})")
 
         return task
     }
@@ -345,9 +361,9 @@ data class ScheduledTask(
     val name: String,
     val action: String,
     val chatId: String,
-    val createdAt: Long,
-    val nextRunTime: Long,
-    val repeatIntervalSeconds: Long?,
+    val createdAt: Instant,
+    val nextRunTime: Instant,
+    val repeatInterval: Duration?,
     val status: TaskStatus,
     val runCount: Int,
 )

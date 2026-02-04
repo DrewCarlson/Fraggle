@@ -2,9 +2,9 @@ package org.drewcarlson.fraggle.memory
 
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Nested
-import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.time.Clock
 
 class MemoryTest {
 
@@ -55,7 +55,7 @@ class MemoryTest {
 
         @Test
         fun `Fact with all fields preserves them`() {
-            val timestamp = Instant.now()
+            val timestamp = Clock.System.now()
             val fact = Fact(
                 content = "Important fact",
                 timestamp = timestamp,
@@ -167,7 +167,7 @@ class MemoryTest {
 
         @Test
         fun `Memory preserves lastUpdated`() {
-            val timestamp = Instant.now()
+            val timestamp = Clock.System.now()
             val memory = Memory(
                 scope = MemoryScope.Global,
                 facts = emptyList(),

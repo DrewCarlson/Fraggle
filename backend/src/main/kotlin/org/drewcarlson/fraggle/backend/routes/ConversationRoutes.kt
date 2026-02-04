@@ -8,6 +8,7 @@ import org.drewcarlson.fraggle.models.ConversationDetail
 import org.drewcarlson.fraggle.models.ConversationSummary
 import org.drewcarlson.fraggle.models.ErrorResponse
 import org.drewcarlson.fraggle.models.MessageInfo
+import kotlin.time.Instant
 
 /**
  * Conversation management routes.
@@ -25,7 +26,9 @@ fun Route.conversationRoutes(services: FraggleServices) {
                     id = conv.id,
                     chatId = conv.chatId,
                     messageCount = conv.messages.size,
-                    lastMessageAt = conv.messages.lastOrNull()?.timestamp,
+                    lastMessageAt = conv.messages.lastOrNull()?.timestamp?.let {
+                        Instant.fromEpochMilliseconds(it)
+                    },
                 )
             }
             call.respond(response)
@@ -49,7 +52,7 @@ fun Route.conversationRoutes(services: FraggleServices) {
                     MessageInfo(
                         role = msg.role.name.lowercase(),
                         content = msg.content,
-                        timestamp = msg.timestamp,
+                        timestamp = Instant.fromEpochMilliseconds(msg.timestamp),
                     )
                 },
             )

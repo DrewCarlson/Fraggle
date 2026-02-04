@@ -1,6 +1,7 @@
 package org.drewcarlson.fraggle.models
 
 import kotlinx.serialization.Serializable
+import kotlin.time.Instant
 
 /**
  * Summary of a conversation for list views.
@@ -10,7 +11,7 @@ data class ConversationSummary(
     val id: String,
     val chatId: String,
     val messageCount: Int,
-    val lastMessageAt: Long?,
+    val lastMessageAt: Instant?,
 )
 
 /**
@@ -30,5 +31,5 @@ data class ConversationDetail(
 data class MessageInfo(
     val role: String,
     val content: String,
-    val timestamp: Long,
+    val timestamp: Instant,
 )

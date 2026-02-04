@@ -2,7 +2,7 @@ package org.drewcarlson.fraggle.chat
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.Serializable
-import java.time.Instant
+import kotlin.time.Instant
 
 /**
  * Describes the capabilities and characteristics of a chat platform.

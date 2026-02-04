@@ -6,8 +6,10 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.nio.file.Files
 import java.nio.file.Path
-import java.time.Instant
 import kotlin.io.path.*
+import kotlin.time.Clock
+import kotlin.time.Instant
+import kotlin.time.toKotlinInstant
 
 /**
  * Hierarchical memory storage interface.
@@ -101,7 +103,7 @@ data class Memory(
  */
 data class Fact(
     val content: String,
-    val timestamp: Instant = Instant.now(),
+    val timestamp: Instant = Clock.System.now(),
     val source: String? = null,
     val tags: List<String> = emptyList(),
 )
@@ -140,7 +142,7 @@ class FileMemoryStore(
         Memory(
             scope = scope,
             facts = facts,
-            lastUpdated = path.getLastModifiedTime().toInstant(),
+            lastUpdated = path.getLastModifiedTime().toInstant().toKotlinInstant(),
         )
     }
 
@@ -281,7 +283,7 @@ class InMemoryStore : MemoryStore {
             val existing = storage[scope.toString()] ?: Memory(scope, emptyList())
             storage[scope.toString()] = existing.copy(
                 facts = existing.facts + fact,
-                lastUpdated = Instant.now(),
+                lastUpdated = Clock.System.now(),
             )
         }
     }

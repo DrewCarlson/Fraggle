@@ -10,7 +10,6 @@ import kotlinx.coroutines.withContext
 import org.drewcarlson.fraggle.chat.*
 import org.slf4j.LoggerFactory
 import java.nio.file.Files
-import java.time.Instant
 import kotlin.io.path.writeBytes
 
 /**
@@ -208,14 +207,14 @@ IMPORTANT LIMITATIONS:
         }
 
         return IncomingMessage(
-            id = "$source-$timestamp",
+            id = "$source-${timestamp.toEpochMilliseconds()}",
             chatId = chatId,
             sender = Sender(
                 id = source,
                 name = sourceName,
             ),
             content = MessageContent.Text(message),
-            timestamp = Instant.ofEpochMilli(timestamp),
+            timestamp = timestamp,
         )
     }
 }

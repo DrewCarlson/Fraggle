@@ -12,6 +12,8 @@ import java.io.BufferedWriter
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 /**
  * Safely get string content from a JsonPrimitive, returning null if not a string.
@@ -602,7 +604,8 @@ class SignalCli(
 
         val sourceName = envelope["sourceName"]?.jsonPrimitive?.contentOrNull
             ?: sourceAddress?.get("name")?.jsonPrimitive?.contentOrNull
-        val timestamp = envelope["timestamp"]?.jsonPrimitive?.longOrNull ?: System.currentTimeMillis()
+        val timestamp = envelope["timestamp"]?.jsonPrimitive?.longOrNull
+            ?.let(Instant::fromEpochMilliseconds) ?: Clock.System.now()
 
         // Handle data message
         val dataMessage = envelope["dataMessage"]?.jsonObject
@@ -695,7 +698,7 @@ class SignalCliException(message: String, cause: Throwable? = null) : Exception(
 data class SignalMessage(
     val source: String,
     val sourceName: String?,
-    val timestamp: Long,
+    val timestamp: Instant,
     val message: String,
     val groupId: String?,
     val isGroupMessage: Boolean,

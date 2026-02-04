@@ -88,23 +88,16 @@ class FraggleServicesImpl(
             taskScheduler.cancel(id)
 
         private fun ScheduledTask.toInfo(): ScheduledTaskInfo {
-            val interval = repeatIntervalSeconds
+            val isActive = status == TaskStatus.PENDING || status == TaskStatus.RUNNING
             return ScheduledTaskInfo(
                 id = id,
                 name = name,
                 chatId = chatId,
                 action = action,
-                schedule = if (interval != null) "every ${formatDuration(interval)}" else "once",
-                nextRun = if (status == TaskStatus.PENDING || status == TaskStatus.RUNNING) nextRunTime else null,
-                enabled = status == TaskStatus.PENDING || status == TaskStatus.RUNNING,
+                schedule = if (repeatInterval != null) "every $repeatInterval" else "once",
+                nextRun = if (isActive) nextRunTime else null,
+                enabled = isActive,
             )
-        }
-
-        private fun formatDuration(seconds: Long): String = when {
-            seconds < 60 -> "${seconds}s"
-            seconds < 3600 -> "${seconds / 60}m"
-            seconds < 86400 -> "${seconds / 3600}h"
-            else -> "${seconds / 86400}d"
         }
     }
 }

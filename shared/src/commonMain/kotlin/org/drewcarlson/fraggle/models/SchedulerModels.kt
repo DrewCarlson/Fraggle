@@ -1,6 +1,7 @@
 package org.drewcarlson.fraggle.models
 
 import kotlinx.serialization.Serializable
+import kotlin.time.Instant
 
 /**
  * Information about a scheduled task.
@@ -12,6 +13,6 @@ data class ScheduledTaskInfo(
     val chatId: String,
     val action: String,
     val schedule: String,
-    val nextRun: Long?,
+    val nextRun: Instant?,
     val enabled: Boolean,
 )

@@ -5,12 +5,12 @@ import org.drewcarlson.fraggle.chat.MessageContent
 import org.drewcarlson.fraggle.chat.Sender
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Nested
-import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.Clock
 
 class MessageRouterTest {
 
@@ -33,7 +33,7 @@ class MessageRouterTest {
         chatId = chatId,
         sender = Sender(id = "+1111111111", name = "Test User"),
         content = MessageContent.Text(text),
-        timestamp = Instant.now(),
+        timestamp = Clock.System.now(),
     )
 
     private fun createImageMessage(chatId: String = "+1111111111"): IncomingMessage = IncomingMessage(
@@ -41,7 +41,7 @@ class MessageRouterTest {
         chatId = chatId,
         sender = Sender(id = "+1111111111", name = "Test User"),
         content = MessageContent.Image(data = byteArrayOf(), mimeType = "image/png"),
-        timestamp = Instant.now(),
+        timestamp = Clock.System.now(),
     )
 
     @Nested
