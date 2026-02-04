@@ -128,6 +128,7 @@ private fun SkillCard(
                         justifyContent(JustifyContent.Center)
                         width(44.px)
                         height(44.px)
+                        flexShrink(0)
                         backgroundColor(Color("#6366f11a"))
                         borderRadius(10.px)
                         fontSize(20.px)
@@ -167,6 +168,7 @@ private fun SkillCard(
                     display(DisplayStyle.Flex)
                     alignItems(AlignItems.Center)
                     gap(12.px)
+                    flexShrink(0)
                 }
             }) {
                 Span({
@@ -176,6 +178,7 @@ private fun SkillCard(
                         backgroundColor(Color("#27273a"))
                         padding(4.px, 8.px)
                         borderRadius(4.px)
+                        property("white-space", "nowrap")
                     }
                 }) {
                     Text("${skill.parameters.size} params")

@@ -30,7 +30,8 @@ object DashboardStyles : StyleSheet() {
 
     val appContainer by style {
         display(DisplayStyle.Flex)
-        minHeight(100.vh)
+        height(100.vh)
+        overflow("hidden")
         backgroundColor(colorBackground)
         color(colorText)
         fontFamily("Inter", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif")
@@ -46,10 +47,12 @@ object DashboardStyles : StyleSheet() {
         display(DisplayStyle.Flex)
         flexDirection(FlexDirection.Column)
         width(260.px)
-        minHeight(100.vh)
+        height(100.vh)
+        flexShrink(0)
         backgroundColor(colorSurface)
         property("border-right", "1px solid $colorBorder")
         property("transition", "width 0.2s ease")
+        overflow("hidden")
     }
 
     val sidebarCollapsed by style {
@@ -85,6 +88,7 @@ object DashboardStyles : StyleSheet() {
         padding(16.px, 12.px)
         gap(4.px)
         flex(1)
+        overflow("auto")
     }
 
     val navItem by style {
@@ -157,7 +161,8 @@ object DashboardStyles : StyleSheet() {
         display(DisplayStyle.Flex)
         flexDirection(FlexDirection.Column)
         flex(1)
-        minHeight(100.vh)
+        height(100.vh)
+        minWidth(0.px) // Prevent flex item from overflowing
         overflow("hidden")
     }
 
@@ -168,6 +173,7 @@ object DashboardStyles : StyleSheet() {
         padding(24.px, 32.px)
         property("border-bottom", "1px solid $colorBorder")
         backgroundColor(colorSurface)
+        flexShrink(0)
     }
 
     val pageTitle by style {
