@@ -43,10 +43,10 @@ class RunCommand : CliktCommand(name = "run") {
         logger.info("Starting Fraggle...")
 
         // Load configuration
-        val config = loadConfig()
+        val (config, resolvedConfigPath) = loadConfig()
 
         // Create and initialize orchestrator
-        val orchestrator = ServiceOrchestrator(config)
+        val orchestrator = ServiceOrchestrator(config, resolvedConfigPath)
         orchestrator.initialize()
 
         // Setup shutdown hook
@@ -69,7 +69,7 @@ class RunCommand : CliktCommand(name = "run") {
         }
     }
 
-    private fun loadConfig(): FraggleConfig {
+    private fun loadConfig(): Pair<FraggleConfig, java.nio.file.Path> {
         val path = if (configPath != null) {
             Path(configPath!!).toAbsolutePath()
         } else {
@@ -85,7 +85,7 @@ class RunCommand : CliktCommand(name = "run") {
             logger.info("Created default configuration at: $path")
         }
 
-        return config
+        return config to path
     }
 }
 
@@ -113,7 +113,7 @@ class ChatCommand : CliktCommand(name = "chat") {
         println()
 
         // Load configuration
-        val config = loadConfig()
+        val (config, resolvedConfigPath) = loadConfig()
 
         // Show loaded config
         println("Provider: ${config.fraggle.provider.type}")
@@ -122,7 +122,7 @@ class ChatCommand : CliktCommand(name = "chat") {
         println()
 
         // Create and initialize orchestrator
-        val orchestrator = ServiceOrchestrator(config)
+        val orchestrator = ServiceOrchestrator(config, resolvedConfigPath)
         orchestrator.initialize()
 
         println("Available skills: ${orchestrator.getSkills().all().map { it.name }}")
@@ -163,7 +163,7 @@ class ChatCommand : CliktCommand(name = "chat") {
         orchestrator.stop()
     }
 
-    private fun loadConfig(): FraggleConfig {
+    private fun loadConfig(): Pair<FraggleConfig, java.nio.file.Path> {
         val path = if (configPath != null) {
             Path(configPath!!).toAbsolutePath()
         } else {
@@ -182,7 +182,7 @@ class ChatCommand : CliktCommand(name = "chat") {
         }
 
         // Apply command-line overrides
-        return if (model != null) {
+        val finalConfig = if (model != null) {
             config.copy(
                 fraggle = config.fraggle.copy(
                     provider = config.fraggle.provider.copy(model = model!!)
@@ -191,6 +191,8 @@ class ChatCommand : CliktCommand(name = "chat") {
         } else {
             config
         }
+
+        return finalConfig to path
     }
 }
 

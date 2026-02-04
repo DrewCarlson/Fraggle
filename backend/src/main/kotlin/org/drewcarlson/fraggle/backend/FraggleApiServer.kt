@@ -116,6 +116,7 @@ fun createApiServer(
                 skillRoutes(services)
                 memoryRoutes(services)
                 schedulerRoutes(services)
+                settingsRoutes(services)
             }
 
             // WebSocket endpoint for real-time updates

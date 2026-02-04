@@ -19,6 +19,7 @@ kotlin {
 }
 
 dependencies {
+    implementation(project(":shared"))
     implementation(project(":fraggle"))
     implementation(project(":fraggle-signal"))
     implementation(project(":fraggle-skills"))

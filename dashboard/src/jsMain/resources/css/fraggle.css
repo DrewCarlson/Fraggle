@@ -1,3 +1,37 @@
 @import "./preflight.css";
 @import "@fontsource/inter/index.css";
+@import "@fontsource/jetbrains-mono/index.css";
 @import "bootstrap-icons/font/bootstrap-icons.min.css";
+@import "highlight.js/styles/github-dark.min.css";
+
+/* Code highlighting overrides for dark theme */
+.hljs {
+    background: #0d1117 !important;
+    color: #e6edf3 !important;
+}
+
+pre code.hljs {
+    padding: 24px !important;
+    border-radius: 8px;
+}
+
+/* Custom YAML syntax colors matching dashboard theme */
+.hljs-attr {
+    color: #f472b6 !important;
+}
+
+.hljs-string {
+    color: #a5d6ff !important;
+}
+
+.hljs-number {
+    color: #a78bfa !important;
+}
+
+.hljs-literal {
+    color: #fbbf24 !important;
+}
+
+.hljs-comment {
+    color: #6b7280 !important;
+}

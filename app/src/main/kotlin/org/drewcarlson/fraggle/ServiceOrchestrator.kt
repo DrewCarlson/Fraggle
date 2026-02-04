@@ -40,6 +40,7 @@ import kotlin.time.Instant
  */
 class ServiceOrchestrator(
     private val config: FraggleConfig,
+    private val configPath: Path,
 ) {
     private val logger = LoggerFactory.getLogger(ServiceOrchestrator::class.java)
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
@@ -386,6 +387,8 @@ class ServiceOrchestrator(
             bridges = bridgeManager,
             taskScheduler = taskScheduler,
             conversationMap = conversations,
+            fraggleConfig = config,
+            configPath = configPath,
             startTime = startTime,
         )
 

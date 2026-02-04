@@ -2,8 +2,7 @@ package org.drewcarlson.fraggle
 
 import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.YamlConfiguration
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
+import org.drewcarlson.fraggle.models.*
 import org.drewcarlson.fraggle.signal.RegisteredChat
 import java.nio.file.Path
 import kotlin.io.path.Path
@@ -11,6 +10,26 @@ import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
+
+// Re-export shared config models for convenience
+typealias FraggleConfig = org.drewcarlson.fraggle.models.FraggleConfig
+typealias FraggleSettings = org.drewcarlson.fraggle.models.FraggleSettings
+typealias ProviderConfig = org.drewcarlson.fraggle.models.ProviderConfig
+typealias ProviderType = org.drewcarlson.fraggle.models.ProviderType
+typealias BridgesConfig = org.drewcarlson.fraggle.models.BridgesConfig
+typealias SignalBridgeConfig = org.drewcarlson.fraggle.models.SignalBridgeConfig
+typealias MemorySettings = org.drewcarlson.fraggle.models.MemoryConfig
+typealias SandboxSettings = org.drewcarlson.fraggle.models.SandboxConfig
+typealias SandboxType = org.drewcarlson.fraggle.models.SandboxType
+typealias AgentSettings = org.drewcarlson.fraggle.models.AgentConfig
+typealias PromptsSettings = org.drewcarlson.fraggle.models.PromptsConfig
+typealias ChatsSettings = org.drewcarlson.fraggle.models.ChatsConfig
+typealias RegisteredChatConfig = org.drewcarlson.fraggle.models.RegisteredChatConfig
+typealias WebSettings = org.drewcarlson.fraggle.models.WebConfig
+typealias PlaywrightSettings = org.drewcarlson.fraggle.models.PlaywrightConfig
+typealias ApiSettings = org.drewcarlson.fraggle.models.ApiConfig
+typealias CorsSettings = org.drewcarlson.fraggle.models.CorsConfig
+typealias DashboardSettings = org.drewcarlson.fraggle.models.DashboardConfig
 
 /**
  * Environment configuration for Fraggle runtime directories.
@@ -60,296 +79,14 @@ object FraggleEnvironment {
 }
 
 /**
- * Root configuration for Fraggle.
+ * Extension to convert RegisteredChatConfig to the signal module's RegisteredChat.
  */
-@Serializable
-data class FraggleConfig(
-    val fraggle: FraggleSettings = FraggleSettings(),
+fun RegisteredChatConfig.toRegisteredChat(): RegisteredChat = RegisteredChat(
+    id = id,
+    name = name,
+    triggerOverride = triggerOverride,
+    enabled = enabled,
 )
-
-@Serializable
-data class FraggleSettings(
-    val provider: ProviderConfig = ProviderConfig(),
-    val bridges: BridgesConfig = BridgesConfig(),
-    val prompts: PromptsSettings = PromptsSettings(),
-    val memory: MemorySettings = MemorySettings(),
-    val sandbox: SandboxSettings = SandboxSettings(),
-    val agent: AgentSettings = AgentSettings(),
-    val chats: ChatsSettings = ChatsSettings(),
-    val web: WebSettings = WebSettings(),
-    val api: ApiSettings = ApiSettings(),
-    val dashboard: DashboardSettings = DashboardSettings(),
-)
-
-@Serializable
-data class ProviderConfig(
-    val type: ProviderType = ProviderType.LMSTUDIO,
-    val url: String = "http://localhost:1234/v1",
-    val model: String = "",
-    @SerialName("api_key")
-    val apiKey: String? = null,
-)
-
-@Serializable
-enum class ProviderType {
-    @SerialName("lmstudio")
-    LMSTUDIO,
-    @SerialName("openai")
-    OPENAI,
-    @SerialName("anthropic")
-    ANTHROPIC,
-}
-
-/**
- * Configuration for all chat bridges.
- */
-@Serializable
-data class BridgesConfig(
-    /**
-     * Signal messenger bridge configuration.
-     */
-    val signal: SignalBridgeConfig? = null,
-
-    // Future bridges can be added here:
-    // val discord: DiscordBridgeConfig? = null,
-    // val telegram: TelegramBridgeConfig? = null,
-    // val whatsapp: WhatsAppBridgeConfig? = null,
-)
-
-/**
- * Signal bridge configuration.
- */
-@Serializable
-data class SignalBridgeConfig(
-
-    /**
-     * The phone number registered with Signal (including country code).
-     */
-    val phone: String = "",
-
-    /**
-     * Whether this bridge is enabled.
-     */
-    val enabled: Boolean = phone.isNotBlank(),
-
-    /**
-     * Directory where Signal configuration is stored.
-     */
-    @SerialName("config_dir")
-    val configDir: String = "~/.config/fraggle/signal",
-
-    /**
-     * The trigger prefix for group messages (e.g., "@fraggle").
-     * Set to null to respond to all messages.
-     */
-    val trigger: String? = "@fraggle",
-
-    /**
-     * Path to signal-cli executable. If null, uses PATH.
-     */
-    @SerialName("signal_cli_path")
-    val signalCliPath: String? = null,
-
-    /**
-     * Whether to respond to direct messages without a trigger.
-     */
-    @SerialName("respond_to_direct_messages")
-    val respondToDirectMessages: Boolean = true,
-
-    /**
-     * Whether to show typing indicator while processing.
-     */
-    @SerialName("show_typing_indicator")
-    val showTypingIndicator: Boolean = true,
-)
-
-
-@Serializable
-data class MemorySettings(
-    @SerialName("base_dir")
-    val baseDir: String = "./data/memory",
-)
-
-@Serializable
-data class SandboxSettings(
-    val type: SandboxType = SandboxType.PERMISSIVE,
-    @SerialName("work_dir")
-    val workDir: String = "./data/workspace",
-)
-
-@Serializable
-enum class SandboxType {
-    @SerialName("permissive")
-    PERMISSIVE,
-    @SerialName("docker")
-    DOCKER,
-    @SerialName("gvisor")
-    GVISOR,
-}
-
-@Serializable
-data class AgentSettings(
-    val temperature: Double = 0.7,
-    @SerialName("max_tokens")
-    val maxTokens: Int = 4096,
-    @SerialName("max_iterations")
-    val maxIterations: Int = 10,
-    @SerialName("max_history_messages")
-    val maxHistoryMessages: Int = 20,
-)
-
-@Serializable
-data class PromptsSettings(
-    /**
-     * Directory where prompt files (SYSTEM.md, IDENTITY.md, USER.md) are stored.
-     * If files don't exist, they are created from default templates.
-     */
-    @SerialName("prompts_dir")
-    val promptsDir: String = "./config/prompts",
-
-    /**
-     * Maximum characters to include from each prompt file.
-     * Files exceeding this limit are truncated.
-     */
-    @SerialName("max_file_chars")
-    val maxFileChars: Int = 20_000,
-
-    /**
-     * Whether to auto-create missing prompt files from templates.
-     */
-    @SerialName("auto_create_missing")
-    val autoCreateMissing: Boolean = true,
-)
-
-@Serializable
-data class ChatsSettings(
-    val registered: List<RegisteredChatConfig> = emptyList(),
-)
-
-@Serializable
-data class WebSettings(
-    val playwright: PlaywrightSettings? = null,
-)
-
-/**
- * REST API server configuration.
- */
-@Serializable
-data class ApiSettings(
-    /**
-     * Whether the API server is enabled.
-     */
-    val enabled: Boolean = false,
-
-    /**
-     * Host to bind the API server to.
-     */
-    val host: String = "0.0.0.0",
-
-    /**
-     * Port for the API server.
-     */
-    val port: Int = 8080,
-
-    /**
-     * CORS configuration.
-     */
-    val cors: CorsSettings = CorsSettings(),
-)
-
-/**
- * CORS settings for the API.
- */
-@Serializable
-data class CorsSettings(
-    /**
-     * Whether CORS is enabled.
-     */
-    val enabled: Boolean = true,
-
-    /**
-     * Allowed origins for CORS requests.
-     * If empty and enabled, allows the dashboard origin.
-     */
-    @SerialName("allowed_origins")
-    val allowedOrigins: List<String> = emptyList(),
-)
-
-/**
- * Dashboard web UI configuration.
- */
-@Serializable
-data class DashboardSettings(
-    /**
-     * Whether the dashboard is enabled.
-     * Requires API to be enabled.
-     */
-    val enabled: Boolean = false,
-
-    /**
-     * Path to the built dashboard static files.
-     * If null, serves from classpath resources (embedded).
-     */
-    @SerialName("static_path")
-    val staticPath: String? = null,
-)
-
-@Serializable
-data class PlaywrightSettings(
-    /**
-     * WebSocket URL for connecting to a Playwright browser server.
-     * Example: ws://localhost:3000
-     */
-    @SerialName("ws_endpoint")
-    val wsEndpoint: String,
-
-    /**
-     * Timeout in milliseconds for page navigation. Defaults to 30000 (30 seconds).
-     */
-    @SerialName("navigation_timeout")
-    val navigationTimeout: Long = 30_000,
-
-    /**
-     * Additional time to wait after page load for JavaScript to execute.
-     * Defaults to 2000 (2 seconds).
-     */
-    @SerialName("wait_after_load")
-    val waitAfterLoad: Long = 2_000,
-
-    /**
-     * Default viewport width. Defaults to 1280.
-     */
-    @SerialName("viewport_width")
-    val viewportWidth: Int = 1280,
-
-    /**
-     * Default viewport height. Defaults to 720.
-     */
-    @SerialName("viewport_height")
-    val viewportHeight: Int = 720,
-
-    /**
-     * User agent string to use. If not specified, uses browser default.
-     */
-    @SerialName("user_agent")
-    val userAgent: String? = null,
-)
-
-@Serializable
-data class RegisteredChatConfig(
-    val id: String,
-    val name: String? = null,
-    @SerialName("trigger_override")
-    val triggerOverride: String? = null,
-    val enabled: Boolean = true,
-) {
-    fun toRegisteredChat(): RegisteredChat = RegisteredChat(
-        id = id,
-        name = name,
-        triggerOverride = triggerOverride,
-        enabled = enabled,
-    )
-}
 
 /**
  * Configuration loader.

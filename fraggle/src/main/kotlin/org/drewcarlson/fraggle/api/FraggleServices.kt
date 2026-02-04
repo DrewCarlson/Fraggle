@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import org.drewcarlson.fraggle.agent.Conversation
 import org.drewcarlson.fraggle.chat.ChatBridgeManager
 import org.drewcarlson.fraggle.memory.MemoryStore
+import org.drewcarlson.fraggle.models.ConfigResponse
 import org.drewcarlson.fraggle.models.FraggleEvent
 import org.drewcarlson.fraggle.models.ScheduledTaskInfo
 import org.drewcarlson.fraggle.models.SystemStatus
@@ -39,6 +40,11 @@ interface FraggleServices {
      * Access to the task scheduler.
      */
     val scheduler: SchedulerService
+
+    /**
+     * Access to configuration.
+     */
+    val config: ConfigService
 
     /**
      * Real-time event stream for WebSocket clients.
@@ -94,4 +100,14 @@ interface SchedulerService {
      * Cancel a scheduled task.
      */
     fun cancelTask(id: String): Boolean
+}
+
+/**
+ * Service for accessing configuration.
+ */
+interface ConfigService {
+    /**
+     * Get the current configuration.
+     */
+    fun getConfig(): ConfigResponse
 }

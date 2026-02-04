@@ -42,7 +42,9 @@ kotlin {
 
             // NPM dependencies
             implementation(npm("@fontsource/inter", "5.2.8"))
+            implementation(npm("@fontsource/jetbrains-mono", "5.2.8"))
             implementation(npm("bootstrap-icons", "1.13.1"))
+            implementation(npm("highlight.js", "11.11.1"))
         }
     }
 }

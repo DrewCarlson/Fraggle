@@ -4,20 +4,20 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import org.drewcarlson.fraggle.agent.Conversation
+import org.drewcarlson.fraggle.api.ConfigService
 import org.drewcarlson.fraggle.api.ConversationService
 import org.drewcarlson.fraggle.api.FraggleServices
 import org.drewcarlson.fraggle.api.SchedulerService
 import org.drewcarlson.fraggle.chat.ChatBridgeManager
 import org.drewcarlson.fraggle.memory.MemoryStore
-import org.drewcarlson.fraggle.models.FraggleEvent
-import org.drewcarlson.fraggle.models.MemoryUsage
-import org.drewcarlson.fraggle.models.ScheduledTaskInfo
-import org.drewcarlson.fraggle.models.SystemStatus
+import org.drewcarlson.fraggle.models.*
 import org.drewcarlson.fraggle.skill.SkillRegistry
 import org.drewcarlson.fraggle.skills.scheduling.ScheduledTask
 import org.drewcarlson.fraggle.skills.scheduling.TaskScheduler
 import org.drewcarlson.fraggle.skills.scheduling.TaskStatus
+import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.io.path.readText
 import kotlin.time.Clock
 import kotlin.time.Instant
 
@@ -30,6 +30,8 @@ class FraggleServicesImpl(
     override val bridges: ChatBridgeManager,
     private val taskScheduler: TaskScheduler,
     private val conversationMap: ConcurrentHashMap<String, Conversation>,
+    private val fraggleConfig: FraggleConfig,
+    private val configPath: Path,
     private val startTime: Instant = Clock.System.now(),
 ) : FraggleServices {
 
@@ -39,6 +41,8 @@ class FraggleServicesImpl(
     override val conversations: ConversationService = ConversationServiceImpl()
 
     override val scheduler: SchedulerService = SchedulerServiceImpl()
+
+    override val config: ConfigService = ConfigServiceImpl()
 
     override suspend fun getStatus(): SystemStatus {
         val runtime = Runtime.getRuntime()
@@ -97,6 +101,21 @@ class FraggleServicesImpl(
                 schedule = if (repeatInterval != null) "every $repeatInterval" else "once",
                 nextRun = if (isActive) nextRunTime else null,
                 enabled = isActive,
+            )
+        }
+    }
+
+    private inner class ConfigServiceImpl : ConfigService {
+        override fun getConfig(): ConfigResponse {
+            val yaml = configPath.readText()
+            // Mask the API key for security
+            val settings = fraggleConfig.fraggle.copy(
+                provider = fraggleConfig.fraggle.provider.copy(apiKey = null)
+            )
+
+            return ConfigResponse(
+                yaml = yaml,
+                config = settings,
             )
         }
     }
