@@ -526,6 +526,111 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#core-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core Components
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Core Components">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#fraggleagent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FraggleAgent
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#llm-providers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LLM Providers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#skill-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Skill System
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#memory-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Memory System
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sandbox" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sandbox
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Flow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#platform-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Platform Support
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -808,6 +913,111 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#core-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core Components
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Core Components">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#fraggleagent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FraggleAgent
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#llm-providers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LLM Providers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#skill-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Skill System
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#memory-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Memory System
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sandbox" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sandbox
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Flow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#platform-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Platform Support
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -834,19 +1044,108 @@
 
 
 <h1 id="architecture-overview">Architecture Overview<a class="headerlink" href="#architecture-overview" title="Permanent link">&para;</a></h1>
-<div class="admonition note">
-<p class="admonition-title">Work in Progress</p>
-<p>This documentation is being written.</p>
-</div>
+<p>Fraggle is built as a modular Kotlin application with clear separation of concerns.</p>
 <h2 id="module-structure">Module Structure<a class="headerlink" href="#module-structure" title="Permanent link">&para;</a></h2>
-<p>Fraggle is organized into several Gradle modules:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Fraggle/
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── app/                    # CLI application and entry point
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├── fraggle/                # Core framework
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│   ├── agent/              # ReAct agent implementation
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>│   ├── provider/           # LLM provider abstractions
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>│   ├── skill/              # Skill system and DSL
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>│   └── sandbox/            # Execution sandbox
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>├── fraggle-signal/         # Signal messenger bridge
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>├── fraggle-skills/         # Built-in skill implementations
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>├── shared/                 # Shared models (Kotlin Multiplatform)
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>├── backend/                # REST API server
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>├── dashboard/              # Web dashboard (Compose for Web)
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>└── documented-*            # Annotation processor for config docs
+</code></pre></div>
+<h2 id="core-components">Core Components<a class="headerlink" href="#core-components" title="Permanent link">&para;</a></h2>
+<h3 id="fraggleagent">FraggleAgent<a class="headerlink" href="#fraggleagent" title="Permanent link">&para;</a></h3>
+<p>The central component that orchestrates message processing. It implements a ReAct (Reasoning + Acting) loop:</p>
+<ol>
+<li>Receives a message</li>
+<li>Sends message + history + tools to LLM</li>
+<li>If LLM requests a tool call, executes it and loops back to step 2</li>
+<li>If LLM produces a final response, returns it</li>
+</ol>
+<p>See <a href="../agent/">Agent System</a> for details.</p>
+<h3 id="llm-providers">LLM Providers<a class="headerlink" href="#llm-providers" title="Permanent link">&para;</a></h3>
+<p>Abstraction layer for different LLM backends:</p>
 <ul>
-<li><strong>fraggle</strong> - Core framework and abstractions</li>
-<li><strong>fraggle-signal</strong> - Signal messenger integration</li>
-<li><strong>fraggle-skills</strong> - Built-in skill implementations</li>
-<li><strong>app</strong> - CLI application</li>
-<li><strong>backend</strong> - Optional REST API server</li>
+<li><strong>LM Studio</strong> - Local inference via OpenAI-compatible API</li>
+<li><strong>OpenAI</strong> - GPT models via OpenAI API</li>
+<li><strong>Anthropic</strong> - Claude models via Anthropic API</li>
 </ul>
+<p>All providers implement the same interface, making it easy to switch between them.</p>
+<h3 id="skill-system">Skill System<a class="headerlink" href="#skill-system" title="Permanent link">&para;</a></h3>
+<p>Skills are the tools available to the agent. They're defined using a Kotlin DSL:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">skill</span><span class="p">(</span><span class="s">&quot;my_skill&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;Does something useful&quot;</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="n">parameter</span><span class="o">&lt;</span><span class="kt">String</span><span class="o">&gt;</span><span class="p">(</span><span class="s">&quot;input&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">        </span><span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;The input value&quot;</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">        </span><span class="n">required</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="n">execute</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">params</span><span class="w"> </span><span class="o">-&gt;</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">        </span><span class="kd">val</span><span class="w"> </span><span class="nv">input</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">params</span><span class="p">.</span><span class="na">get</span><span class="o">&lt;</span><span class="kt">String</span><span class="o">&gt;</span><span class="p">(</span><span class="s">&quot;input&quot;</span><span class="p">)</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">        </span><span class="n">SkillResult</span><span class="p">.</span><span class="na">Success</span><span class="p">(</span><span class="s">&quot;Result: </span><span class="si">$</span><span class="n">input</span><span class="s">&quot;</span><span class="p">)</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="p">}</span>
+</code></pre></div>
+<p>See <a href="../skills/">Skills</a> for the full skill reference.</p>
+<h3 id="memory-system">Memory System<a class="headerlink" href="#memory-system" title="Permanent link">&para;</a></h3>
+<p>Hierarchical memory storage with three scopes:</p>
+<ul>
+<li><strong>Global</strong> - Shared across all conversations</li>
+<li><strong>Chat</strong> - Per-conversation memory</li>
+<li><strong>User</strong> - Per-user memory across chats</li>
+</ul>
+<p>Memory is persisted as human-readable markdown files.</p>
+<p>See <a href="../memory/">Memory</a> for details.</p>
+<h3 id="sandbox">Sandbox<a class="headerlink" href="#sandbox" title="Permanent link">&para;</a></h3>
+<p>Execution environment for potentially dangerous operations:</p>
+<ul>
+<li>File system access</li>
+<li>Shell command execution</li>
+<li>Network requests</li>
+</ul>
+<p>The sandbox can be configured for different security levels.</p>
+<h2 id="data-flow">Data Flow<a class="headerlink" href="#data-flow" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>│    Chat     │────&gt;│   Agent     │────&gt;│   Skills    │
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>│   Bridge    │&lt;────│   (ReAct)   │&lt;────│             │
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>└─────────────┘     └─────────────┘     └─────────────┘
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>                          │
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>                          v
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>                    ┌─────────────┐
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>                    │   Memory    │
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>                    └─────────────┘
+</code></pre></div>
+<ol>
+<li><strong>Chat Bridge</strong> receives messages and passes them to the agent</li>
+<li><strong>Agent</strong> processes messages using the ReAct loop, calling skills as needed</li>
+<li><strong>Skills</strong> execute operations and return results</li>
+<li><strong>Memory</strong> stores and retrieves conversation context</li>
+<li><strong>Agent</strong> generates final response</li>
+<li><strong>Chat Bridge</strong> sends the response back to the user</li>
+</ol>
+<h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
+<p>Configuration is managed through a YAML file with type-safe Kotlin models:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nd">@Serializable</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kd">data</span><span class="w"> </span><span class="kd">class</span><span class="w"> </span><span class="nc">FraggleConfig</span><span class="p">(</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="kd">val</span><span class="w"> </span><span class="nv">fraggle</span><span class="p">:</span><span class="w"> </span><span class="n">FraggleSettings</span><span class="p">,</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="p">)</span>
+</code></pre></div>
+<p>The <code>@Documented</code> annotation generates runtime documentation that powers the web dashboard's settings UI.</p>
+<h2 id="platform-support">Platform Support<a class="headerlink" href="#platform-support" title="Permanent link">&para;</a></h2>
+<p>Fraggle uses Kotlin Multiplatform for shared code:</p>
+<ul>
+<li><strong>JVM</strong> - Main application, chat bridges, skills</li>
+<li><strong>JS</strong> - Web dashboard (Compose for Web)</li>
+</ul>
+<p>Shared modules (like configuration models) compile to both targets.</p>
 
 
 

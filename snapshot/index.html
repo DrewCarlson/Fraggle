@@ -288,10 +288,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#features" class="md-nav__link">
+  <a href="#key-features" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Features
+        Key Features
       
     </span>
   </a>
@@ -303,6 +303,39 @@
     <span class="md-ellipsis">
       
         Quick Start
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#project-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Project Structure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How It Works
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#license" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        License
       
     </span>
   </a>
@@ -807,10 +840,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#features" class="md-nav__link">
+  <a href="#key-features" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Features
+        Key Features
       
     </span>
   </a>
@@ -822,6 +855,39 @@
     <span class="md-ellipsis">
       
         Quick Start
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#project-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Project Structure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How It Works
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#license" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        License
       
     </span>
   </a>
@@ -854,25 +920,63 @@
 
 
 <h1 id="fraggle">Fraggle<a class="headerlink" href="#fraggle" title="Permanent link">&para;</a></h1>
-<p>Fraggle is a Kotlin-based AI assistant framework that integrates with messaging platforms using local LLM providers.</p>
-<h2 id="features">Features<a class="headerlink" href="#features" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong>ReAct-style Agent Loop</strong> - Iterative reasoning with tool calling</li>
-<li><strong>Signal Integration</strong> - Chat via Signal messenger</li>
-<li><strong>Extensible Skill System</strong> - DSL-based skill definitions</li>
-<li><strong>Hierarchical Memory</strong> - Global, chat, and user-scoped memory</li>
-<li><strong>Local LLM Support</strong> - Works with LM Studio and compatible providers</li>
-</ul>
+<p>Fraggle is a Kotlin-based AI assistant framework that integrates with messaging platforms. It connects to local or cloud LLM providers and provides an extensible skill system for tasks like file operations, web fetching, and command execution.</p>
+<h2 id="key-features">Key Features<a class="headerlink" href="#key-features" title="Permanent link">&para;</a></h2>
+<div class="grid cards" markdown>
+
+- :material-chat-processing: **Chat Bridge Integration**
+  Connect to messaging platforms like Signal, with support for both direct and group conversations.
+
+- :material-robot: **ReAct Agent Loop**
+  Iterative reasoning and acting pattern for reliable tool use with any compatible LLM.
+
+- :material-puzzle: **Extensible Skills**
+  DSL-based skill definitions make it easy to add custom capabilities.
+
+- :material-memory: **Persistent Memory**
+  Hierarchical memory system with global, chat, and user scopes.
+
+- :material-shield-check: **Sandboxed Execution**
+  File and shell operations run in a configurable sandbox environment.
+
+- :material-server: **Multiple LLM Providers**
+  Works with LM Studio, OpenAI, and Anthropic APIs.
+
+</div>
+
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Clone and build</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/DrewCarlson/Fraggle.git
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nb">cd</span><span class="w"> </span>Fraggle
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>./gradlew<span class="w"> </span>build
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Download latest release</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>wget<span class="w"> </span>https://github.com/DrewCarlson/Fraggle/releases/latest/download/fraggle.zip
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>unzip<span class="w"> </span>fraggle.zip
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nb">cd</span><span class="w"> </span>fraggle
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="c1"># Run interactive chat mode</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>./gradlew<span class="w"> </span>:app:run<span class="w"> </span>--args<span class="o">=</span><span class="s2">&quot;chat&quot;</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="c1"># Run the configuration wizard</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>./bin/fraggle<span class="w"> </span>configure
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="c1"># Start chatting</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>./bin/fraggle<span class="w"> </span>chat
 </code></pre></div>
 <p>See the <a href="installation/getting-started/">Getting Started</a> guide for full setup instructions.</p>
+<h2 id="project-structure">Project Structure<a class="headerlink" href="#project-structure" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Fraggle/
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>├── app/                    # CLI application entry point
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>├── fraggle/                # Core agent, provider, and skill abstractions
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>├── fraggle-signal/         # Signal messaging integration
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>├── fraggle-skills/         # Built-in skill implementations
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>├── backend/                # REST API server and dashboard
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>├── shared/                 # Shared models (Kotlin Multiplatform)
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>└── config/                 # Example configuration files
+</code></pre></div>
+<h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Message Received</strong> - A message arrives via a chat bridge (or interactive mode)</li>
+<li><strong>Agent Processing</strong> - The ReAct loop evaluates the message and available tools</li>
+<li><strong>Skill Execution</strong> - The agent calls skills as needed (file ops, web fetch, etc.)</li>
+<li><strong>Response Sent</strong> - The final response is delivered back to the user</li>
+</ol>
+<p>The agent continues reasoning and acting until it produces a final response or reaches the iteration limit.</p>
+<h2 id="license">License<a class="headerlink" href="#license" title="Permanent link">&para;</a></h2>
+<p>Fraggle is published under the <a href="https://github.com/DrewCarlson/Fraggle/blob/main/LICENSE">MIT License</a>.</p>
 
 
 
