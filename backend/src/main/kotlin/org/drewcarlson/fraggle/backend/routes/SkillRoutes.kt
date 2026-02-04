@@ -3,8 +3,11 @@ package org.drewcarlson.fraggle.backend.routes
 import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import kotlinx.serialization.Serializable
 import org.drewcarlson.fraggle.api.FraggleServices
+import org.drewcarlson.fraggle.models.ErrorResponse
+import org.drewcarlson.fraggle.models.ParameterInfo
+import org.drewcarlson.fraggle.models.SkillDetail
+import org.drewcarlson.fraggle.models.SkillInfo
 import org.drewcarlson.fraggle.skill.ParameterType
 
 /**
@@ -61,28 +64,6 @@ fun Route.skillRoutes(services: FraggleServices) {
         }
     }
 }
-
-@Serializable
-data class SkillInfo(
-    val name: String,
-    val description: String,
-    val parameters: List<ParameterInfo>,
-)
-
-@Serializable
-data class SkillDetail(
-    val name: String,
-    val description: String,
-    val parameters: List<ParameterInfo>,
-)
-
-@Serializable
-data class ParameterInfo(
-    val name: String,
-    val type: String,
-    val description: String,
-    val required: Boolean,
-)
 
 private fun ParameterType.toTypeName(): String = when (this) {
     is ParameterType.StringType -> "string"

@@ -3,9 +3,11 @@ package org.drewcarlson.fraggle.backend.routes
 import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import kotlinx.serialization.Serializable
 import org.drewcarlson.fraggle.api.FraggleServices
 import org.drewcarlson.fraggle.memory.MemoryScope
+import org.drewcarlson.fraggle.models.ErrorResponse
+import org.drewcarlson.fraggle.models.FactInfo
+import org.drewcarlson.fraggle.models.MemoryResponse
 
 /**
  * Memory store routes.
@@ -109,16 +111,3 @@ fun Route.memoryRoutes(services: FraggleServices) {
         }
     }
 }
-
-@Serializable
-data class MemoryResponse(
-    val scope: String,
-    val facts: List<FactInfo>,
-)
-
-@Serializable
-data class FactInfo(
-    val content: String,
-    val source: String?,
-    val createdAt: Long,
-)

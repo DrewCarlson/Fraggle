@@ -10,13 +10,12 @@ import io.ktor.serialization.kotlinx.json.*
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.coroutines.delay
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import org.drewcarlson.fraggle.models.SystemStatus
 import org.jetbrains.compose.web.css.*
 import org.jetbrains.compose.web.dom.*
 import org.jetbrains.compose.web.renderComposableInBody
 import screens.*
-import kotlin.time.Duration
 
 /**
  * Shared HTTP client for API calls to the backend.
@@ -38,26 +37,6 @@ fun getApiBaseUrl(): String {
     val location = window.location
     return "${location.protocol}//${location.host}/api/v1"
 }
-
-// ============================================================================
-// API Response Models
-// ============================================================================
-
-@Serializable
-data class SystemStatus(
-    val uptime: Duration,
-    val activeConversations: Int,
-    val connectedBridges: Int,
-    val availableSkills: Int,
-    val scheduledTasks: Int,
-    val memoryUsage: MemoryUsage,
-)
-
-@Serializable
-data class MemoryUsage(
-    val heapUsed: Long,
-    val heapMax: Long,
-)
 
 /**
  * State holder for system status with loading and error states.

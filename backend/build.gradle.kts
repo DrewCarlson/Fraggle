@@ -12,6 +12,9 @@ kotlin {
 }
 
 dependencies {
+    // Shared models
+    api(project(":shared"))
+
     // Fraggle core module
     implementation(project(":fraggle"))
 

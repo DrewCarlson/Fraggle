@@ -4,6 +4,7 @@ import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.drewcarlson.fraggle.api.FraggleServices
+import org.drewcarlson.fraggle.models.ErrorResponse
 
 /**
  * Task scheduler routes.

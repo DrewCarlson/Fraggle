@@ -3,8 +3,10 @@ package org.drewcarlson.fraggle.backend.routes
 import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import kotlinx.serialization.Serializable
 import org.drewcarlson.fraggle.api.FraggleServices
+import org.drewcarlson.fraggle.models.BridgeDetail
+import org.drewcarlson.fraggle.models.BridgeInfo
+import org.drewcarlson.fraggle.models.ErrorResponse
 
 /**
  * Bridge management routes.
@@ -87,19 +89,3 @@ fun Route.bridgeRoutes(services: FraggleServices) {
         }
     }
 }
-
-@Serializable
-data class BridgeInfo(
-    val name: String,
-    val platform: String,
-    val connected: Boolean,
-)
-
-@Serializable
-data class BridgeDetail(
-    val name: String,
-    val platform: String,
-    val connected: Boolean,
-    val supportsAttachments: Boolean,
-    val supportsInlineImages: Boolean,
-)

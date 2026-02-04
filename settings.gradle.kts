@@ -16,6 +16,7 @@ pluginManagement {
     }
 }
 
+include(":shared")
 include(":fraggle")
 include(":fraggle-signal")
 include(":fraggle-skills")

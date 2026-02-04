@@ -15,6 +15,9 @@ kotlin {
 
     sourceSets {
         jsMain.dependencies {
+            // Shared models
+            implementation(project(":shared"))
+
             // Compose HTML
             implementation(libs.compose.html.core)
             implementation(libs.compose.runtime)

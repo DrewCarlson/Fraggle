@@ -3,8 +3,11 @@ package org.drewcarlson.fraggle.backend.routes
 import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import kotlinx.serialization.Serializable
 import org.drewcarlson.fraggle.api.FraggleServices
+import org.drewcarlson.fraggle.models.ConversationDetail
+import org.drewcarlson.fraggle.models.ConversationSummary
+import org.drewcarlson.fraggle.models.ErrorResponse
+import org.drewcarlson.fraggle.models.MessageInfo
 
 /**
  * Conversation management routes.
@@ -70,30 +73,3 @@ fun Route.conversationRoutes(services: FraggleServices) {
         }
     }
 }
-
-@Serializable
-data class ConversationSummary(
-    val id: String,
-    val chatId: String,
-    val messageCount: Int,
-    val lastMessageAt: Long?,
-)
-
-@Serializable
-data class ConversationDetail(
-    val id: String,
-    val chatId: String,
-    val messages: List<MessageInfo>,
-)
-
-@Serializable
-data class MessageInfo(
-    val role: String,
-    val content: String,
-    val timestamp: Long,
-)
-
-@Serializable
-data class ErrorResponse(
-    val error: String,
-)

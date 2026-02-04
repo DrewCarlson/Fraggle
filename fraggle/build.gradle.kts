@@ -12,6 +12,9 @@ kotlin {
 }
 
 dependencies {
+    // Shared models
+    api(project(":shared"))
+
     // Ktor Client for LLM API calls
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.cio)

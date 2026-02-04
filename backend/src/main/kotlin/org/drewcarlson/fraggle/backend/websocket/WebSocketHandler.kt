@@ -8,7 +8,7 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.drewcarlson.fraggle.api.FraggleServices
-import org.drewcarlson.fraggle.api.FraggleEvent
+import org.drewcarlson.fraggle.models.FraggleEvent
 import org.slf4j.LoggerFactory
 
 private val logger = LoggerFactory.getLogger("WebSocket")

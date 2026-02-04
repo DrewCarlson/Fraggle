@@ -5,7 +5,7 @@ import io.ktor.server.netty.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collectLatest
 import org.drewcarlson.fraggle.agent.*
-import org.drewcarlson.fraggle.api.FraggleEvent
+import org.drewcarlson.fraggle.models.FraggleEvent
 import org.drewcarlson.fraggle.backend.ApiServerConfig
 import org.drewcarlson.fraggle.backend.createApiServer
 import org.drewcarlson.fraggle.chat.ChatBridgeManager
