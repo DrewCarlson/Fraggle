@@ -2,36 +2,59 @@ package org.drewcarlson.fraggle.models
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import org.drewcarlson.fraggle.documented.Documented
 
 /**
  * Root configuration for Fraggle.
  * This is the shared model used across JVM and JS targets.
  */
 @Serializable
+@Documented(name = "Fraggle Configuration", description = "Root configuration for the Fraggle application")
 data class FraggleConfig(
+    @Documented(name = "Settings", description = "Main application settings")
     val fraggle: FraggleSettings = FraggleSettings(),
 )
 
 @Serializable
+@Documented(name = "Settings", description = "Main Fraggle settings containing all configuration sections")
 data class FraggleSettings(
+    @Documented(name = "Provider", description = "LLM provider configuration")
     val provider: ProviderConfig = ProviderConfig(),
+    @Documented(name = "Bridges", description = "Chat bridge configurations")
     val bridges: BridgesConfig = BridgesConfig(),
+    @Documented(name = "Prompts", description = "Prompt file configuration")
     val prompts: PromptsConfig = PromptsConfig(),
+    @Documented(name = "Memory", description = "Memory storage configuration")
     val memory: MemoryConfig = MemoryConfig(),
+    @Documented(name = "Sandbox", description = "Code execution sandbox configuration")
     val sandbox: SandboxConfig = SandboxConfig(),
+    @Documented(name = "Agent", description = "AI agent behavior configuration")
     val agent: AgentConfig = AgentConfig(),
+    @Documented(name = "Chats", description = "Registered chat configuration")
     val chats: ChatsConfig = ChatsConfig(),
+    @Documented(name = "Web", description = "Web browsing configuration")
     val web: WebConfig = WebConfig(),
+    @Documented(name = "API", description = "REST API server configuration")
     val api: ApiConfig = ApiConfig(),
+    @Documented(name = "Dashboard", description = "Web dashboard configuration")
     val dashboard: DashboardConfig = DashboardConfig(),
 )
 
 @Serializable
+@Documented(
+    name = "Provider",
+    description = "Configuration for the LLM provider",
+    extras = ["icon=bi-cpu"],
+)
 data class ProviderConfig(
+    @Documented(name = "Type", description = "The type of LLM provider (lmstudio, openai, anthropic)")
     val type: ProviderType = ProviderType.LMSTUDIO,
+    @Documented(name = "URL", description = "The API endpoint URL for the provider")
     val url: String = "http://localhost:1234/v1",
+    @Documented(name = "Model", description = "The model identifier to use (empty for provider default)")
     val model: String = "",
     @SerialName("api_key")
+    @Documented(name = "API Key", description = "API key for authentication with the provider", secret = true)
     val apiKey: String? = null,
 )
 
@@ -49,10 +72,13 @@ enum class ProviderType {
  * Configuration for all chat bridges.
  */
 @Serializable
+@Documented(
+    name = "Bridges",
+    description = "Configuration for chat platform bridges",
+    extras = ["icon=bi-plug"],
+)
 data class BridgesConfig(
-    /**
-     * Signal messenger bridge configuration.
-     */
+    @Documented(name = "Signal", description = "Signal messenger bridge configuration")
     val signal: SignalBridgeConfig? = null,
 )
 
@@ -60,59 +86,62 @@ data class BridgesConfig(
  * Signal bridge configuration.
  */
 @Serializable
+@Documented(
+    name = "Signal",
+    description = "Configuration for Signal messenger integration",
+    extras = ["icon=bi-chat-left-text"],
+)
 data class SignalBridgeConfig(
-    /**
-     * The phone number registered with Signal (including country code).
-     */
+    @Documented(name = "Phone", description = "Phone number registered with Signal (including country code)")
     val phone: String = "",
 
-    /**
-     * Whether this bridge is enabled.
-     */
+    @Documented(name = "Enabled", description = "Whether this bridge is enabled")
     val enabled: Boolean = phone.isNotBlank(),
 
-    /**
-     * Directory where Signal configuration is stored.
-     */
     @SerialName("config_dir")
+    @Documented(name = "Config Directory", description = "Directory where Signal configuration is stored")
     val configDir: String = "~/.config/fraggle/signal",
 
-    /**
-     * The trigger prefix for group messages (e.g., "@fraggle").
-     * Set to null to respond to all messages.
-     */
+    @Documented(name = "Trigger", description = "Trigger prefix for group messages (e.g., '@fraggle'). Set to null to respond to all messages")
     val trigger: String? = "@fraggle",
 
-    /**
-     * Path to signal-cli executable. If null, uses PATH.
-     */
     @SerialName("signal_cli_path")
+    @Documented(name = "Signal CLI Path", description = "Path to signal-cli executable. If null, uses system PATH")
     val signalCliPath: String? = null,
 
-    /**
-     * Whether to respond to direct messages without a trigger.
-     */
     @SerialName("respond_to_direct_messages")
+    @Documented(name = "Respond to DMs", description = "Whether to respond to direct messages without a trigger")
     val respondToDirectMessages: Boolean = true,
 
-    /**
-     * Whether to show typing indicator while processing.
-     */
     @SerialName("show_typing_indicator")
+    @Documented(name = "Typing Indicator", description = "Whether to show typing indicator while processing")
     val showTypingIndicator: Boolean = true,
 )
 
 
 @Serializable
+@Documented(
+    name = "Memory",
+    description = "Configuration for the memory storage system",
+    extras = ["icon=bi-journal-bookmark"],
+)
 data class MemoryConfig(
     @SerialName("base_dir")
+    @Documented(name = "Base Directory", description = "Directory where memory files are stored")
     val baseDir: String = "./data/memory",
 )
 
 @Serializable
+@Documented(
+    name = "Sandbox",
+    description = "Configuration for the code execution sandbox",
+    extras = ["icon=bi-shield-check"],
+)
 data class SandboxConfig(
+    @Documented(name = "Type", description = "Sandbox type (permissive, docker, gvisor)")
     val type: SandboxType = SandboxType.PERMISSIVE,
     @SerialName("work_dir")
+    @Documented(name = "Work Directory", description = "Working directory for sandbox operations")
     val workDir: String = "./data/workspace",
 )
 
@@ -127,92 +156,114 @@ enum class SandboxType {
 }
 
 @Serializable
+@Documented(
+    name = "Agent",
+    description = "Configuration for AI agent behavior",
+    extras = ["icon=bi-robot"],
+)
 data class AgentConfig(
+    @Documented(name = "Temperature", description = "Sampling temperature for LLM responses (0.0-2.0)")
     val temperature: Double = 0.7,
     @SerialName("max_tokens")
+    @Documented(name = "Max Tokens", description = "Maximum number of tokens in LLM responses")
     val maxTokens: Int = 4096,
     @SerialName("max_iterations")
+    @Documented(name = "Max Iterations", description = "Maximum number of tool-use iterations per request")
     val maxIterations: Int = 10,
     @SerialName("max_history_messages")
+    @Documented(name = "Max History", description = "Maximum number of messages to include in conversation history")
     val maxHistoryMessages: Int = 20,
 )
 
 @Serializable
+@Documented(
+    name = "Prompts",
+    description = "Configuration for prompt file management",
+    extras = ["icon=bi-file-text"],
+)
 data class PromptsConfig(
-    /**
-     * Directory where prompt files (SYSTEM.md, IDENTITY.md, USER.md) are stored.
-     */
     @SerialName("prompts_dir")
+    @Documented(name = "Prompts Directory", description = "Directory where prompt files (SYSTEM.md, IDENTITY.md, USER.md) are stored")
     val promptsDir: String = "./config/prompts",
 
-    /**
-     * Maximum characters to include from each prompt file.
-     */
     @SerialName("max_file_chars")
+    @Documented(name = "Max File Chars", description = "Maximum characters to include from each prompt file")
     val maxFileChars: Int = 20_000,
 
-    /**
-     * Whether to auto-create missing prompt files from templates.
-     */
     @SerialName("auto_create_missing")
+    @Documented(name = "Auto Create", description = "Whether to auto-create missing prompt files from templates")
     val autoCreateMissing: Boolean = true,
 )
 
 @Serializable
+@Documented(
+    name = "Chats",
+    description = "Configuration for registered chats",
+    extras = ["icon=bi-chat-dots"],
+)
 data class ChatsConfig(
+    @Documented(name = "Registered", description = "List of registered chat configurations")
     val registered: List<RegisteredChatConfig> = emptyList(),
 )
 
 @Serializable
+@Documented(
+    name = "Registered Chat",
+    description = "Configuration for a specific registered chat",
+    extras = ["icon=bi-person-badge"],
+)
 data class RegisteredChatConfig(
+    @Documented(name = "ID", description = "Unique identifier for the chat")
     val id: String,
+    @Documented(name = "Name", description = "Human-readable name for the chat")
     val name: String? = null,
     @SerialName("trigger_override")
+    @Documented(name = "Trigger Override", description = "Override the default trigger for this specific chat")
     val triggerOverride: String? = null,
+    @Documented(name = "Enabled", description = "Whether this chat is enabled")
     val enabled: Boolean = true,
 )
 
 @Serializable
+@Documented(
+    name = "Web",
+    description = "Configuration for web browsing capabilities",
+    extras = ["icon=bi-globe"],
+)
 data class WebConfig(
+    @Documented(name = "Playwright", description = "Playwright browser automation configuration")
     val playwright: PlaywrightConfig? = null,
 )
 
 @Serializable
+@Documented(
+    name = "Playwright",
+    description = "Configuration for Playwright browser automation",
+    extras = ["icon=bi-browser-chrome"],
+)
 data class PlaywrightConfig(
-    /**
-     * WebSocket URL for connecting to a Playwright browser server.
-     */
     @SerialName("ws_endpoint")
+    @Documented(name = "WebSocket Endpoint", description = "WebSocket URL for connecting to a Playwright browser server")
     val wsEndpoint: String,
 
-    /**
-     * Timeout in milliseconds for page navigation.
-     */
     @SerialName("navigation_timeout")
+    @Documented(name = "Navigation Timeout", description = "Timeout in milliseconds for page navigation")
     val navigationTimeout: Long = 30_000,
 
-    /**
-     * Additional time to wait after page load for JavaScript to execute.
-     */
     @SerialName("wait_after_load")
+    @Documented(name = "Wait After Load", description = "Time to wait after page load for JavaScript to execute (ms)")
     val waitAfterLoad: Long = 2_000,
 
-    /**
-     * Default viewport width.
-     */
     @SerialName("viewport_width")
+    @Documented(name = "Viewport Width", description = "Browser viewport width in pixels")
     val viewportWidth: Int = 1280,
 
-    /**
-     * Default viewport height.
-     */
     @SerialName("viewport_height")
+    @Documented(name = "Viewport Height", description = "Browser viewport height in pixels")
     val viewportHeight: Int = 720,
 
-    /**
-     * User agent string to use. If not specified, uses browser default.
-     */
     @SerialName("user_agent")
+    @Documented(name = "User Agent", description = "Custom user agent string (null for browser default)")
     val userAgent: String? = null,
 )
 
@@ -220,25 +271,22 @@ data class PlaywrightConfig(
  * REST API server configuration.
  */
 @Serializable
+@Documented(
+    name = "API Server",
+    description = "Configuration for the REST API server",
+    extras = ["icon=bi-hdd-network"],
+)
 data class ApiConfig(
-    /**
-     * Whether the API server is enabled.
-     */
+    @Documented(name = "Enabled", description = "Whether the API server is enabled")
     val enabled: Boolean = false,
 
-    /**
-     * Host to bind the API server to.
-     */
+    @Documented(name = "Host", description = "Host address to bind the API server to")
     val host: String = "0.0.0.0",
 
-    /**
-     * Port for the API server.
-     */
+    @Documented(name = "Port", description = "Port number for the API server")
     val port: Int = 8080,
 
-    /**
-     * CORS configuration.
-     */
+    @Documented(name = "CORS", description = "Cross-Origin Resource Sharing configuration")
     val cors: CorsConfig = CorsConfig(),
 )
 
@@ -246,16 +294,17 @@ data class ApiConfig(
  * CORS settings for the API.
  */
 @Serializable
+@Documented(
+    name = "CORS",
+    description = "Cross-Origin Resource Sharing settings",
+    extras = ["icon=bi-shield"],
+)
 data class CorsConfig(
-    /**
-     * Whether CORS is enabled.
-     */
+    @Documented(name = "Enabled", description = "Whether CORS is enabled")
     val enabled: Boolean = true,
 
-    /**
-     * Allowed origins for CORS requests.
-     */
     @SerialName("allowed_origins")
+    @Documented(name = "Allowed Origins", description = "List of allowed origins for CORS requests")
     val allowedOrigins: List<String> = emptyList(),
 )
 
@@ -263,15 +312,16 @@ data class CorsConfig(
  * Dashboard web UI configuration.
  */
 @Serializable
+@Documented(
+    name = "Dashboard",
+    description = "Configuration for the web dashboard UI",
+    extras = ["icon=bi-window"],
+)
 data class DashboardConfig(
-    /**
-     * Whether the dashboard is enabled.
-     */
+    @Documented(name = "Enabled", description = "Whether the dashboard is enabled (requires API to be enabled)")
     val enabled: Boolean = false,
 
-    /**
-     * Path to the built dashboard static files.
-     */
     @SerialName("static_path")
+    @Documented(name = "Static Path", description = "Path to built dashboard static files (null for embedded)")
     val staticPath: String? = null,
 )

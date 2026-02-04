@@ -16,6 +16,8 @@ pluginManagement {
     }
 }
 
+include(":documented-annotations")
+include(":documented-processor")
 include(":shared")
 include(":fraggle")
 include(":fraggle-signal")

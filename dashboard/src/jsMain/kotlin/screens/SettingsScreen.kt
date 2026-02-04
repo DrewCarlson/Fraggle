@@ -9,6 +9,9 @@ import getApiBaseUrl
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import kotlinx.browser.document
+import org.drewcarlson.fraggle.documented.DocumentedValueType
+import org.drewcarlson.fraggle.documented.NestedClassDocumentationInfo
+import org.drewcarlson.fraggle.documented.PropertyDocumentationInfo
 import org.drewcarlson.fraggle.models.*
 import org.jetbrains.compose.web.css.*
 import org.jetbrains.compose.web.dom.*
@@ -159,6 +162,9 @@ private fun YamlConfigView(yaml: String) {
 
 @Composable
 private fun UiConfigView(config: FraggleSettings) {
+    // Get documentation with current values
+    val doc = FraggleSettingsDoc.withValues(config)
+
     Div({
         style {
             display(DisplayStyle.Flex)
@@ -166,169 +172,22 @@ private fun UiConfigView(config: FraggleSettings) {
             gap(24.px)
         }
     }) {
-        // Provider section
-        ConfigSection("Provider", "bi-cpu") {
-            ConfigField("Type", config.provider.type.name.lowercase())
-            ConfigField("URL", config.provider.url)
-            ConfigField("Model", config.provider.model.ifBlank { "(default)" })
-            ConfigField("API Key", if (config.provider.apiKey != null) "Configured" else "Not set",
-                valueColor = if (config.provider.apiKey != null) "#22c55e" else "#71717a")
-        }
-
-        // Bridges section
-        ConfigSection("Bridges", "bi-plug") {
-            ConfigSubSection("Signal") {
-                val signal = config.bridges.signal ?: SignalBridgeConfig()
-                val isConfigured = config.bridges.signal != null
-
-                if (!isConfigured) {
-                    Div({
-                        style {
-                            color(Color("#71717a"))
-                            fontStyle("italic")
-                            marginBottom(12.px)
-                            fontSize(12.px)
-                        }
-                    }) {
-                        Text("Not configured (showing defaults)")
-                    }
-                }
-
-                ConfigField("Enabled", signal.enabled.toString(),
-                    valueColor = if (signal.enabled) "#22c55e" else "#71717a")
-                ConfigField("Phone", signal.phone.ifBlank { "(not set)" },
-                    valueColor = if (signal.phone.isBlank()) "#71717a" else null)
-                ConfigField("Config Directory", signal.configDir)
-                ConfigField("Trigger", signal.trigger ?: "(all messages)")
-                ConfigField("Signal CLI Path", signal.signalCliPath ?: "(system PATH)")
-                ConfigField("Respond to DMs", signal.respondToDirectMessages.toString())
-                ConfigField("Typing Indicator", signal.showTypingIndicator.toString())
-            }
-        }
-
-        // Agent section
-        ConfigSection("Agent", "bi-robot") {
-            ConfigField("Temperature", config.agent.temperature.toString())
-            ConfigField("Max Tokens", config.agent.maxTokens.toString())
-            ConfigField("Max Iterations", config.agent.maxIterations.toString())
-            ConfigField("Max History Messages", config.agent.maxHistoryMessages.toString())
-        }
-
-        // Sandbox section
-        ConfigSection("Sandbox", "bi-shield-check") {
-            ConfigField("Type", config.sandbox.type.name.lowercase())
-            ConfigField("Work Directory", config.sandbox.workDir)
-        }
-
-        // Memory section
-        ConfigSection("Memory", "bi-journal-bookmark") {
-            ConfigField("Base Directory", config.memory.baseDir)
-        }
-
-        // Prompts section
-        ConfigSection("Prompts", "bi-file-text") {
-            ConfigField("Prompts Directory", config.prompts.promptsDir)
-            ConfigField("Max File Characters", config.prompts.maxFileChars.toString())
-            ConfigField("Auto Create Missing", config.prompts.autoCreateMissing.toString())
-        }
-
-        // Chats section
-        ConfigSection("Registered Chats", "bi-chat-dots") {
-            if (config.chats.registered.isEmpty()) {
-                Div({
-                    style {
-                        color(Color("#71717a"))
-                        fontStyle("italic")
-                    }
-                }) {
-                    Text("No registered chats")
-                }
-            } else {
-                config.chats.registered.forEachIndexed { index, chat ->
-                    if (index > 0) {
-                        Div({
-                            style {
-                                height(1.px)
-                                backgroundColor(Color("#27273a"))
-                                margin(12.px, 0.px)
-                            }
-                        })
-                    }
-                    ConfigField("ID", chat.id)
-                    ConfigField("Name", chat.name ?: "(unnamed)")
-                    ConfigField("Trigger Override", chat.triggerOverride ?: "(default)")
-                    ConfigField("Enabled", chat.enabled.toString(),
-                        valueColor = if (chat.enabled) "#22c55e" else "#71717a")
-                }
-            }
-        }
-
-        // Web section
-        ConfigSection("Web", "bi-globe") {
-            ConfigSubSection("Playwright") {
-                val pw = config.web.playwright
-                val isConfigured = pw != null
-
-                if (!isConfigured) {
-                    Div({
-                        style {
-                            color(Color("#71717a"))
-                            fontStyle("italic")
-                            marginBottom(12.px)
-                            fontSize(12.px)
-                        }
-                    }) {
-                        Text("Not configured")
-                    }
-                    // Show default values
-                    ConfigField("WebSocket Endpoint", "(not set)", valueColor = "#71717a")
-                    ConfigField("Navigation Timeout", "30000ms")
-                    ConfigField("Wait After Load", "2000ms")
-                    ConfigField("Viewport", "1280x720")
-                    ConfigField("User Agent", "(browser default)")
-                } else {
-                    ConfigField("WebSocket Endpoint", pw.wsEndpoint)
-                    ConfigField("Navigation Timeout", "${pw.navigationTimeout}ms")
-                    ConfigField("Wait After Load", "${pw.waitAfterLoad}ms")
-                    ConfigField("Viewport", "${pw.viewportWidth}x${pw.viewportHeight}")
-                    ConfigField("User Agent", pw.userAgent ?: "(browser default)")
-                }
-            }
-        }
-
-        // API section
-        ConfigSection("API Server", "bi-hdd-network") {
-            ConfigField("Enabled", config.api.enabled.toString(),
-                valueColor = if (config.api.enabled) "#22c55e" else "#71717a")
-            ConfigField("Host", config.api.host)
-            ConfigField("Port", config.api.port.toString())
-            ConfigField("CORS Enabled", config.api.cors.enabled.toString())
-            if (config.api.cors.allowedOrigins.isNotEmpty()) {
-                ConfigField("Allowed Origins", config.api.cors.allowedOrigins.joinToString(", "))
-            } else {
-                ConfigField("Allowed Origins", "(default localhost)", valueColor = "#71717a")
-            }
-        }
-
-        // Dashboard section
-        ConfigSection("Dashboard", "bi-window") {
-            ConfigField("Enabled", config.dashboard.enabled.toString(),
-                valueColor = if (config.dashboard.enabled) "#22c55e" else "#71717a")
-            ConfigField("Static Path", config.dashboard.staticPath ?: "(embedded)")
+        // Render each nested class as a section
+        doc.nestedClasses.forEach { nestedClass ->
+            DocumentedSection(nestedClass)
         }
     }
 }
 
 @Composable
-private fun ConfigSection(
-    title: String,
-    icon: String,
-    content: @Composable () -> Unit,
-) {
+private fun DocumentedSection(nestedClass: NestedClassDocumentationInfo) {
+    val doc = nestedClass.documentation
+    val icon = doc.extras["icon"] ?: "bi-gear"
+
     Div({
         classes(DashboardStyles.card)
     }) {
-        // Header
+        // Header with title and description
         Div({
             style {
                 display(DisplayStyle.Flex)
@@ -352,15 +211,33 @@ private fun ConfigSection(
             }) {
                 I({ classes("bi", icon) })
             }
-            H3({
+            Div({
                 style {
-                    fontSize(16.px)
-                    fontWeight("600")
-                    color(Color("#e4e4e7"))
-                    property("margin", "0")
+                    display(DisplayStyle.Flex)
+                    flexDirection(FlexDirection.Column)
+                    gap(2.px)
                 }
             }) {
-                Text(title)
+                H3({
+                    style {
+                        fontSize(16.px)
+                        fontWeight("600")
+                        color(Color("#e4e4e7"))
+                        property("margin", "0")
+                    }
+                }) {
+                    Text(doc.name)
+                }
+                if (doc.description.isNotBlank()) {
+                    Span({
+                        style {
+                            fontSize(12.px)
+                            color(Color("#71717a"))
+                        }
+                    }) {
+                        Text(doc.description)
+                    }
+                }
             }
         }
 
@@ -370,19 +247,34 @@ private fun ConfigSection(
                 padding(20.px, 24.px)
                 display(DisplayStyle.Flex)
                 flexDirection(FlexDirection.Column)
-                gap(12.px)
             }
         }) {
-            content()
+            // Render non-nested properties first
+            val simpleProperties = doc.properties.filter { it.valueType != DocumentedValueType.NESTED_OBJECT }
+            simpleProperties.forEachIndexed { index, prop ->
+                if (index > 0) {
+                    FieldSeparator()
+                }
+                DocumentedField(prop)
+            }
+
+            // Render nested classes as subsections
+            doc.nestedClasses.forEachIndexed { index, nested ->
+                if (index > 0 || simpleProperties.isNotEmpty()) {
+                    Div({ style { height(16.px) } }) // Spacing before subsections
+                }
+                DocumentedSubSection(nested)
+            }
         }
     }
 }
 
 @Composable
-private fun ConfigSubSection(
-    title: String,
-    content: @Composable () -> Unit,
-) {
+private fun DocumentedSubSection(nestedClass: NestedClassDocumentationInfo) {
+    val doc = nestedClass.documentation
+    val hasValues = doc.properties.any { it.currentValue != null }
+    val subIcon = doc.extras["icon"] ?: "bi-chevron-right"
+
     Div({
         style {
             padding(16.px)
@@ -390,62 +282,204 @@ private fun ConfigSubSection(
             borderRadius(8.px)
         }
     }) {
-        H4({
+        // Header
+        Div({
             style {
-                fontSize(14.px)
-                fontWeight("600")
-                color(Color("#a1a1aa"))
-                marginTop(0.px)
+                display(DisplayStyle.Flex)
+                alignItems(AlignItems.Center)
+                gap(8.px)
                 marginBottom(12.px)
             }
         }) {
-            Text(title)
+            I({
+                classes("bi", subIcon)
+                style {
+                    fontSize(14.px)
+                    color(Color("#6366f1"))
+                }
+            })
+            H4({
+                style {
+                    fontSize(14.px)
+                    fontWeight("600")
+                    color(Color("#a1a1aa"))
+                    property("margin", "0")
+                }
+            }) {
+                Text(doc.name)
+            }
+            if (doc.description.isNotBlank()) {
+                InfoTooltip(doc.description)
+            }
         }
+
+        // Show "Not configured" message for nullable nested classes without values
+        if (nestedClass.isNullable && !hasValues) {
+            Div({
+                style {
+                    color(Color("#71717a"))
+                    fontStyle("italic")
+                    marginBottom(12.px)
+                    fontSize(12.px)
+                }
+            }) {
+                Text("Not configured (showing defaults)")
+            }
+        }
+
         Div({
             style {
                 display(DisplayStyle.Flex)
                 flexDirection(FlexDirection.Column)
-                gap(8.px)
             }
         }) {
-            content()
+            // Render simple properties
+            val simpleProperties = doc.properties.filter { it.valueType != DocumentedValueType.NESTED_OBJECT }
+            simpleProperties.forEachIndexed { index, prop ->
+                if (index > 0) {
+                    FieldSeparator()
+                }
+                DocumentedField(prop)
+            }
+
+            // Recurse for deeply nested classes
+            doc.nestedClasses.forEachIndexed { index, nested ->
+                if (index > 0 || simpleProperties.isNotEmpty()) {
+                    Div({ style { height(12.px) } })
+                }
+                DocumentedSubSection(nested)
+            }
         }
     }
 }
 
 @Composable
-private fun ConfigField(
-    label: String,
-    value: String,
-    valueColor: String? = null,
-) {
+private fun FieldSeparator() {
+    Div({
+        style {
+            height(1.px)
+            backgroundColor(Color("#27273a"))
+            margin(12.px, 0.px)
+        }
+    })
+}
+
+@Composable
+private fun DocumentedField(prop: PropertyDocumentationInfo) {
+    val displayValue = remember { formatValue(prop) }
+    val valueColor = remember { getValueColor(prop) }
+
     Div({
         style {
             display(DisplayStyle.Flex)
             justifyContent(JustifyContent.SpaceBetween)
             alignItems(AlignItems.Center)
             gap(16.px)
+            padding(4.px, 0.px)
         }
     }) {
-        Span({
+        // Label with optional info tooltip
+        Div({
             style {
-                fontSize(13.px)
-                color(Color("#71717a"))
+                display(DisplayStyle.Flex)
+                alignItems(AlignItems.Center)
+                gap(6.px)
                 flexShrink(0)
             }
         }) {
-            Text(label)
+            Span({
+                style {
+                    fontSize(14.px)
+                    color(Color("#a1a1aa"))
+                }
+            }) {
+                Text(prop.name)
+            }
+            if (prop.description.isNotBlank()) {
+                InfoTooltip(prop.description)
+            }
         }
+
+        // Value
         Span({
             style {
                 fontSize(13.px)
-                color(Color(valueColor ?: "#e4e4e7"))
+                color(Color(valueColor))
                 fontFamily("JetBrains Mono")
                 textAlign("right")
                 property("word-break", "break-all")
             }
         }) {
-            Text(value)
+            Text(displayValue)
         }
     }
+}
+
+@Composable
+private fun InfoTooltip(text: String) {
+    Span({
+        style {
+            display(DisplayStyle.InlineBlock)
+            cursor("help")
+            position(Position.Relative)
+        }
+        title(text)
+    }) {
+        I({
+            classes("bi", "bi-info-circle")
+            style {
+                fontSize(12.px)
+                color(Color("#52525b"))
+                property("transition", "color 0.15s")
+            }
+        })
+    }
+}
+
+private fun formatValue(prop: PropertyDocumentationInfo): String {
+    val value = prop.currentValue
+
+    // Handle null values
+    if (value == null || value == "null") {
+        return if (prop.isNullable) "(not set)" else "(default)"
+    }
+
+    // Handle empty strings
+    if (value.isBlank()) {
+        return "(empty)"
+    }
+
+    // Mask secret fields
+    if (prop.isSecret) {
+        return "••••••••"
+    }
+
+    // Format based on type
+    return when (prop.valueType) {
+        DocumentedValueType.ENUM -> value.lowercase()
+        DocumentedValueType.LIST -> if (value == "[]") "(none)" else value
+        else -> value
+    }
+}
+
+private fun getValueColor(prop: PropertyDocumentationInfo): String {
+    val value = prop.currentValue
+
+    // Null or empty values get muted color
+    if (value == null || value == "null" || value.isBlank()) {
+        return "#71717a"
+    }
+
+    // Boolean coloring
+    if (prop.valueType == DocumentedValueType.BOOLEAN) {
+        return if (value == "true") "#22c55e" else "#71717a"
+    }
+
+    // Secret fields with a value show green to indicate it's configured
+    if (prop.isSecret) {
+        return "#22c55e"
+    }
+
+    // Default color
+    return "#e4e4e7"
 }
