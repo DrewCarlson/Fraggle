@@ -12,6 +12,7 @@ pluginManagement {
     repositories {
         gradlePluginPortal()
         mavenCentral()
+        google()
     }
 }
 
@@ -20,3 +21,4 @@ include(":fraggle-signal")
 include(":fraggle-skills")
 include(":backend")
 include(":app")
+include(":dashboard")

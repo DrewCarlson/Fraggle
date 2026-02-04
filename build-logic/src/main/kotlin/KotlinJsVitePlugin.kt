@@ -173,6 +173,7 @@ abstract class ViteServeTask @Inject constructor(
                 executable(nodeExecutable.get())
                 args(
                     viteScript.asFile.get().absolutePath,
+                    "--host",
                     "--config",
                     configFile.asFile.orNull?.absolutePath ?: "vite.config.js",
                 )

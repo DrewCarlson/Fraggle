@@ -2,15 +2,19 @@
 kotlin = "2.3.0"
 ktor = "3.4.0"
 logback = "1.5.13"
-kotlinx-coroutines = "1.9.0"
-kotlinx-serialization = "1.7.3"
-kaml = "0.61.0"
-clikt = "5.0.3"
+kotlinx-coroutines = "1.10.2"
+kotlinx-serialization = "1.10.0"
+kotlinx-datetime = "0.7.1"
+kaml = "0.104.0"
+clikt = "5.1.0"
 playwright = "1.49.0"
 mockk = "1.13.13"
 junit = "5.11.3"
 shadow = "9.3.1"
 kover = "0.9.1"
+compose = "1.11.0-alpha02"
+kotlinjs-wrappers = "2026.2.2"
+routing-compose = "0.5.0"
 
 [libraries]
 # Ktor Server
@@ -36,6 +40,7 @@ ktor-server-test-host = { module = "io.ktor:ktor-server-test-host", version.ref 
 # Ktor Client
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
+ktor-client-js = { module = "io.ktor:ktor-client-js", version.ref = "ktor" }
 ktor-client-apache = { module = "io.ktor:ktor-client-apache", version.ref = "ktor" }
 ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
 ktor-client-logging = { module = "io.ktor:ktor-client-logging", version.ref = "ktor" }
@@ -49,6 +54,18 @@ kotlinGradlePlugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", ver
 # Kotlinx
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
+
+# Kotlin JS Wrappers
+kotlinjs-browser = { module = "org.jetbrains.kotlin-wrappers:kotlin-browser", version.ref = "kotlinjs-wrappers" }
+kotlinjs-web = { module = "org.jetbrains.kotlin-wrappers:kotlin-web", version.ref = "kotlinjs-wrappers" }
+
+# Compose
+compose-html-core = { module = "org.jetbrains.compose.html:html-core", version.ref = "compose" }
+compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "compose" }
+
+# Compose Routing
+routing-compose = { module = "app.softwork:routing-compose", version.ref = "routing-compose" }
 
 # YAML Configuration
 kaml = { module = "com.charleskorn.kaml:kaml", version.ref = "kaml" }
@@ -75,6 +92,8 @@ junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", vers
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+compose = { id = "org.jetbrains.compose", version.ref = "compose" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 ktor = { id = "io.ktor.plugin", version.ref = "ktor" }
 shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
 kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }

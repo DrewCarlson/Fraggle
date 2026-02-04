@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <meta name="description" content="Fraggle Dashboard - Management Interface">
+    <meta name="theme-color" content="#1a1a2e">
+    <link rel="icon" href="/favicon.ico">
+    <title>Fraggle Dashboard</title>
+    <base href="/">
+    <link rel="stylesheet" href="/css/fraggle.css">
+    <style>
+        /* Critical CSS - prevents flash of unstyled content */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        html, body {
+            height: 100%;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #0f0f1a;
+            color: #e4e4e7;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+        }
+        /* Loading state */
+        #loading {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #0f0f1a;
+            z-index: 9999;
+        }
+        #loading.hidden {
+            display: none;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #27273a;
+            border-top-color: #6366f1;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">
+        <div class="spinner"></div>
+    </div>
+    <script type="module" src="/Fraggle-dashboard.mjs"></script>
+</body>
+</html>
