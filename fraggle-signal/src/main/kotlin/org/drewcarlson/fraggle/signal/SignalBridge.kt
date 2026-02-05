@@ -186,6 +186,23 @@ IMPORTANT LIMITATIONS:
         get() = signalCli.connectionState
 
     /**
+     * Check if the Signal account is properly initialized and authenticated.
+     * Uses the RPC connection if available.
+     * Returns null if the check cannot be performed (e.g., not connected).
+     */
+    suspend fun checkAccountInitialized(): Boolean? {
+        if (!isConnected()) {
+            return null
+        }
+        return try {
+            signalCli.getUserStatus()
+        } catch (e: Exception) {
+            logger.warn("Failed to check account status: ${e.message}")
+            null
+        }
+    }
+
+    /**
      * Parse a chat ID into recipient and optional group ID.
      * Format: "group:base64groupid" for groups, or phone number for direct.
      */

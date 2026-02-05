@@ -520,6 +520,26 @@ class SignalCli(
         }
     }
 
+    /**
+     * Get user status for the configured account.
+     * Returns true if the account is properly registered and authenticated.
+     */
+    suspend fun getUserStatus(): Boolean {
+        if (!_isRunning.value) {
+            return false
+        }
+        val params = buildJsonObject {
+            put("recipient", config.phoneNumber)
+        }
+        return try {
+            rpcCall("getUserStatus", params)
+            true
+        } catch (e: Exception) {
+            logger.debug("getUserStatus failed: ${e.message}")
+            false
+        }
+    }
+
     private var resolvedCliPath: String? = null
 
     private suspend fun buildCommand(): List<String> {

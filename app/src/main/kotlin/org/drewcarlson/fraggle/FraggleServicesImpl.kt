@@ -17,6 +17,7 @@ import org.drewcarlson.fraggle.chat.BridgeInitializer
 import org.drewcarlson.fraggle.chat.BridgeInitializerRegistry
 import org.drewcarlson.fraggle.chat.ChatBridgeManager
 import org.drewcarlson.fraggle.chat.InitStepResult
+import org.drewcarlson.fraggle.signal.SignalBridge
 import org.drewcarlson.fraggle.memory.MemoryStore
 import org.drewcarlson.fraggle.models.*
 import org.drewcarlson.fraggle.skill.SkillRegistry
@@ -214,6 +215,21 @@ class FraggleServicesImpl(
         }
 
         override suspend fun isInitialized(bridgeName: String): Boolean {
+            // First, check if the bridge is connected and can check via RPC
+            // This avoids the config directory lock issue when signal-cli daemon is running
+            val bridge = bridges.getBridge(bridgeName)
+            if (bridge != null && bridge.isConnected()) {
+                when (bridge) {
+                    is SignalBridge -> {
+                        val rpcResult = bridge.checkAccountInitialized()
+                        if (rpcResult != null) {
+                            return rpcResult
+                        }
+                    }
+                }
+            }
+
+            // Fall back to initializer check (works when daemon is not running)
             return initializerRegistry.get(bridgeName)?.isInitialized() ?: false
         }
 
