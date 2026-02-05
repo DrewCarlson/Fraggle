@@ -5,19 +5,37 @@ import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import kotlinx.serialization.Serializable
 import org.drewcarlson.fraggle.api.FraggleServices
-import org.drewcarlson.fraggle.models.FraggleEvent
 import org.slf4j.LoggerFactory
 
 private val logger = LoggerFactory.getLogger("WebSocket")
-private val json = Json { encodeDefaults = true }
+
+/**
+ * Client-to-server WebSocket messages.
+ */
+@Serializable
+sealed class ClientMessage {
+    /**
+     * Subscribe to specific event types.
+     */
+    @Serializable
+    data class Subscribe(val eventTypes: List<String>) : ClientMessage()
+
+    /**
+     * Unsubscribe from event types.
+     */
+    @Serializable
+    data class Unsubscribe(val eventTypes: List<String>) : ClientMessage()
+}
 
 /**
  * Configure WebSocket endpoint for real-time updates.
+ *
+ * Uses Ktor's built-in ping/pong mechanism and kotlinx serialization for type-safe messaging.
+ * Ping/pong is automatically handled by the WebSockets plugin configuration in FraggleApiServer.
  */
-fun Routing.configureWebSockets(services: FraggleServices) {
+fun Route.configureWebSockets(services: FraggleServices) {
     webSocket("/ws") {
         logger.info("WebSocket client connected: ${call.request.local.remoteAddress}")
 
@@ -26,24 +44,26 @@ fun Routing.configureWebSockets(services: FraggleServices) {
             val eventJob = launch {
                 services.events.collectLatest { event ->
                     try {
-                        val message = json.encodeToString(event)
-                        send(Frame.Text(message))
+                        sendSerialized(event)
                     } catch (e: Exception) {
                         logger.debug("Failed to send event to client: ${e.message}")
                     }
                 }
             }
 
-            // Handle incoming messages (for future use - commands, subscriptions, etc.)
+            // Handle incoming messages using Ktor's serialization
             for (frame in incoming) {
                 when (frame) {
                     is Frame.Text -> {
-                        val text = frame.readText()
-                        handleClientMessage(text, services)
+                        try {
+                            val message = receiveDeserialized<ClientMessage>()
+                            handleClientMessage(message, services)
+                        } catch (e: Exception) {
+                            // Log but don't fail the connection for deserialization errors
+                            logger.debug("Failed to deserialize client message: ${e.message}")
+                        }
                     }
-                    is Frame.Ping -> {
-                        send(Frame.Pong(frame.data))
-                    }
+                    // Ping/Pong is handled automatically by Ktor's WebSocket plugin
                     else -> {
                         // Ignore other frame types
                     }
@@ -61,24 +81,19 @@ fun Routing.configureWebSockets(services: FraggleServices) {
 
 /**
  * Handle incoming WebSocket messages from clients.
- * Currently supports:
- * - ping: Responds with pong
- * - subscribe: Subscribe to specific event types (future)
  */
-private suspend fun DefaultWebSocketServerSession.handleClientMessage(
-    message: String,
+private fun handleClientMessage(
+    message: ClientMessage,
     services: FraggleServices,
 ) {
-    try {
-        // Simple ping/pong for connection health
-        if (message == "ping") {
-            send(Frame.Text("pong"))
-            return
+    when (message) {
+        is ClientMessage.Subscribe -> {
+            logger.debug("Client subscribed to: ${message.eventTypes}")
+            // Future: implement selective event subscription
         }
-
-        // For now, just echo unknown commands
-        logger.debug("Received WebSocket message: $message")
-    } catch (e: Exception) {
-        logger.debug("Error handling WebSocket message: ${e.message}")
+        is ClientMessage.Unsubscribe -> {
+            logger.debug("Client unsubscribed from: ${message.eventTypes}")
+            // Future: implement selective event unsubscription
+        }
     }
 }

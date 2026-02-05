@@ -23,6 +23,7 @@ fun Application.configureDashboard(staticPath: Path?) {
             singlePageApplication {
                 filesPath = "dashboard"
                 useResources = true
+                ignoreFiles { it.startsWith("/api") }
             }
         }
     } else if (staticPath.exists()) {
@@ -30,6 +31,7 @@ fun Application.configureDashboard(staticPath: Path?) {
         routing {
             singlePageApplication {
                 filesPath = staticPath.absolutePathString()
+                ignoreFiles { it.startsWith("/api") }
             }
         }
     } else {

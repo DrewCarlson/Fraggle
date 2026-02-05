@@ -1,11 +1,17 @@
 import androidx.compose.runtime.*
+import io.ktor.client.*
+import io.ktor.client.engine.js.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.plugins.websocket.*
+import io.ktor.serialization.kotlinx.*
+import io.ktor.serialization.kotlinx.json.json
+import io.ktor.serialization.WebsocketDeserializeException
+import io.ktor.websocket.*
 import kotlinx.browser.window
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.serialization.json.Json
 import org.drewcarlson.fraggle.models.FraggleEvent
-import org.w3c.dom.WebSocket
-import org.w3c.dom.events.Event
 
 /**
  * WebSocket connection state.
@@ -18,19 +24,36 @@ enum class ConnectionState {
 }
 
 /**
+ * Shared JSON configuration for serialization.
+ */
+private val jsonConfig = Json {
+    ignoreUnknownKeys = true
+    isLenient = true
+    encodeDefaults = true
+}
+
+/**
+ * Ktor HttpClient configured for WebSocket connections with serialization support.
+ */
+private val wsClient = HttpClient(Js) {
+    install(ContentNegotiation) {
+        json(jsonConfig)
+    }
+    install(WebSockets) {
+        contentConverter = KotlinxWebsocketSerializationConverter(jsonConfig)
+    }
+}
+
+/**
  * WebSocket service for real-time updates from the backend.
+ * Uses Ktor's WebSocket client with kotlinx serialization for type-safe message handling.
  */
 class WebSocketService(
     private val scope: CoroutineScope,
 ) {
-    private val json = Json {
-        ignoreUnknownKeys = true
-        isLenient = true
-    }
-
-    private var webSocket: WebSocket? = null
+    private var wsSession: DefaultClientWebSocketSession? = null
+    private var connectionJob: Job? = null
     private var reconnectJob: Job? = null
-    private var pingJob: Job? = null
 
     private val _connectionState = MutableStateFlow(ConnectionState.DISCONNECTED)
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
@@ -49,73 +72,66 @@ class WebSocketService(
         }
 
         _connectionState.value = ConnectionState.CONNECTING
+        startConnection()
+    }
 
-        val location = window.location
-        val protocol = if (location.protocol == "https:") "wss:" else "ws:"
-        val wsUrl = "$protocol//${location.host}/ws"
+    private fun startConnection() {
+        connectionJob?.cancel()
+        connectionJob = scope.launch {
+            val location = window.location
+            val protocol = if (location.protocol == "https:") "wss" else "ws"
+            val wsUrl = "$protocol://${location.host}/api/v1/ws"
 
-        try {
-            webSocket = WebSocket(wsUrl).apply {
-                onopen = { handleOpen() }
-                onclose = { handleClose() }
-                onerror = { handleError(it) }
-                onmessage = { handleMessage(it) }
+            try {
+                wsClient.webSocket(wsUrl) {
+                    wsSession = this
+                    _connectionState.value = ConnectionState.CONNECTED
+                    console.log("WebSocket connected via Ktor client")
+
+                    try {
+                        // Receive events using Ktor's serialization
+                        while (isActive) {
+                            try {
+                                val event = receiveDeserialized<FraggleEvent>()
+                                _events.emit(event)
+                                emitRefreshTrigger(event)
+                            } catch (_: WebsocketDeserializeException) {
+                                console.warn("Failed to deserialize WebSocket message")
+                            }
+                        }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        console.log("WebSocket receive error")
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                console.error("WebSocket connection error: ${e.message}")
+            } finally {
+                wsSession = null
+                handleDisconnect()
             }
-        } catch (e: Exception) {
-            console.error("Failed to create WebSocket:", e.message)
-            _connectionState.value = ConnectionState.DISCONNECTED
+        }
+    }
+
+    private fun handleDisconnect() {
+        if (_connectionState.value != ConnectionState.DISCONNECTED) {
+            console.log("WebSocket disconnected, scheduling reconnect")
+            _connectionState.value = ConnectionState.RECONNECTING
             scheduleReconnect()
         }
     }
 
     fun disconnect() {
         reconnectJob?.cancel()
-        pingJob?.cancel()
-        webSocket?.close()
-        webSocket = null
+        connectionJob?.cancel()
+        scope.launch {
+            wsSession?.close(CloseReason(CloseReason.Codes.NORMAL, "Client disconnecting"))
+        }
+        wsSession = null
         _connectionState.value = ConnectionState.DISCONNECTED
-    }
-
-    private fun handleOpen() {
-        console.log("WebSocket connected")
-        _connectionState.value = ConnectionState.CONNECTED
-        startPing()
-    }
-
-    private fun handleClose() {
-        console.log("WebSocket disconnected")
-        pingJob?.cancel()
-        webSocket = null
-
-        if (_connectionState.value != ConnectionState.DISCONNECTED) {
-            _connectionState.value = ConnectionState.RECONNECTING
-            scheduleReconnect()
-        }
-    }
-
-    private fun handleError(event: Event) {
-        console.error("WebSocket error")
-        // Error is typically followed by close, so we don't need to do much here
-    }
-
-    private fun handleMessage(event: dynamic) {
-        val data = event.data as? String ?: return
-
-        // Handle pong response
-        if (data == "pong") {
-            return
-        }
-
-        // Try to parse as FraggleEvent
-        try {
-            val fraggleEvent = json.decodeFromString<FraggleEvent>(data)
-            scope.launch {
-                _events.emit(fraggleEvent)
-                emitRefreshTrigger(fraggleEvent)
-            }
-        } catch (e: Exception) {
-            console.warn("Failed to parse WebSocket message:", data)
-        }
     }
 
     private suspend fun emitRefreshTrigger(event: FraggleEvent) {
@@ -139,22 +155,12 @@ class WebSocketService(
         }
     }
 
-    private fun startPing() {
-        pingJob?.cancel()
-        pingJob = scope.launch {
-            while (isActive) {
-                delay(30000) // Ping every 30 seconds
-                webSocket?.send("ping")
-            }
-        }
-    }
-
     private fun scheduleReconnect() {
         reconnectJob?.cancel()
         reconnectJob = scope.launch {
             delay(3000) // Wait 3 seconds before reconnecting
             if (_connectionState.value == ConnectionState.RECONNECTING) {
-                connect()
+                startConnection()
             }
         }
     }

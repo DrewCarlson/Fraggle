@@ -8,10 +8,6 @@ export default {
             '/api': {
                 target: process.env.FRAGGLE_SERVER_URL,
                 changeOrigin: true,
-            },
-            // Proxy WebSocket connections
-            '/ws': {
-                target: process.env.FRAGGLE_SERVER_URL,
                 ws: true,
             },
         },

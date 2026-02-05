@@ -12,6 +12,7 @@ import io.ktor.server.plugins.autohead.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.http.*
+import io.ktor.serialization.kotlinx.KotlinxWebsocketSerializationConverter
 import kotlinx.serialization.json.Json
 import org.drewcarlson.fraggle.api.FraggleServices
 import org.drewcarlson.fraggle.backend.routes.*
@@ -61,11 +62,15 @@ fun createApiServer(
                 allowHeader(HttpHeaders.ContentType)
                 allowHeader(HttpHeaders.Accept)
                 allowCredentials = true
-
-                apiConfig.cors.allowedOrigins.forEach { origin ->
-                    val url = Url(origin)
-                    allowHost(url.host + (url.port.takeIf { it != 80 && it != 443 }?.let { ":$it" } ?: ""),
-                        schemes = listOf(url.protocol.name))
+                if (apiConfig.cors.allowedOrigins.isEmpty()) {
+                    // Note: allowCredentials cannot be used with anyHost()
+                    anyHost()
+                } else {
+                    apiConfig.cors.allowedOrigins.forEach { origin ->
+                        val url = Url(origin)
+                        allowHost(url.host + (url.port.takeIf { it != 80 && it != 443 }?.let { ":$it" } ?: ""),
+                            schemes = listOf(url.protocol.name))
+                    }
                 }
             }
         }
@@ -86,8 +91,12 @@ fun createApiServer(
         install(WebSockets) {
             pingPeriod = 15.seconds
             timeout = 15.seconds
-            maxFrameSize = Long.MAX_VALUE
-            masking = false
+            contentConverter = KotlinxWebsocketSerializationConverter(Json {
+                prettyPrint = false
+                isLenient = true
+                ignoreUnknownKeys = true
+                encodeDefaults = true
+            })
         }
 
         // Routing
@@ -101,10 +110,8 @@ fun createApiServer(
                 memoryRoutes(services)
                 schedulerRoutes(services)
                 settingsRoutes(services)
+                configureWebSockets(services)
             }
-
-            // WebSocket endpoint for real-time updates
-            configureWebSockets(services)
         }
 
         // Dashboard static files
