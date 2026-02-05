@@ -450,6 +450,29 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#automatic-installation-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Automatic Installation (Recommended)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#manual-installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Manual Installation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Manual Installation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#macos-homebrew" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -461,13 +484,29 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#linux" class="md-nav__link">
+  <a href="#linux-native-binary" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Linux
+        Linux (Native Binary)
       
     </span>
   </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#linuxmacos-java-version" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Linux/macOS (Java Version)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
         
@@ -643,6 +682,28 @@
     <span class="md-ellipsis">
       
         "Permission denied" errors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#auto-installation-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Auto-installation issues
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#updating-signal-cli-version" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Updating signal-cli version
       
     </span>
   </a>
@@ -1049,6 +1110,29 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#automatic-installation-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Automatic Installation (Recommended)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#manual-installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Manual Installation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Manual Installation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#macos-homebrew" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1060,13 +1144,29 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#linux" class="md-nav__link">
+  <a href="#linux-native-binary" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Linux
+        Linux (Native Binary)
       
     </span>
   </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#linuxmacos-java-version" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Linux/macOS (Java Version)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
         
@@ -1248,6 +1348,28 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#auto-installation-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Auto-installation issues
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#updating-signal-cli-version" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Updating signal-cli version
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1293,36 +1415,55 @@
 <p>This guide covers setting up Signal integration for Fraggle.</p>
 <h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="https://github.com/AsamK/signal-cli">signal-cli</a> installed</li>
 <li>A phone number to register with Signal</li>
+<li><strong>signal-cli</strong> (automatically installed by Fraggle, or manually installed)</li>
 </ul>
 <h2 id="installing-signal-cli">Installing signal-cli<a class="headerlink" href="#installing-signal-cli" title="Permanent link">&para;</a></h2>
-<h3 id="macos-homebrew">macOS (Homebrew)<a class="headerlink" href="#macos-homebrew" title="Permanent link">&para;</a></h3>
+<h3 id="automatic-installation-recommended">Automatic Installation (Recommended)<a class="headerlink" href="#automatic-installation-recommended" title="Permanent link">&para;</a></h3>
+<p>Fraggle can automatically download and install signal-cli when it's not found in your system PATH. This is enabled by default and requires no manual setup.</p>
+<p>When you first run Fraggle with Signal bridge enabled, it will:</p>
+<ol>
+<li>Check if signal-cli is available in your system PATH</li>
+<li>If not found, download the appropriate version to <code>data/apps/signal-cli-{version}/</code></li>
+<li>On Linux: Downloads the native binary for better performance</li>
+<li>On macOS/Windows: Downloads the Java-based version</li>
+</ol>
+<p>You can control this behavior with the <code>auto_install</code> and <code>signal_cli_version</code> configuration options.</p>
+<h3 id="manual-installation">Manual Installation<a class="headerlink" href="#manual-installation" title="Permanent link">&para;</a></h3>
+<p>If you prefer to install signal-cli manually, or if automatic installation fails:</p>
+<h4 id="macos-homebrew">macOS (Homebrew)<a class="headerlink" href="#macos-homebrew" title="Permanent link">&para;</a></h4>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>brew<span class="w"> </span>install<span class="w"> </span>signal-cli
 </code></pre></div>
-<h3 id="linux">Linux<a class="headerlink" href="#linux" title="Permanent link">&para;</a></h3>
-<p>Download the latest release from <a href="https://github.com/AsamK/signal-cli/releases">signal-cli releases</a>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Example for version 0.13.0</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>wget<span class="w"> </span>https://github.com/AsamK/signal-cli/releases/download/v0.13.0/signal-cli-0.13.0.tar.gz
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>tar<span class="w"> </span>xf<span class="w"> </span>signal-cli-0.13.0.tar.gz
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>sudo<span class="w"> </span>mv<span class="w"> </span>signal-cli-0.13.0<span class="w"> </span>/opt/signal-cli
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>sudo<span class="w"> </span>ln<span class="w"> </span>-s<span class="w"> </span>/opt/signal-cli/bin/signal-cli<span class="w"> </span>/usr/local/bin/signal-cli
+<h4 id="linux-native-binary">Linux (Native Binary)<a class="headerlink" href="#linux-native-binary" title="Permanent link">&para;</a></h4>
+<p>Download the native binary for better performance:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Example for version 0.13.23</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>wget<span class="w"> </span>https://github.com/AsamK/signal-cli/releases/download/v0.13.23/signal-cli-0.13.23-Linux-native.tar.gz
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>tar<span class="w"> </span>xf<span class="w"> </span>signal-cli-0.13.23-Linux-native.tar.gz
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>sudo<span class="w"> </span>mv<span class="w"> </span>signal-cli<span class="w"> </span>/usr/local/bin/signal-cli
+</code></pre></div>
+<h4 id="linuxmacos-java-version">Linux/macOS (Java Version)<a class="headerlink" href="#linuxmacos-java-version" title="Permanent link">&para;</a></h4>
+<p>If you prefer the Java-based version:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Example for version 0.13.23</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>wget<span class="w"> </span>https://github.com/AsamK/signal-cli/releases/download/v0.13.23/signal-cli-0.13.23.tar.gz
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>tar<span class="w"> </span>xf<span class="w"> </span>signal-cli-0.13.23.tar.gz
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>sudo<span class="w"> </span>mv<span class="w"> </span>signal-cli-0.13.23<span class="w"> </span>/opt/signal-cli
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>sudo<span class="w"> </span>ln<span class="w"> </span>-s<span class="w"> </span>/opt/signal-cli/bin/signal-cli<span class="w"> </span>/usr/local/bin/signal-cli
 </code></pre></div>
 <h2 id="registering-a-phone-number">Registering a Phone Number<a class="headerlink" href="#registering-a-phone-number" title="Permanent link">&para;</a></h2>
 <h3 id="option-1-new-registration">Option 1: New Registration<a class="headerlink" href="#option-1-new-registration" title="Permanent link">&para;</a></h3>
 <p>Register a new phone number with Signal:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Request verification code via SMS</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>signal-cli<span class="w"> </span>-u<span class="w"> </span>+1234567890<span class="w"> </span>register
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Or request via voice call</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>signal-cli<span class="w"> </span>-u<span class="w"> </span>+1234567890<span class="w"> </span>register<span class="w"> </span>--voice
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c1"># Verify with the code you received</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>signal-cli<span class="w"> </span>-u<span class="w"> </span>+1234567890<span class="w"> </span>verify<span class="w"> </span>CODE
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Request verification code via SMS</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>signal-cli<span class="w"> </span>-u<span class="w"> </span>+1234567890<span class="w"> </span>register
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># Or request via voice call</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>signal-cli<span class="w"> </span>-u<span class="w"> </span>+1234567890<span class="w"> </span>register<span class="w"> </span>--voice
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="c1"># Verify with the code you received</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>signal-cli<span class="w"> </span>-u<span class="w"> </span>+1234567890<span class="w"> </span>verify<span class="w"> </span>CODE
 </code></pre></div>
 <h3 id="option-2-link-to-existing-account">Option 2: Link to Existing Account<a class="headerlink" href="#option-2-link-to-existing-account" title="Permanent link">&para;</a></h3>
 <p>Link signal-cli as a secondary device to an existing Signal account:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>signal-cli<span class="w"> </span>link<span class="w"> </span>-n<span class="w"> </span><span class="s2">&quot;Fraggle Bot&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>signal-cli<span class="w"> </span>link<span class="w"> </span>-n<span class="w"> </span><span class="s2">&quot;Fraggle Bot&quot;</span>
 </code></pre></div>
 <p>This displays a QR code or URI. Scan it with the Signal app on your phone:</p>
 <ol>
@@ -1333,16 +1474,23 @@
 </ol>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <p>Add Signal configuration to your <code>fraggle.yaml</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">fraggle</span><span class="p">:</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">bridges</span><span class="p">:</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">signal</span><span class="p">:</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">      </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">      </span><span class="nt">phone</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;+1234567890&quot;</span><span class="w">            </span><span class="c1"># Your registered number</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">      </span><span class="nt">config_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~/.config/fraggle/signal</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">      </span><span class="nt">trigger</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;@fraggle&quot;</span><span class="w">             </span><span class="c1"># Trigger for group messages</span>
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">      </span><span class="nt">respond_to_direct_messages</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">      </span><span class="nt">show_typing_indicator</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">fraggle</span><span class="p">:</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">bridges</span><span class="p">:</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nt">signal</span><span class="p">:</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">      </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">      </span><span class="nt">phone</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;+1234567890&quot;</span><span class="w">            </span><span class="c1"># Your registered number</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">      </span><span class="nt">config_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~/.config/fraggle/signal</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">      </span><span class="nt">trigger</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;@fraggle&quot;</span><span class="w">             </span><span class="c1"># Trigger for group messages</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">      </span><span class="nt">respond_to_direct_messages</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">      </span><span class="nt">show_typing_indicator</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">      </span><span class="c1"># Auto-installation settings (optional)</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">      </span><span class="nt">auto_install</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">              </span><span class="c1"># Auto-download signal-cli if not found</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">      </span><span class="nt">signal_cli_version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;0.13.23&quot;</span><span class="w">   </span><span class="c1"># Version to download</span>
 </code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">Automatic Installation</p>
+<p>With <code>auto_install: true</code> (the default), you don't need to install signal-cli manually. Fraggle will download it automatically on first run if it's not found in your system PATH.</p>
+</div>
 <h3 id="configuration-options">Configuration Options<a class="headerlink" href="#configuration-options" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -1375,8 +1523,18 @@
 </tr>
 <tr>
 <td><code>signal_cli_path</code></td>
-<td>Path to signal-cli (null = use PATH)</td>
+<td>Path to signal-cli (null = use PATH or auto-install)</td>
 <td><code>null</code></td>
+</tr>
+<tr>
+<td><code>auto_install</code></td>
+<td>Automatically download signal-cli if not found</td>
+<td><code>true</code></td>
+</tr>
+<tr>
+<td><code>signal_cli_version</code></td>
+<td>Version of signal-cli to auto-install</td>
+<td><code>0.13.23</code></td>
 </tr>
 <tr>
 <td><code>respond_to_direct_messages</code></td>
@@ -1395,20 +1553,20 @@
 <p>When <code>respond_to_direct_messages</code> is <code>true</code>, Fraggle responds to all direct messages automatically.</p>
 <h3 id="group-messages">Group Messages<a class="headerlink" href="#group-messages" title="Permanent link">&para;</a></h3>
 <p>In group chats, Fraggle only responds when the message starts with the trigger prefix:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>@fraggle what&#39;s the weather like?
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>@fraggle what&#39;s the weather like?
 </code></pre></div>
 <p>Set <code>trigger</code> to <code>null</code> to respond to all group messages (use with caution).</p>
 <h3 id="per-chat-triggers">Per-Chat Triggers<a class="headerlink" href="#per-chat-triggers" title="Permanent link">&para;</a></h3>
 <p>You can override the trigger for specific chats:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">fraggle</span><span class="p">:</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">bridges</span><span class="p">:</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nt">signal</span><span class="p">:</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">      </span><span class="nt">trigger</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;@fraggle&quot;</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span><span class="nt">chats</span><span class="p">:</span>
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="nt">registered</span><span class="p">:</span>
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;group-abc123&quot;</span>
-<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">        </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Dev</span><span class="nv"> </span><span class="s">Team&quot;</span>
-<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">        </span><span class="nt">trigger_override</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;@bot&quot;</span><span class="w">    </span><span class="c1"># Use @bot in this group</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">fraggle</span><span class="p">:</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">bridges</span><span class="p">:</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="nt">signal</span><span class="p">:</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">      </span><span class="nt">trigger</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;@fraggle&quot;</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span><span class="nt">chats</span><span class="p">:</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="nt">registered</span><span class="p">:</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;group-abc123&quot;</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">        </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Dev</span><span class="nv"> </span><span class="s">Team&quot;</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">        </span><span class="nt">trigger_override</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;@bot&quot;</span><span class="w">    </span><span class="c1"># Use @bot in this group</span>
 </code></pre></div>
 <h2 id="text-formatting">Text Formatting<a class="headerlink" href="#text-formatting" title="Permanent link">&para;</a></h2>
 <p>Fraggle supports Signal's text formatting. The LLM can use markdown-like syntax that's automatically converted:</p>
@@ -1455,7 +1613,7 @@
 </ol>
 <h3 id="messages-not-being-received">"Messages not being received"<a class="headerlink" href="#messages-not-being-received" title="Permanent link">&para;</a></h3>
 <ol>
-<li>Run in interactive mode first to verify the agent works: <code>./gradlew :app:run --args="chat"</code></li>
+<li>Run in interactive mode first to verify the agent works: <code>./bin/fraggle chat</code></li>
 <li>Check logs at <code>$FRAGGLE_ROOT/logs/fraggle.log</code></li>
 <li>Try receiving messages manually: <code>signal-cli -u +1234567890 receive</code></li>
 </ol>
@@ -1465,6 +1623,30 @@
 <li>Read/write access to <code>config_dir</code></li>
 <li>Execute permission on <code>signal-cli</code></li>
 </ul>
+<h3 id="auto-installation-issues">Auto-installation issues<a class="headerlink" href="#auto-installation-issues" title="Permanent link">&para;</a></h3>
+<p>If automatic installation of signal-cli fails:</p>
+<ol>
+<li>Check internet connectivity - Fraggle needs to download from GitHub releases</li>
+<li>Verify write permissions to <code>data/apps/</code> directory</li>
+<li>Check logs for specific download or extraction errors</li>
+<li>On Linux, ensure <code>tar</code> command is available for extraction</li>
+<li>Try manual installation instead (see above)</li>
+</ol>
+<p>To disable auto-installation and use a manually installed version:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nt">fraggle</span><span class="p">:</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">bridges</span><span class="p">:</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="nt">signal</span><span class="p">:</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">      </span><span class="nt">auto_install</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">      </span><span class="nt">signal_cli_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/signal-cli</span><span class="w">  </span><span class="c1"># Optional: specify explicit path</span>
+</code></pre></div>
+<h3 id="updating-signal-cli-version">Updating signal-cli version<a class="headerlink" href="#updating-signal-cli-version" title="Permanent link">&para;</a></h3>
+<p>To use a different version of signal-cli:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nt">fraggle</span><span class="p">:</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">bridges</span><span class="p">:</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span><span class="nt">signal</span><span class="p">:</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">      </span><span class="nt">signal_cli_version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;0.13.24&quot;</span><span class="w">  </span><span class="c1"># Specify desired version</span>
+</code></pre></div>
+<p>Fraggle will download the new version on next startup. Old versions in <code>data/apps/</code> can be manually deleted.</p>
 <h2 id="security-considerations">Security Considerations<a class="headerlink" href="#security-considerations" title="Permanent link">&para;</a></h2>
 <ul>
 <li>The Signal configuration directory contains sensitive authentication data</li>
