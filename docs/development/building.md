@@ -30,7 +30,7 @@ This compiles all modules and runs tests.
 
 ```bash
 # Core framework
-./gradlew :fraggle:build
+./gradlew :fraggle-agent:build
 
 # Signal integration
 ./gradlew :fraggle-signal:build
@@ -39,7 +39,7 @@ This compiles all modules and runs tests.
 ./gradlew :fraggle-skills:build
 
 # CLI application
-./gradlew :app:build
+./gradlew :fraggle-cli:build
 ```
 
 ## Distribution
@@ -47,36 +47,36 @@ This compiles all modules and runs tests.
 ### Create Runnable Distribution
 
 ```bash
-./gradlew :app:installDist
+./gradlew :fraggle-cli:installDist
 ```
 
-Creates a runnable distribution at `app/build/install/app/`.
+Creates a runnable distribution at `fraggle-cli/build/install/fraggle-cli/`.
 
 Run with:
 ```bash
-./app/build/install/app/bin/app run
+./fraggle-cli/build/install/fraggle-cli/bin/fraggle run
 ```
 
 ### Create Distribution Archives
 
 ```bash
-./gradlew :app:distZip
-./gradlew :app:distTar
+./gradlew :fraggle-cli:distZip
+./gradlew :fraggle-cli:distTar
 ```
 
-Creates archives at `app/build/distributions/`.
+Creates archives at `fraggle-cli/build/distributions/`.
 
 ### Build Fat JAR
 
 ```bash
-./gradlew :app:shadowJar
+./gradlew :fraggle-cli:shadowJar
 ```
 
-Creates an executable JAR with all dependencies at `app/build/libs/app-all.jar`.
+Creates an executable JAR with all dependencies at `fraggle-cli/build/libs/fraggle.jar`.
 
 Run with:
 ```bash
-java -jar app/build/libs/app-all.jar run
+java -jar fraggle-cli/build/libs/fraggle.jar run
 ```
 
 ## Development Mode
@@ -93,7 +93,7 @@ mkdir -p runtime-dev/config
 cp config/fraggle.yaml runtime-dev/config/fraggle.yaml
 
 # Run in dev mode (sets FRAGGLE_ROOT=runtime-dev/)
-./gradlew :app:run --args="chat"
+./gradlew :fraggle-cli:run --args="chat"
 ```
 
 ## Dashboard Build
@@ -102,13 +102,13 @@ The web dashboard uses Kotlin/JS with Compose for Web:
 
 ```bash
 # Development build
-./gradlew :dashboard:jsBrowserDevelopmentWebpack
+./gradlew :fraggle-dashboard:jsBrowserDevelopmentDist
 
 # Production build
-./gradlew :dashboard:jsBrowserProductionWebpack
+./gradlew :fraggle-dashboard:jsBrowserProductionDist
 ```
 
-Output is at `dashboard/build/dist/js/productionExecutable/`.
+Output is at `fraggle-dashboard/build/vite/js/productionExecutable/`.
 
 ## Clean Build
 

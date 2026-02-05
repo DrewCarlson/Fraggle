@@ -19,11 +19,11 @@ kotlin {
 }
 
 dependencies {
-    implementation(project(":shared"))
-    implementation(project(":fraggle"))
+    implementation(project(":fraggle-common"))
+    implementation(project(":fraggle-agent"))
     implementation(project(":fraggle-signal"))
     implementation(project(":fraggle-skills"))
-    implementation(project(":backend"))
+    implementation(project(":fraggle-api"))
 
     // Kotlinx
     implementation(libs.kotlinx.coroutines.core)
@@ -56,7 +56,7 @@ tasks.named<JavaExec>("run") {
     environment("FRAGGLE_ROOT", rootProject.projectDir.resolve("runtime-dev").absolutePath)
 }
 
-val dashboard = evaluationDependsOn(":dashboard")
+val dashboard = evaluationDependsOn(":fraggle-dashboard")
 
 tasks.shadowJar {
     dependsOn(dashboard.tasks.getByName("jsBrowserProductionDist"))

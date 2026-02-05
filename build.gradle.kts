@@ -8,9 +8,9 @@ plugins {
 }
 
 dependencies {
-    kover(project(":app"))
-    kover(project(":fraggle"))
+    kover(project(":fraggle-cli"))
+    kover(project(":fraggle-agent"))
     kover(project(":fraggle-signal"))
     kover(project(":fraggle-skills"))
-    kover(project(":backend"))
+    kover(project(":fraggle-api"))
 }

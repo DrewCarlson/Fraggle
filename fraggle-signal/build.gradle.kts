@@ -12,7 +12,7 @@ kotlin {
 }
 
 dependencies {
-    implementation(project(":fraggle"))
+    implementation(project(":fraggle-agent"))
 
     // Kotlinx
     implementation(libs.kotlinx.coroutines.core)

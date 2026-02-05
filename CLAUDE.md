@@ -9,29 +9,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ./gradlew build
 
 # Run the application (connects to Signal, production mode)
-./gradlew :app:run --args="run"
+./gradlew :fraggle-cli:run --args="run"
 
 # Interactive chat mode (for testing without Signal)
-./gradlew :app:run --args="chat"
+./gradlew :fraggle-cli:run --args="chat"
 
 # Run all tests
 ./gradlew test
 
 # Run tests for a specific module
-./gradlew :fraggle:test
-./gradlew :app:test
+./gradlew :fraggle-agent:test
+./gradlew :fraggle-cli:test
 
 # Run a specific test class
-./gradlew :fraggle:test --tests="*SkillTest"
+./gradlew :fraggle-agent:test --tests="*SkillTest"
 
 # Run a specific test method (use full pattern)
-./gradlew :fraggle:test --tests="*SkillTest.Execution*"
+./gradlew :fraggle-agent:test --tests="*SkillTest.Execution*"
 
 # Build the dashboard for development (with vite, the KMP webpack tasks are not used)
-./gradlew :dashboard:jsBrowserDevelopmentDist
+./gradlew :fraggle-dashboard:jsBrowserDevelopmentDist
 
 # Build the dashboard for production (with vite, the KMP webpack tasks are not used)
-./gradlew :dashboard:jsBrowserProductionDist
+./gradlew :fraggle-dashboard:jsBrowserProductionDist
 ```
 
 ## Project Architecture
@@ -40,12 +40,13 @@ Fraggle is a Kotlin-based AI assistant that integrates with messaging platforms 
 
 ### Module Structure
 
-- **`fraggle`** - Core framework: agent loop, LLM provider interface, skill system, memory storage, sandbox abstraction, chat bridge interface
+- **`fraggle-agent`** - Core framework: agent loop, LLM provider interface, skill system, memory storage, sandbox abstraction, chat bridge interface
 - **`fraggle-signal`** - Signal messenger integration with message routing and text formatting
 - **`fraggle-skills`** - Built-in skills: filesystem, web fetching, shell execution, task scheduling
-- **`app`** - CLI application using Clikt, configuration loading, service orchestration
-- **`backend`** - Optional Ktor REST API server
-- **`dashboard`** - Web dashboard built with Compose for HTML
+- **`fraggle-cli`** - CLI application using Clikt, configuration loading, service orchestration
+- **`fraggle-api`** - Optional Ktor REST API server
+- **`fraggle-dashboard`** - Web dashboard built with Compose for HTML
+- **`fraggle-common`** - Shared models (Kotlin Multiplatform)
 
 ### Key Architectural Patterns
 

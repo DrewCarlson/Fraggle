@@ -4,7 +4,7 @@ build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
-backend/docs/
+fraggle-api/docs/
 local.properties
 
 ### STS ###

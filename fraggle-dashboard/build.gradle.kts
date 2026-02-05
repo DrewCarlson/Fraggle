@@ -21,7 +21,7 @@ kotlin {
     sourceSets {
         jsMain.dependencies {
             // Shared models
-            implementation(project(":shared"))
+            implementation(project(":fraggle-common"))
 
             // Compose HTML
             implementation(libs.compose.html.core)

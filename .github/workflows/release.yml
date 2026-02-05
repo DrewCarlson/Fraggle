@@ -34,12 +34,13 @@ jobs:
             build.gradle.kts
             gradle/libs.versions.toml
             build-logic/**
-            app/**
-            backend/**
-            fraggle/**
+            fraggle-cli/**
+            fraggle-api/**
+            fraggle-agent/**
             fraggle-signal/**
             fraggle-skills/**
-            shared/**
+            fraggle-common/**
+            fraggle-dashboard/**
             documented-annotations/**
             documented-processor/**
             Dockerfile
@@ -106,9 +107,9 @@ jobs:
       - name: Build Shadow Distribution
         run: >
           ./gradlew
-          :app:installShadowDist
-          :app:shadowDistZip
-          :app:shadowDistTar
+          :fraggle-cli:installShadowDist
+          :fraggle-cli:shadowDistZip
+          :fraggle-cli:shadowDistTar
 
       - name: Container registry Log in
         uses: docker/login-action@0567fa5ae8c9a197cb207537dc5cbb43ca3d803f
@@ -147,5 +148,5 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           prerelease: ${{ contains(github.ref, '-') }}
           files: |
-            app/build/distributions/*.zip
-            app/build/distributions/*.tar
+            fraggle-cli/build/distributions/*.zip
+            fraggle-cli/build/distributions/*.tar

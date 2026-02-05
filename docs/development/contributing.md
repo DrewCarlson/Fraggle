@@ -27,7 +27,7 @@ Thank you for your interest in contributing to Fraggle.
 
 5. **Run in development mode**
    ```bash
-   ./gradlew :app:run --args="chat"
+   ./gradlew :fraggle-cli:run --args="chat"
    ```
 
 ## Code Style

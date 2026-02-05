@@ -47,12 +47,13 @@ See the [Getting Started](installation/getting-started.md) guide for full setup 
 
 ```
 Fraggle/
-├── app/                    # CLI application entry point
-├── fraggle/                # Core agent, provider, and skill abstractions
+├── fraggle-cli/            # CLI application entry point
+├── fraggle-agent/          # Core agent, provider, and skill abstractions
 ├── fraggle-signal/         # Signal messaging integration
 ├── fraggle-skills/         # Built-in skill implementations
-├── backend/                # REST API server and dashboard
-├── shared/                 # Shared models (Kotlin Multiplatform)
+├── fraggle-api/            # REST API server
+├── fraggle-dashboard/      # Web dashboard (Compose for Web)
+├── fraggle-common/         # Shared models (Kotlin Multiplatform)
 └── config/                 # Example configuration files
 ```
 

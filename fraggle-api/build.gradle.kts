@@ -13,10 +13,10 @@ kotlin {
 
 dependencies {
     // Shared models
-    api(project(":shared"))
+    api(project(":fraggle-common"))
 
-    // Fraggle core module
-    implementation(project(":fraggle"))
+    // Fraggle agent module
+    implementation(project(":fraggle-agent"))
 
     // Ktor Server - expose core and netty via api for app module
     api(libs.ktor.server.core)

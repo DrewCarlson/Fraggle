@@ -52,13 +52,13 @@ Full documentation available at **[drewcarlson.github.io/Fraggle](https://drewca
 
 ```
 Fraggle/
-├── app/                    # CLI application
-├── fraggle/                # Core agent and provider abstractions
+├── fraggle-cli/            # CLI application
+├── fraggle-agent/          # Core agent and provider abstractions
 ├── fraggle-signal/         # Signal messenger integration
 ├── fraggle-skills/         # Built-in skill implementations
-├── backend/                # REST API server
-├── dashboard/              # Web dashboard (Compose for Web)
-└── shared/                 # Shared models (Kotlin Multiplatform)
+├── fraggle-api/            # REST API server
+├── fraggle-dashboard/      # Web dashboard (Compose for Web)
+└── fraggle-common/         # Shared models (Kotlin Multiplatform)
 ```
 
 ## License

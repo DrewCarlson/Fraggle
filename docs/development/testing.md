@@ -13,7 +13,7 @@ This guide covers running and writing tests for Fraggle.
 ### Specific Module
 
 ```bash
-./gradlew :fraggle:test
+./gradlew :fraggle-agent:test
 ./gradlew :fraggle-skills:test
 ./gradlew :fraggle-signal:test
 ```
@@ -21,14 +21,14 @@ This guide covers running and writing tests for Fraggle.
 ### Specific Test Class
 
 ```bash
-./gradlew :fraggle:test --tests="*AgentTest"
+./gradlew :fraggle-agent:test --tests="*AgentTest"
 ./gradlew :fraggle-skills:test --tests="*FileSkillsTest"
 ```
 
 ### Specific Test Method
 
 ```bash
-./gradlew :fraggle:test --tests="*AgentTest.testReActLoop"
+./gradlew :fraggle-agent:test --tests="*AgentTest.testReActLoop"
 ```
 
 ### With Detailed Output

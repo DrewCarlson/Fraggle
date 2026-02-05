@@ -10,7 +10,7 @@ kotlin {
 
 dependencies {
     // Shared models
-    api(project(":shared"))
+    api(project(":fraggle-common"))
 
     // Ktor Client for LLM API calls
     implementation(libs.ktor.client.core)
