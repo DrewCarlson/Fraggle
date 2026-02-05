@@ -41,8 +41,8 @@ jobs:
             fraggle-skills/**
             fraggle-common/**
             fraggle-dashboard/**
-            documented-annotations/**
-            documented-processor/**
+            libs/documented-annotations/**
+            libs/documented-processor/**
             Dockerfile
       - name: Get changed files
         id: docs
