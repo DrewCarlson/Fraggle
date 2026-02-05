@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 import kotlin.io.path.Path
 import kotlin.io.path.createDirectories
-import kotlin.io.path.exists
 
 /**
  * Initializer for Signal bridge registration.

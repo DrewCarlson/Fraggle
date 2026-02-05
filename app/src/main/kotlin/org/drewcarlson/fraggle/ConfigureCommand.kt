@@ -4,6 +4,11 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import org.drewcarlson.fraggle.documented.ClassDocumentationInfo
 import org.drewcarlson.fraggle.documented.generated.ConfigDocumentation
+import org.drewcarlson.fraggle.models.FraggleConfig
+import org.drewcarlson.fraggle.models.ProviderConfig
+import org.drewcarlson.fraggle.models.ProviderType
+import org.drewcarlson.fraggle.models.SandboxType
+import org.drewcarlson.fraggle.models.SignalBridgeConfig
 import kotlin.io.path.Path
 import kotlin.io.path.exists
 
@@ -133,8 +138,7 @@ class ConfigureCommand : CliktCommand(name = "configure") {
             (enableSignal.isNullOrEmpty() && settings.bridges.signal?.enabled == true)
 
         if (wantSignal) {
-            val signalResult = configureSignalBridge(settings.bridges.signal)
-            if (signalResult == null) return null
+            val signalResult = configureSignalBridge(settings.bridges.signal) ?: return null
             settings = settings.copy(bridges = settings.bridges.copy(signal = signalResult))
         } else {
             settings = settings.copy(bridges = settings.bridges.copy(signal = null))
@@ -204,8 +208,7 @@ class ConfigureCommand : CliktCommand(name = "configure") {
             (enableSignal.isNullOrEmpty() && settings.bridges.signal?.enabled == true)
 
         if (wantSignal) {
-            val signalResult = configureSignalBridge(settings.bridges.signal)
-            if (signalResult == null) return null
+            val signalResult = configureSignalBridge(settings.bridges.signal) ?: return null
             settings = settings.copy(bridges = settings.bridges.copy(signal = signalResult))
         }
 

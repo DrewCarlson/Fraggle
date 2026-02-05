@@ -11,7 +11,9 @@ import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 import org.drewcarlson.fraggle.sandbox.Sandbox
 import org.drewcarlson.fraggle.sandbox.SandboxResult
-import org.drewcarlson.fraggle.skill.*
+import org.drewcarlson.fraggle.skill.Skill
+import org.drewcarlson.fraggle.skill.SkillResult
+import org.drewcarlson.fraggle.skill.skill
 import org.slf4j.LoggerFactory
 import kotlin.time.Duration.Companion.seconds
 

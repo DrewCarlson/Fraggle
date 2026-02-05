@@ -2,7 +2,9 @@ package org.drewcarlson.fraggle.skills.shell
 
 import org.drewcarlson.fraggle.sandbox.Sandbox
 import org.drewcarlson.fraggle.sandbox.SandboxResult
-import org.drewcarlson.fraggle.skill.*
+import org.drewcarlson.fraggle.skill.Skill
+import org.drewcarlson.fraggle.skill.SkillResult
+import org.drewcarlson.fraggle.skill.skill
 import kotlin.time.Duration.Companion.seconds
 
 /**

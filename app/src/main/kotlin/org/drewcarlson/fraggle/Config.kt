@@ -2,34 +2,11 @@ package org.drewcarlson.fraggle
 
 import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.YamlConfiguration
-import org.drewcarlson.fraggle.models.*
+import org.drewcarlson.fraggle.models.FraggleConfig
+import org.drewcarlson.fraggle.models.RegisteredChatConfig
 import org.drewcarlson.fraggle.signal.RegisteredChat
 import java.nio.file.Path
-import kotlin.io.path.Path
-import kotlin.io.path.createDirectories
-import kotlin.io.path.exists
-import kotlin.io.path.readText
-import kotlin.io.path.writeText
-
-// Re-export shared config models for convenience
-typealias FraggleConfig = org.drewcarlson.fraggle.models.FraggleConfig
-typealias FraggleSettings = org.drewcarlson.fraggle.models.FraggleSettings
-typealias ProviderConfig = org.drewcarlson.fraggle.models.ProviderConfig
-typealias ProviderType = org.drewcarlson.fraggle.models.ProviderType
-typealias BridgesConfig = org.drewcarlson.fraggle.models.BridgesConfig
-typealias SignalBridgeConfig = org.drewcarlson.fraggle.models.SignalBridgeConfig
-typealias MemorySettings = org.drewcarlson.fraggle.models.MemoryConfig
-typealias SandboxSettings = org.drewcarlson.fraggle.models.SandboxConfig
-typealias SandboxType = org.drewcarlson.fraggle.models.SandboxType
-typealias AgentSettings = org.drewcarlson.fraggle.models.AgentConfig
-typealias PromptsSettings = org.drewcarlson.fraggle.models.PromptsConfig
-typealias ChatsSettings = org.drewcarlson.fraggle.models.ChatsConfig
-typealias RegisteredChatConfig = org.drewcarlson.fraggle.models.RegisteredChatConfig
-typealias WebSettings = org.drewcarlson.fraggle.models.WebConfig
-typealias PlaywrightSettings = org.drewcarlson.fraggle.models.PlaywrightConfig
-typealias ApiSettings = org.drewcarlson.fraggle.models.ApiConfig
-typealias CorsSettings = org.drewcarlson.fraggle.models.CorsConfig
-typealias DashboardSettings = org.drewcarlson.fraggle.models.DashboardConfig
+import kotlin.io.path.*
 
 /**
  * Environment configuration for Fraggle runtime directories.

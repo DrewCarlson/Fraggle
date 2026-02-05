@@ -1,6 +1,8 @@
 package org.drewcarlson.fraggle.skills.web
 
-import com.microsoft.playwright.*
+import com.microsoft.playwright.Browser
+import com.microsoft.playwright.Page
+import com.microsoft.playwright.Playwright
 import com.microsoft.playwright.options.LoadState
 import com.microsoft.playwright.options.WaitUntilState
 import kotlinx.coroutines.Dispatchers

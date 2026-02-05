@@ -1,7 +1,6 @@
 package org.drewcarlson.fraggle.backend.routes
 
-import io.ktor.server.application.Application
-import io.ktor.server.application.log
+import io.ktor.server.application.*
 import io.ktor.server.http.content.*
 import io.ktor.server.routing.*
 import java.nio.file.Path

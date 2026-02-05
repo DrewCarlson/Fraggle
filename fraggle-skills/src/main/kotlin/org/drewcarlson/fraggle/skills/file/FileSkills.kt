@@ -2,7 +2,9 @@ package org.drewcarlson.fraggle.skills.file
 
 import org.drewcarlson.fraggle.sandbox.Sandbox
 import org.drewcarlson.fraggle.sandbox.SandboxResult
-import org.drewcarlson.fraggle.skill.*
+import org.drewcarlson.fraggle.skill.Skill
+import org.drewcarlson.fraggle.skill.SkillResult
+import org.drewcarlson.fraggle.skill.skill
 
 /**
  * File operation skills using the sandbox for safe execution.

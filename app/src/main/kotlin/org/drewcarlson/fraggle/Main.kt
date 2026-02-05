@@ -10,9 +10,11 @@ import kotlinx.coroutines.runBlocking
 import org.drewcarlson.fraggle.chat.BridgeInitializer
 import org.drewcarlson.fraggle.chat.BridgeInitializerRegistry
 import org.drewcarlson.fraggle.chat.InitStepResult
+import org.drewcarlson.fraggle.models.FraggleConfig
 import org.drewcarlson.fraggle.signal.SignalBridgeInitializer
 import org.drewcarlson.fraggle.signal.SignalConfig
 import org.slf4j.LoggerFactory
+import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.io.path.exists
 
@@ -69,7 +71,7 @@ class RunCommand : CliktCommand(name = "run") {
         }
     }
 
-    private fun loadConfig(): Pair<FraggleConfig, java.nio.file.Path> {
+    private fun loadConfig(): Pair<FraggleConfig, Path> {
         val path = if (configPath != null) {
             Path(configPath!!).toAbsolutePath()
         } else {
@@ -163,7 +165,7 @@ class ChatCommand : CliktCommand(name = "chat") {
         orchestrator.stop()
     }
 
-    private fun loadConfig(): Pair<FraggleConfig, java.nio.file.Path> {
+    private fun loadConfig(): Pair<FraggleConfig, Path> {
         val path = if (configPath != null) {
             Path(configPath!!).toAbsolutePath()
         } else {

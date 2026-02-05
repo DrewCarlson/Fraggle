@@ -11,7 +11,7 @@ import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.serialization.json.Json
 import org.drewcarlson.fraggle.models.SystemStatus
-import org.jetbrains.compose.web.css.*
+import org.jetbrains.compose.web.css.Style
 import org.jetbrains.compose.web.dom.*
 import org.jetbrains.compose.web.renderComposableInBody
 import screens.*

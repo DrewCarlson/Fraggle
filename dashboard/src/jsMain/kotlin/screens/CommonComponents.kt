@@ -4,7 +4,10 @@ import DashboardStyles
 import DataState
 import androidx.compose.runtime.Composable
 import org.jetbrains.compose.web.css.*
-import org.jetbrains.compose.web.dom.*
+import org.jetbrains.compose.web.dom.Div
+import org.jetbrains.compose.web.dom.I
+import org.jetbrains.compose.web.dom.P
+import org.jetbrains.compose.web.dom.Text
 
 @Composable
 fun LoadingCard(message: String) {
