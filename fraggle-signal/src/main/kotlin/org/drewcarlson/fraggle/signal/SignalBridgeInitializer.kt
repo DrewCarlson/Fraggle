@@ -55,18 +55,15 @@ class SignalBridgeInitializer(
     private var lastError: String? = null
 
     override suspend fun isInitialized(): Boolean {
-        // Check if signal-cli data directory exists with account data
-        val configPath = Path(config.configDir)
-        val dataDir = configPath.resolve("data")
-        val accountsDir = dataDir.resolve("accounts.json")
-
-        if (!accountsDir.exists()) {
+        if (config.phoneNumber.isBlank()) {
             return false
         }
 
-        // Try to run a simple command to verify the account is working
+        // Use getUserStatus to verify the account is registered and authenticated
+        // This returns quickly and will error if auth is expired or incomplete
         return try {
-            val result = runSignalCli("listGroups")
+            val result = runSignalCli("getUserStatus", config.phoneNumber)
+            // getUserStatus returns 0 if the account is properly registered
             result.exitCode == 0
         } catch (e: Exception) {
             logger.debug("Signal account check failed: ${e.message}")
