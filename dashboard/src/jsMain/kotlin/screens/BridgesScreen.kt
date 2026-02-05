@@ -6,6 +6,7 @@ import RefreshTrigger
 import WebSocketService
 import apiClient
 import androidx.compose.runtime.*
+import components.BridgeInitDialog
 import getApiBaseUrl
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -16,6 +17,8 @@ import rememberRefreshableDataLoader
 
 @Composable
 fun BridgesScreen(wsService: WebSocketService) {
+    var initializingBridge by remember { mutableStateOf<String?>(null) }
+
     val (state, refresh) = rememberRefreshableDataLoader(
         wsService = wsService,
         refreshOn = setOf(RefreshTrigger.Bridges),
@@ -78,12 +81,28 @@ fun BridgesScreen(wsService: WebSocketService) {
                                 name = bridge.name,
                                 platform = bridge.platform,
                                 isConnected = bridge.connected,
+                                isInitialized = bridge.initialized,
+                                onSetup = { initializingBridge = bridge.name },
+                                onConnect = { /* TODO: implement connect via API */ },
+                                onDisconnect = { /* TODO: implement disconnect via API */ },
                             )
                         }
                     }
                 }
             }
         }
+    }
+
+    // Bridge initialization dialog
+    initializingBridge?.let { bridgeName ->
+        BridgeInitDialog(
+            bridgeName = bridgeName,
+            wsService = wsService,
+            onClose = {
+                initializingBridge = null
+                refresh()
+            },
+        )
     }
 }
 
@@ -92,6 +111,10 @@ private fun BridgeCard(
     name: String,
     platform: String,
     isConnected: Boolean,
+    isInitialized: Boolean,
+    onSetup: () -> Unit,
+    onConnect: () -> Unit,
+    onDisconnect: () -> Unit,
 ) {
     val icon = when (platform.lowercase()) {
         "signal" -> "bi-signal"
@@ -100,6 +123,12 @@ private fun BridgeCard(
         "telegram" -> "bi-telegram"
         "slack" -> "bi-slack"
         else -> "bi-chat"
+    }
+
+    val statusText = when {
+        isConnected -> "Connected"
+        isInitialized -> "Ready to connect"
+        else -> "Needs setup"
     }
 
     Div({
@@ -124,18 +153,42 @@ private fun BridgeCard(
                     classes(DashboardStyles.statusOnline)
                 }
             }) {
-                Text(if (isConnected) "Connected" else "Disconnected")
+                Text(statusText)
             }
         }
-        Button({
-            classes(DashboardStyles.button, DashboardStyles.buttonSmall)
-            if (isConnected) {
-                classes(DashboardStyles.buttonOutline)
-            } else {
-                classes(DashboardStyles.buttonPrimary)
+
+        // Button logic based on state
+        when {
+            !isInitialized -> {
+                // Not initialized - show Setup button
+                Button({
+                    classes(DashboardStyles.button, DashboardStyles.buttonSmall, DashboardStyles.buttonPrimary)
+                    onClick { onSetup() }
+                }) {
+                    I({ classes("bi", "bi-gear") })
+                    Text("Setup")
+                }
             }
-        }) {
-            Text(if (isConnected) "Configure" else "Connect")
+            !isConnected -> {
+                // Initialized but not connected - show Connect button
+                Button({
+                    classes(DashboardStyles.button, DashboardStyles.buttonSmall, DashboardStyles.buttonPrimary)
+                    onClick { onConnect() }
+                }) {
+                    I({ classes("bi", "bi-plug") })
+                    Text("Connect")
+                }
+            }
+            else -> {
+                // Connected - show Disconnect button
+                Button({
+                    classes(DashboardStyles.button, DashboardStyles.buttonSmall, DashboardStyles.buttonOutline)
+                    onClick { onDisconnect() }
+                }) {
+                    I({ classes("bi", "bi-x-circle") })
+                    Text("Disconnect")
+                }
+            }
         }
     }
 }

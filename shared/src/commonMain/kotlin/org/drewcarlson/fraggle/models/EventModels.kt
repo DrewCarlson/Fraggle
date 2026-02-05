@@ -63,4 +63,51 @@ sealed class FraggleEvent {
         val source: String,
         val message: String,
     ) : FraggleEvent()
+
+    /**
+     * Bridge initialization requires user input.
+     */
+    @Serializable
+    data class BridgeInitPrompt(
+        override val timestamp: Instant,
+        val bridgeName: String,
+        val sessionId: String,
+        val prompt: String,
+        val helpText: String? = null,
+        val sensitive: Boolean = false,
+    ) : FraggleEvent()
+
+    /**
+     * Bridge initialization progress update.
+     */
+    @Serializable
+    data class BridgeInitProgress(
+        override val timestamp: Instant,
+        val bridgeName: String,
+        val sessionId: String,
+        val message: String,
+    ) : FraggleEvent()
+
+    /**
+     * Bridge initialization completed successfully.
+     */
+    @Serializable
+    data class BridgeInitComplete(
+        override val timestamp: Instant,
+        val bridgeName: String,
+        val sessionId: String,
+        val message: String,
+    ) : FraggleEvent()
+
+    /**
+     * Bridge initialization encountered an error.
+     */
+    @Serializable
+    data class BridgeInitError(
+        override val timestamp: Instant,
+        val bridgeName: String,
+        val sessionId: String,
+        val message: String,
+        val recoverable: Boolean,
+    ) : FraggleEvent()
 }

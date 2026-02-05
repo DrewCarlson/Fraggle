@@ -47,6 +47,11 @@ interface FraggleServices {
     val config: ConfigService
 
     /**
+     * Access to bridge initialization.
+     */
+    val bridgeInit: BridgeInitService
+
+    /**
      * Real-time event stream for WebSocket clients.
      */
     val events: SharedFlow<FraggleEvent>

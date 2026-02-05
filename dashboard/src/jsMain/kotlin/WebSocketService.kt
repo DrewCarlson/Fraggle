@@ -10,6 +10,9 @@ import io.ktor.websocket.*
 import kotlinx.browser.window
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.drewcarlson.fraggle.models.FraggleEvent
 
@@ -30,6 +33,24 @@ private val jsonConfig = Json {
     ignoreUnknownKeys = true
     isLenient = true
     encodeDefaults = true
+}
+
+/**
+ * Client-to-server WebSocket messages.
+ */
+@Serializable
+sealed class ClientMessage {
+    @Serializable
+    @SerialName("start_bridge_init")
+    data class StartBridgeInit(val bridgeName: String) : ClientMessage()
+
+    @Serializable
+    @SerialName("bridge_init_input")
+    data class BridgeInitInput(val sessionId: String, val input: String) : ClientMessage()
+
+    @Serializable
+    @SerialName("cancel_bridge_init")
+    data class CancelBridgeInit(val sessionId: String) : ClientMessage()
 }
 
 /**
@@ -60,6 +81,10 @@ class WebSocketService(
 
     private val _events = MutableSharedFlow<FraggleEvent>(extraBufferCapacity = 100)
     val events: SharedFlow<FraggleEvent> = _events.asSharedFlow()
+
+    // Bridge initialization events
+    private val _bridgeInitEvents = MutableSharedFlow<FraggleEvent>(extraBufferCapacity = 10)
+    val bridgeInitEvents: SharedFlow<FraggleEvent> = _bridgeInitEvents.asSharedFlow()
 
     // Callbacks for specific data refresh triggers
     private val _refreshTriggers = MutableSharedFlow<RefreshTrigger>(extraBufferCapacity = 10)
@@ -134,6 +159,38 @@ class WebSocketService(
         _connectionState.value = ConnectionState.DISCONNECTED
     }
 
+    /**
+     * Start bridge initialization.
+     */
+    fun startBridgeInit(bridgeName: String) {
+        sendMessage(ClientMessage.StartBridgeInit(bridgeName))
+    }
+
+    /**
+     * Submit user input for an active bridge initialization session.
+     */
+    fun submitBridgeInitInput(sessionId: String, input: String) {
+        sendMessage(ClientMessage.BridgeInitInput(sessionId, input))
+    }
+
+    /**
+     * Cancel an active bridge initialization session.
+     */
+    fun cancelBridgeInit(sessionId: String) {
+        sendMessage(ClientMessage.CancelBridgeInit(sessionId))
+    }
+
+    private fun sendMessage(message: ClientMessage) {
+        scope.launch {
+            try {
+                val json = jsonConfig.encodeToString(message)
+                wsSession?.send(Frame.Text(json))
+            } catch (e: Exception) {
+                console.error("Failed to send WebSocket message: ${e.message}")
+            }
+        }
+    }
+
     private suspend fun emitRefreshTrigger(event: FraggleEvent) {
         when (event) {
             is FraggleEvent.MessageReceived -> {
@@ -151,6 +208,17 @@ class WebSocketService(
             }
             is FraggleEvent.Error -> {
                 // Could trigger specific refresh based on source
+            }
+            is FraggleEvent.BridgeInitPrompt,
+            is FraggleEvent.BridgeInitProgress,
+            is FraggleEvent.BridgeInitComplete,
+            is FraggleEvent.BridgeInitError -> {
+                // Emit to bridge init events flow for dialog handling
+                _bridgeInitEvents.emit(event)
+                // Also refresh bridges on complete
+                if (event is FraggleEvent.BridgeInitComplete) {
+                    _refreshTriggers.emit(RefreshTrigger.Bridges)
+                }
             }
         }
     }

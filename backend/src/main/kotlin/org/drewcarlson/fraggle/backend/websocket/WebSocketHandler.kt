@@ -5,6 +5,7 @@ import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.drewcarlson.fraggle.api.FraggleServices
 import org.slf4j.LoggerFactory
@@ -20,13 +21,36 @@ sealed class ClientMessage {
      * Subscribe to specific event types.
      */
     @Serializable
+    @SerialName("subscribe")
     data class Subscribe(val eventTypes: List<String>) : ClientMessage()
 
     /**
      * Unsubscribe from event types.
      */
     @Serializable
+    @SerialName("unsubscribe")
     data class Unsubscribe(val eventTypes: List<String>) : ClientMessage()
+
+    /**
+     * Start bridge initialization.
+     */
+    @Serializable
+    @SerialName("start_bridge_init")
+    data class StartBridgeInit(val bridgeName: String) : ClientMessage()
+
+    /**
+     * Submit user input for active bridge initialization session.
+     */
+    @Serializable
+    @SerialName("bridge_init_input")
+    data class BridgeInitInput(val sessionId: String, val input: String) : ClientMessage()
+
+    /**
+     * Cancel an active bridge initialization session.
+     */
+    @Serializable
+    @SerialName("cancel_bridge_init")
+    data class CancelBridgeInit(val sessionId: String) : ClientMessage()
 }
 
 /**
@@ -57,7 +81,7 @@ fun Route.configureWebSockets(services: FraggleServices) {
                     is Frame.Text -> {
                         try {
                             val message = receiveDeserialized<ClientMessage>()
-                            handleClientMessage(message, services)
+                            launch { handleClientMessage(message, services) }
                         } catch (e: Exception) {
                             // Log but don't fail the connection for deserialization errors
                             logger.debug("Failed to deserialize client message: ${e.message}")
@@ -82,7 +106,7 @@ fun Route.configureWebSockets(services: FraggleServices) {
 /**
  * Handle incoming WebSocket messages from clients.
  */
-private fun handleClientMessage(
+private suspend fun handleClientMessage(
     message: ClientMessage,
     services: FraggleServices,
 ) {
@@ -94,6 +118,18 @@ private fun handleClientMessage(
         is ClientMessage.Unsubscribe -> {
             logger.debug("Client unsubscribed from: ${message.eventTypes}")
             // Future: implement selective event unsubscription
+        }
+        is ClientMessage.StartBridgeInit -> {
+            logger.info("Starting bridge initialization for: ${message.bridgeName}")
+            services.bridgeInit.startInit(message.bridgeName)
+        }
+        is ClientMessage.BridgeInitInput -> {
+            logger.debug("Received bridge init input for session: ${message.sessionId}")
+            services.bridgeInit.submitInput(message.sessionId, message.input)
+        }
+        is ClientMessage.CancelBridgeInit -> {
+            logger.info("Cancelling bridge initialization session: ${message.sessionId}")
+            services.bridgeInit.cancelInit(message.sessionId)
         }
     }
 }

@@ -69,7 +69,7 @@ class ConfigTest {
 
             assertEquals("", config.phone)
             assertFalse(config.enabled) // Empty phone means disabled
-            assertEquals("~/.config/fraggle/signal", config.configDir)
+            assertEquals("./config/app/signal", config.configDir)
             assertEquals("@fraggle", config.trigger)
             assertTrue(config.respondToDirectMessages)
             assertTrue(config.showTypingIndicator)

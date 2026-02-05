@@ -519,4 +519,126 @@ object DashboardStyles : StyleSheet() {
     val mb16 by style {
         marginBottom(16.px)
     }
+
+    // ========================================================================
+    // Modal Dialog
+    // ========================================================================
+
+    val modalOverlay by style {
+        position(Position.Fixed)
+        top(0.px)
+        left(0.px)
+        right(0.px)
+        bottom(0.px)
+        backgroundColor(Color("rgba(0, 0, 0, 0.7)"))
+        display(DisplayStyle.Flex)
+        alignItems(AlignItems.Center)
+        justifyContent(JustifyContent.Center)
+        property("z-index", "1000")
+        property("backdrop-filter", "blur(4px)")
+    }
+
+    val modal by style {
+        backgroundColor(colorSurface)
+        border(1.px, LineStyle.Solid, colorBorder)
+        borderRadius(16.px)
+        padding(24.px)
+        minWidth(400.px)
+        maxWidth(500.px)
+        maxHeight(80.vh)
+        overflow("auto")
+        property("box-shadow", "0 25px 50px -12px rgba(0, 0, 0, 0.5)")
+    }
+
+    val modalHeader by style {
+        display(DisplayStyle.Flex)
+        justifyContent(JustifyContent.SpaceBetween)
+        alignItems(AlignItems.Center)
+        marginBottom(20.px)
+    }
+
+    val modalTitle by style {
+        fontSize(18.px)
+        fontWeight(600)
+        color(colorText)
+        property("margin", "0")
+    }
+
+    val modalCloseButton by style {
+        display(DisplayStyle.Flex)
+        alignItems(AlignItems.Center)
+        justifyContent(JustifyContent.Center)
+        width(32.px)
+        height(32.px)
+        backgroundColor(Color.transparent)
+        border(0.px, LineStyle.None, Color.transparent)
+        borderRadius(8.px)
+        color(colorTextMuted)
+        cursor("pointer")
+        fontSize(18.px)
+        property("transition", "all 0.15s ease")
+
+        self + hover style {
+            backgroundColor(colorSurfaceHover)
+            color(colorText)
+        }
+    }
+
+    val modalBody by style {
+        marginBottom(24.px)
+    }
+
+    val modalFooter by style {
+        display(DisplayStyle.Flex)
+        justifyContent(JustifyContent.FlexEnd)
+        gap(12.px)
+    }
+
+    val helpText by style {
+        fontSize(13.px)
+        color(colorTextMuted)
+        lineHeight("1.6")
+        backgroundColor(colorBackground)
+        padding(16.px)
+        borderRadius(8.px)
+        marginBottom(16.px)
+        property("white-space", "pre-wrap")
+    }
+
+    val progressMessage by style {
+        display(DisplayStyle.Flex)
+        alignItems(AlignItems.Center)
+        gap(12.px)
+        padding(16.px)
+        backgroundColor(Color("#6366f115"))
+        borderRadius(8.px)
+        color(colorPrimary)
+        fontSize(14.px)
+    }
+
+    val errorMessage by style {
+        padding(16.px)
+        backgroundColor(Color("#ef444415"))
+        borderRadius(8.px)
+        color(colorError)
+        fontSize(14.px)
+        marginBottom(16.px)
+    }
+
+    val successMessage by style {
+        padding(16.px)
+        backgroundColor(Color("#22c55e15"))
+        borderRadius(8.px)
+        color(colorSuccess)
+        fontSize(14.px)
+    }
+
+    val spinner by style {
+        width(16.px)
+        height(16.px)
+        border(2.px, LineStyle.Solid, Color("currentColor"))
+        property("border-top-color", "transparent")
+        borderRadius(50.percent)
+        property("animation", "spin 0.8s linear infinite")
+    }
 }

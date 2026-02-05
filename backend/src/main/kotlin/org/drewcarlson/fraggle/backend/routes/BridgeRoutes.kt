@@ -20,10 +20,12 @@ fun Route.bridgeRoutes(services: FraggleServices) {
         get {
             val bridges = services.bridges.registeredBridges().map { name ->
                 val bridge = services.bridges.getBridge(name)
+                val initialized = services.bridgeInit.isInitialized(name)
                 BridgeInfo(
                     name = name,
                     platform = bridge?.platform?.name ?: "Unknown",
                     connected = bridge?.isConnected() ?: false,
+                    initialized = initialized,
                 )
             }
             call.respond(bridges)
@@ -40,10 +42,12 @@ fun Route.bridgeRoutes(services: FraggleServices) {
             val bridge = services.bridges.getBridge(name)
                 ?: return@get call.respond(HttpStatusCode.NotFound, ErrorResponse("Bridge not found"))
 
+            val initialized = services.bridgeInit.isInitialized(name)
             val info = BridgeDetail(
                 name = name,
                 platform = bridge.platform.name,
                 connected = bridge.isConnected(),
+                initialized = initialized,
                 supportsAttachments = bridge.platform.supportsAttachments,
                 supportsInlineImages = bridge.platform.supportsInlineImages,
             )

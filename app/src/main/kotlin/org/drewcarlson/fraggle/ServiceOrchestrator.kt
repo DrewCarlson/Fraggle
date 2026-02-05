@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.collectLatest
 import org.drewcarlson.fraggle.agent.*
 import org.drewcarlson.fraggle.models.FraggleEvent
 import org.drewcarlson.fraggle.backend.createApiServer
+import org.drewcarlson.fraggle.chat.BridgeInitializerRegistry
 import org.drewcarlson.fraggle.chat.ChatBridgeManager
 import org.drewcarlson.fraggle.chat.MessageContent
 import org.drewcarlson.fraggle.chat.OutgoingMessage
@@ -18,6 +19,7 @@ import org.drewcarlson.fraggle.sandbox.PermissiveSandbox
 import org.drewcarlson.fraggle.sandbox.Sandbox
 import org.drewcarlson.fraggle.signal.MessageRouter
 import org.drewcarlson.fraggle.signal.SignalBridge
+import org.drewcarlson.fraggle.signal.SignalBridgeInitializer
 import org.drewcarlson.fraggle.signal.SignalConfig
 import org.drewcarlson.fraggle.prompt.PromptConfig
 import org.drewcarlson.fraggle.prompt.PromptManager
@@ -54,6 +56,7 @@ class ServiceOrchestrator(
 
     // Chat bridge management
     private lateinit var bridgeManager: ChatBridgeManager
+    private lateinit var initializerRegistry: BridgeInitializerRegistry
     private var messageRouter: MessageRouter? = null
     private var messageJob: Job? = null
 
@@ -93,6 +96,9 @@ class ServiceOrchestrator(
 
         // Initialize chat bridge manager
         bridgeManager = ChatBridgeManager(scope)
+
+        // Initialize bridge initializer registry
+        initializerRegistry = BridgeInitializerRegistry()
 
         // Initialize task scheduler with message sending callback
         taskScheduler = TaskScheduler(scope) { task ->
@@ -149,7 +155,7 @@ class ServiceOrchestrator(
     suspend fun start() {
         logger.info("Starting Fraggle services...")
 
-        // Start API server if configured
+        // Start API server first - always available even if bridges fail
         apiServer?.let { server ->
             server.start(wait = false)
             val apiConfig = config.fraggle.api
@@ -159,12 +165,19 @@ class ServiceOrchestrator(
             }
         }
 
-        // Connect all registered bridges
+        // Try to connect all registered bridges, but don't fail on errors
         if (bridgeManager.registeredBridges().isNotEmpty()) {
             logger.info("Connecting chat bridges: ${bridgeManager.registeredBridges()}")
-            bridgeManager.connectAll()
-            startMessageLoop()
-            logger.info("Chat bridges started")
+            try {
+                bridgeManager.connectAll()
+                startMessageLoop()
+                logger.info("Chat bridges started")
+            } catch (e: Exception) {
+                logger.warn("Bridge connection failed: ${e.message}")
+                logger.info("Bridges can be initialized via dashboard or 'fraggle init-bridge' command")
+                // Start the message loop anyway - bridges may connect later
+                startMessageLoop()
+            }
         } else {
             logger.info("No chat bridges configured")
         }
@@ -366,6 +379,9 @@ class ServiceOrchestrator(
         bridgeManager.register("signal", bridge)
         messageRouter = MessageRouter(signalConfig)
 
+        // Register the bridge initializer for interactive setup
+        initializerRegistry.register("signal", SignalBridgeInitializer(signalConfig))
+
         logger.info("Signal bridge initialized for ${settings.phone}")
     }
 
@@ -390,6 +406,8 @@ class ServiceOrchestrator(
             conversationMap = conversations,
             fraggleConfig = config,
             configPath = configPath,
+            initializerRegistry = initializerRegistry,
+            scope = scope,
             startTime = startTime,
         )
 

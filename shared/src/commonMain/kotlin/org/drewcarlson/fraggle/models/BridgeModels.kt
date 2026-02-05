@@ -10,6 +10,7 @@ data class BridgeInfo(
     val name: String,
     val platform: String,
     val connected: Boolean,
+    val initialized: Boolean,
 )
 
 /**
@@ -20,6 +21,7 @@ data class BridgeDetail(
     val name: String,
     val platform: String,
     val connected: Boolean,
+    val initialized: Boolean,
     val supportsAttachments: Boolean,
     val supportsInlineImages: Boolean,
 )
