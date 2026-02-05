@@ -16,36 +16,28 @@ import kotlinx.serialization.json.Json
 import org.drewcarlson.fraggle.api.FraggleServices
 import org.drewcarlson.fraggle.backend.routes.*
 import org.drewcarlson.fraggle.backend.websocket.configureWebSockets
+import org.drewcarlson.fraggle.models.ApiConfig
+import org.drewcarlson.fraggle.models.DashboardConfig
 import org.slf4j.LoggerFactory
-import java.nio.file.Path
+import kotlin.io.path.Path
 import kotlin.time.Duration.Companion.seconds
-
-/**
- * Configuration for the Fraggle API server.
- */
-data class ApiServerConfig(
-    val host: String = "0.0.0.0",
-    val port: Int = 9191,
-    val corsEnabled: Boolean = true,
-    val corsAllowedOrigins: List<String> = emptyList(),
-    val dashboardEnabled: Boolean = false,
-    val dashboardStaticPath: Path? = null,
-)
 
 /**
  * Creates and configures the Fraggle API server.
  *
  * @param services The fraggle services to expose via the API.
- * @param config The API server configuration.
+ * @param apiConfig The API server configuration.
+ * @param dashboardConfig The Dashboard client configuration.
  * @return An embedded server ready to be started.
  */
 fun createApiServer(
     services: FraggleServices,
-    config: ApiServerConfig,
+    apiConfig: ApiConfig,
+    dashboardConfig: DashboardConfig,
 ): EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration> {
     val logger = LoggerFactory.getLogger("FraggleApi")
 
-    return embeddedServer(Netty, port = config.port, host = config.host) {
+    return embeddedServer(Netty, port = apiConfig.port, host = apiConfig.host) {
         // JSON serialization
         install(ContentNegotiation) {
             json(Json {
@@ -57,7 +49,7 @@ fun createApiServer(
         }
 
         // CORS
-        if (config.corsEnabled) {
+        if (apiConfig.cors.enabled) {
             install(CORS) {
                 allowMethod(HttpMethod.Options)
                 allowMethod(HttpMethod.Get)
@@ -70,7 +62,7 @@ fun createApiServer(
                 allowHeader(HttpHeaders.Accept)
                 allowCredentials = true
 
-                config.corsAllowedOrigins.forEach { origin ->
+                apiConfig.cors.allowedOrigins.forEach { origin ->
                     val url = Url(origin)
                     allowHost(url.host + (url.port.takeIf { it != 80 && it != 443 }?.let { ":$it" } ?: ""),
                         schemes = listOf(url.protocol.name))
@@ -113,17 +105,13 @@ fun createApiServer(
 
             // WebSocket endpoint for real-time updates
             configureWebSockets(services)
-
         }
 
         // Dashboard static files
-        if (config.dashboardEnabled) {
-            configureDashboard(config.dashboardStaticPath)
+        if (dashboardConfig.enabled) {
+            configureDashboard(dashboardConfig.staticPath?.run(::Path))
         }
 
-        logger.info("Fraggle API server configured on ${config.host}:${config.port}")
-        if (config.dashboardEnabled) {
-            logger.info("Dashboard enabled${config.dashboardStaticPath?.let { " from $it" } ?: " (embedded)"}")
-        }
+        logger.info("Fraggle API server configured on ${apiConfig.host}:${apiConfig.port}")
     }
 }

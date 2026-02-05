@@ -6,7 +6,6 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collectLatest
 import org.drewcarlson.fraggle.agent.*
 import org.drewcarlson.fraggle.models.FraggleEvent
-import org.drewcarlson.fraggle.backend.ApiServerConfig
 import org.drewcarlson.fraggle.backend.createApiServer
 import org.drewcarlson.fraggle.chat.ChatBridgeManager
 import org.drewcarlson.fraggle.chat.MessageContent
@@ -30,7 +29,6 @@ import org.drewcarlson.fraggle.skills.web.PlaywrightFetcher
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.io.path.Path
 import kotlin.io.path.createDirectories
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -392,18 +390,8 @@ class ServiceOrchestrator(
             startTime = startTime,
         )
 
-        // Build server config
-        val serverConfig = ApiServerConfig(
-            host = apiConfig.host,
-            port = apiConfig.port,
-            corsEnabled = apiConfig.cors.enabled,
-            corsAllowedOrigins = apiConfig.cors.allowedOrigins,
-            dashboardEnabled = dashboardConfig.enabled,
-            dashboardStaticPath = dashboardConfig.staticPath?.let { Path(it) },
-        )
-
         // Create the server
-        apiServer = createApiServer(fraggleServices!!, serverConfig)
+        apiServer = createApiServer(fraggleServices!!, apiConfig, dashboardConfig)
         logger.info("API server initialized on ${apiConfig.host}:${apiConfig.port}")
     }
 
