@@ -5,6 +5,11 @@ plugins {
     alias(libs.plugins.compose.compiler)
     id("vite-serve")
 }
+val localProperties = gradleLocalProperties(rootProject.layout.projectDirectory)
+
+kotlinJsVite {
+    environment["FRAGGLE_SERVER_URL"] = localProperties.getProperty("fraggle.serverUrl", "http://localhost:9191")
+}
 
 kotlin {
     js(IR) {

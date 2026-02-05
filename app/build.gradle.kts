@@ -56,9 +56,15 @@ tasks.named<JavaExec>("run") {
     environment("FRAGGLE_ROOT", rootProject.projectDir.resolve("runtime-dev").absolutePath)
 }
 
+val dashboard = evaluationDependsOn(":dashboard")
+
 tasks.shadowJar {
+    dependsOn(dashboard.tasks.getByName("jsBrowserProductionDist"))
     archiveBaseName.set("fraggle")
     archiveClassifier.set("")
     archiveVersion.set("")
     mergeServiceFiles()
+    from(dashboard.layout.buildDirectory.file("vite/js/productionExecutable")) {
+        into("dashboard")
+    }
 }

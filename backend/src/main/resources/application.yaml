@@ -3,7 +3,7 @@ ktor:
     modules:
       - org.drewcarlson.ApplicationKt.module
   deployment:
-    port: 8080
+    port: 9191
 jwt:
   domain: "https://jwt-provider-domain/"
   audience: "jwt-audience"

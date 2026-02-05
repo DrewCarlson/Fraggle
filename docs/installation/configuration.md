@@ -89,7 +89,7 @@ fraggle:
   api:
     enabled: false
     host: "0.0.0.0"
-    port: 8080
+    port: 9191
     cors:
       enabled: true
       allowed_origins: []
@@ -196,7 +196,7 @@ Enable the REST API for external integrations:
 api:
   enabled: true
   host: "0.0.0.0"
-  port: 8080
+  port: 9191
   cors:
     enabled: true
     allowed_origins:

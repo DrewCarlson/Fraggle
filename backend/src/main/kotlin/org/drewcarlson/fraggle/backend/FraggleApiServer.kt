@@ -25,7 +25,7 @@ import kotlin.time.Duration.Companion.seconds
  */
 data class ApiServerConfig(
     val host: String = "0.0.0.0",
-    val port: Int = 8080,
+    val port: Int = 9191,
     val corsEnabled: Boolean = true,
     val corsAllowedOrigins: List<String> = emptyList(),
     val dashboardEnabled: Boolean = false,
@@ -70,18 +70,10 @@ fun createApiServer(
                 allowHeader(HttpHeaders.Accept)
                 allowCredentials = true
 
-                if (config.corsAllowedOrigins.isEmpty()) {
-                    // Default: allow localhost origins for development
-                    allowHost("localhost:8840", schemes = listOf("http"))
-                    allowHost("localhost:3001", schemes = listOf("http"))
-                    allowHost("127.0.0.1:8840", schemes = listOf("http"))
-                    allowHost("127.0.0.1:3001", schemes = listOf("http"))
-                } else {
-                    config.corsAllowedOrigins.forEach { origin ->
-                        val url = Url(origin)
-                        allowHost(url.host + (url.port.takeIf { it != 80 && it != 443 }?.let { ":$it" } ?: ""),
-                            schemes = listOf(url.protocol.name))
-                    }
+                config.corsAllowedOrigins.forEach { origin ->
+                    val url = Url(origin)
+                    allowHost(url.host + (url.port.takeIf { it != 80 && it != 443 }?.let { ":$it" } ?: ""),
+                        schemes = listOf(url.protocol.name))
                 }
             }
         }
@@ -122,10 +114,11 @@ fun createApiServer(
             // WebSocket endpoint for real-time updates
             configureWebSockets(services)
 
-            // Dashboard static files
-            if (config.dashboardEnabled) {
-                configureDashboard(config.dashboardStaticPath)
-            }
+        }
+
+        // Dashboard static files
+        if (config.dashboardEnabled) {
+            configureDashboard(config.dashboardStaticPath)
         }
 
         logger.info("Fraggle API server configured on ${config.host}:${config.port}")

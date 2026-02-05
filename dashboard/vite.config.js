@@ -6,12 +6,12 @@ export default {
         proxy: {
             // Proxy API requests to the backend server
             '/api': {
-                target: 'http://localhost:8080',
+                target: process.env.FRAGGLE_SERVER_URL,
                 changeOrigin: true,
             },
             // Proxy WebSocket connections
             '/ws': {
-                target: 'ws://localhost:8080',
+                target: process.env.FRAGGLE_SERVER_URL,
                 ws: true,
             },
         },

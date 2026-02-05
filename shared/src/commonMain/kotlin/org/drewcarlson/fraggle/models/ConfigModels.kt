@@ -284,7 +284,7 @@ data class ApiConfig(
     val host: String = "0.0.0.0",
 
     @Documented(name = "Port", description = "Port number for the API server")
-    val port: Int = 8080,
+    val port: Int = 9191,
 
     @Documented(name = "CORS", description = "Cross-Origin Resource Sharing configuration")
     val cors: CorsConfig = CorsConfig(),
