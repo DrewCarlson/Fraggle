@@ -42,7 +42,7 @@ class DocumentedProcessor(
         }
 
         processedClasses.forEach { processedClass ->
-            generateDocumentation(processedClass)
+            generateDocumentation(resolver, processedClass)
         }
 
         generateRegistryFile()
@@ -119,7 +119,7 @@ class DocumentedProcessor(
         }.toMap()
     }
 
-    private fun generateDocumentation(processedClass: ProcessedClass) {
+    private fun generateDocumentation(resolver: Resolver, processedClass: ProcessedClass) {
         val generatedClassName = "${processedClass.className}Doc"
         val modelClassName = ClassName(processedClass.packageName, processedClass.className)
 
@@ -133,7 +133,7 @@ class DocumentedProcessor(
             .addKdoc("Get documentation with current values from an instance.")
             .addParameter("instance", modelClassName)
             .returns(ClassDocumentationInfo::class)
-            .addCode(buildWithValuesCode(processedClass, nestedProps))
+            .addCode(buildWithValuesCode(resolver, processedClass, nestedProps))
             .build()
 
         val objectSpec = TypeSpec.objectBuilder(generatedClassName)
@@ -222,6 +222,7 @@ class DocumentedProcessor(
     }
 
     private fun buildWithValuesCode(
+        resolver: Resolver,
         processedClass: ProcessedClass,
         nestedProps: List<ProcessedProperty>,
     ): CodeBlock {
@@ -232,7 +233,7 @@ class DocumentedProcessor(
             indent()
             processedClass.properties.forEachIndexed { index, prop ->
                 val comma = if (index < processedClass.properties.size - 1) "," else ""
-                add(buildPropertyInfoWithValueBlock(prop, comma))
+                add(buildPropertyInfoWithValueBlock(resolver, prop, comma))
             }
             unindent()
             add("),\n")
@@ -267,14 +268,21 @@ class DocumentedProcessor(
         }
     }
 
-    private fun buildPropertyInfoWithValueBlock(prop: ProcessedProperty, trailingComma: String): CodeBlock {
+    private fun buildPropertyInfoWithValueBlock(
+        resolver: Resolver,
+        prop: ProcessedProperty,
+        trailingComma: String
+    ): CodeBlock {
         val valueType = determineValueType(prop)
         val enumValues = if (valueType == DocumentedValueType.ENUM) {
             getEnumValues(prop.type)
         } else {
             null
         }
-        val valueExpr = if (prop.isNullable) "instance.${prop.name}?.toString()" else "instance.${prop.name}.toString()"
+        var valueExpr = "instance.${prop.name}"
+        if (!prop.type.isAssignableFrom(resolver.builtIns.stringType)) {
+            valueExpr += if (prop.isNullable) "?.toString()" else ".toString()"
+        }
 
         return buildCodeBlock {
             add("%T(\n", PropertyDocumentationInfo::class)
