@@ -8,6 +8,9 @@ ARG USER=fraggle
 
 ENV FRAGGLE_ROOT=/app/data
 
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+ENV PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1
+
 RUN apt-get update \
     && apt-get install -y \
     # Common
