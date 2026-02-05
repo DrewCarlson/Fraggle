@@ -47,7 +47,7 @@ object WebSkills {
         val skills = mutableListOf(
             fetchWebpage(sandbox, playwrightFetcher),
             fetchApi(sandbox),
-            sendImage(),
+            //sendImage(),
         )
 
         // Add screenshot skill if Playwright is configured
@@ -229,14 +229,20 @@ DO NOT USE FOR:
 
     /**
      * Skill to download an image from a URL and send it to the user.
+     *
+     * NOTE: For most cases, prefer using inline syntax [[image:URL]] in your response text,
+     * which sends the image with your message in one cohesive message. This tool sends the
+     * image as a separate message after your text response.
      */
-    fun sendImage() = skill("send_image") {
-        description = """Download an image from a URL and send it as an attachment to the user.
-            |Use this skill when the user asks you to show, send, or share an image from the web.
+    /*fun sendImage() = skill("send_image") {
+        description = """Download an image from a URL and send it as a SEPARATE attachment message.
             |
-            |IMPORTANT: The image is sent AUTOMATICALLY as a native attachment - do NOT include any image
-            |URLs, markdown image syntax, or references in your response text. Simply confirm the image
-            |was sent or describe what it shows.""".trimMargin()
+            |PREFER USING INLINE SYNTAX: For most cases, use [[image:URL]] in your response text instead.
+            |This sends the image WITH your text in one cohesive message.
+            |Example: "Here's the photo you asked for: [[image:https://example.com/photo.jpg]]"
+            |
+            |Only use this tool if you specifically need to send the image as a separate message,
+            |or if the inline syntax isn't working for some reason.""".trimMargin()
 
         parameter<String>("url") {
             description = "The URL of the image to download and send"
@@ -308,18 +314,17 @@ DO NOT USE FOR:
                 SkillResult.Error("Failed to download image: ${e.message}")
             }
         }
-    }
+    }*/
 
     /**
      * Skill to take a screenshot of a web page.
      */
     fun screenshotPage(playwrightFetcher: PlaywrightFetcher) = skill("screenshot_page") {
-        description = """Take a screenshot of a web page and send it as an attachment to the user.
+        description = """Take a screenshot of a web page and send it WITH your response.
             |The page will be fully rendered with JavaScript before the screenshot is taken.
             |
-            |IMPORTANT: The screenshot is sent AUTOMATICALLY as a native image attachment - do NOT include
-            |any image URLs, markdown image syntax, or references in your response text. Simply confirm
-            |the screenshot was taken or describe what it shows.""".trimMargin()
+            |The screenshot will be automatically combined with your text response into one cohesive message.
+            |Simply describe or explain the screenshot in your response text - the image will be attached automatically.""".trimMargin()
 
         parameter<String>("url") {
             description = "The URL to screenshot"

@@ -39,9 +39,14 @@ SUPPORTED FORMATTING (use these in your messages):
 - ||spoiler text|| → displays as a spoiler (hidden until tapped)
 - `monospace` → displays in monospace font
 
+SENDING IMAGES:
+- To include an image, use: [[image:URL]] (e.g., [[image:https://example.com/photo.jpg]])
+- The image will be attached to your message automatically
+- Only ONE image can be sent per message on Signal
+- For screenshots, use the screenshot_page tool
+
 IMPORTANT LIMITATIONS:
-- Images and files must be sent as attachments using tools like send_image
-- Do NOT include image URLs or markdown image syntax like ![](url) - these will not display
+- Do NOT include raw image URLs or markdown image syntax like ![](url) - these will not display
 - Do NOT use markdown links like [text](url) - just include the URL directly
 - Do NOT use headers (#), markdown tables, bullet lists, or code blocks (```). Use plain formatting instead."""
     )

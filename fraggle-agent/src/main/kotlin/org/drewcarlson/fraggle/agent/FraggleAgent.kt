@@ -166,18 +166,21 @@ class FraggleAgent(
                 }
 
                 // Image/attachment handling
-                if (!platform.supportsInlineImages) {
-                    appendLine()
-                    appendLine("IMAGE HANDLING:")
-                    appendLine("- Do NOT include markdown image syntax like ![alt](url)")
-                    appendLine("- Do NOT include raw image URLs expecting them to display as images")
-                    appendLine("- When you use tools like send_image or screenshot_page, the image is AUTOMATICALLY sent as an attachment")
-                    appendLine("- Simply confirm the action was completed; do not try to embed or reference the image in your text")
-                }
-
                 if (platform.supportsAttachments) {
                     appendLine()
-                    appendLine("File and image attachments ARE supported and are sent automatically when using relevant tools.")
+                    appendLine("IMAGE HANDLING:")
+                    appendLine("- To include an image in your response, use this syntax: [[image:URL]]")
+                    appendLine("- Example: [[image:https://example.com/photo.jpg]]")
+                    appendLine("- The image will be downloaded and sent as an attachment WITH your text in one cohesive message")
+                    appendLine("- Only ONE image can be sent per message on this platform")
+                    appendLine("- For screenshots, use the screenshot_page tool (it requires browser automation)")
+                    appendLine("- Do NOT use markdown image syntax like ![alt](url) - it won't display")
+                }
+
+                if (!platform.supportsInlineImages) {
+                    appendLine()
+                    appendLine("IMPORTANT: Raw image URLs or markdown image syntax will NOT display as images.")
+                    appendLine("Always use [[image:URL]] syntax to share images.")
                 }
                 appendLine()
             }

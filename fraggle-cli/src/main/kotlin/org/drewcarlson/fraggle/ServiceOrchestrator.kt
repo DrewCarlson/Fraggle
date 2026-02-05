@@ -5,6 +5,7 @@ import io.ktor.server.netty.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collectLatest
 import org.drewcarlson.fraggle.agent.*
+import org.drewcarlson.fraggle.agent.InlineImageProcessor
 import org.drewcarlson.fraggle.backend.createApiServer
 import org.drewcarlson.fraggle.chat.BridgeInitializerRegistry
 import org.drewcarlson.fraggle.chat.ChatBridgeManager
@@ -66,6 +67,9 @@ class ServiceOrchestrator(
 
     // Playwright integration (optional)
     private var playwrightFetcher: PlaywrightFetcher? = null
+
+    // Inline image processor for [[image:url]] syntax
+    private val inlineImageProcessor = InlineImageProcessor()
 
     // Conversation tracking
     private val conversations = ConcurrentHashMap<String, Conversation>()
@@ -476,22 +480,82 @@ class ServiceOrchestrator(
                     typingJob.cancel()
                     bridgeManager.setTyping(chatId, false)
 
-                    // Send response
+                    // Get response text and attachments
                     val responseText = response.contentOrError()
-                    bridgeManager.send(chatId, OutgoingMessage.Text(responseText))
+                    val toolAttachments = response.collectAttachments()
+
+                    // Process inline images (e.g., [[image:url]])
+                    val processedResponse = if (platform.supportsAttachments) {
+                        inlineImageProcessor.process(responseText)
+                    } else {
+                        // Strip inline image syntax if platform doesn't support attachments
+                        InlineImageProcessor.ProcessResult(
+                            inlineImageProcessor.stripInlineImages(responseText),
+                            null
+                        )
+                    }
+
+                    // Determine the final text to send/store
+                    val finalText = processedResponse.cleanedText
+
+                    // Determine primary image to combine with text:
+                    // 1. Prefer inline image from [[image:url]] syntax
+                    // 2. Fall back to first tool-generated image attachment
+                    val inlineImage = processedResponse.image
+                    val firstToolImage = toolAttachments.filterIsInstance<ResponseAttachment.Image>().firstOrNull()
+                    val primaryImage = inlineImage ?: firstToolImage
+
+                    // Send response - combine text with primary image if present
+                    if (primaryImage != null && platform.supportsAttachments) {
+                        val imageData: ByteArray
+                        val imageMimeType: String
+                        val isFromTool: Boolean
+
+                        if (inlineImage != null) {
+                            imageData = inlineImage.data
+                            imageMimeType = inlineImage.mimeType
+                            isFromTool = false
+                            logger.info("Sending response with inline image (${imageData.size / 1024}KB)")
+                        } else {
+                            imageData = firstToolImage!!.data
+                            imageMimeType = firstToolImage.mimeType
+                            isFromTool = true
+                            logger.info("Sending response with tool-generated image (${imageData.size / 1024}KB)")
+                        }
+
+                        // Send as a single message with text + image attachment
+                        bridgeManager.send(chatId, OutgoingMessage.Image(
+                            data = imageData,
+                            mimeType = imageMimeType,
+                            caption = finalText.takeIf { it.isNotBlank() },
+                        ))
+                    } else {
+                        // Send text only
+                        bridgeManager.send(chatId, OutgoingMessage.Text(finalText))
+                    }
 
                     // Emit response sent event
                     fraggleServices?.emitEvent(FraggleEvent.ResponseSent(
                         timestamp = Instant.fromEpochMilliseconds(System.currentTimeMillis()),
                         chatId = chatId,
-                        content = responseText,
+                        content = finalText,
                     ))
 
-                    // Send any attachments
-                    for (attachment in response.collectAttachments()) {
+                    // Send any remaining attachments (files, additional images beyond the first)
+                    val sentPrimaryImage = primaryImage != null && platform.supportsAttachments
+                    var skippedFirstImage = false
+
+                    for (attachment in toolAttachments) {
                         when (attachment) {
                             is ResponseAttachment.Image -> {
-                                logger.info("Sending image attachment (${attachment.data.size / 1024}KB)")
+                                // Skip the first image if it was combined with text
+                                if (sentPrimaryImage && !skippedFirstImage && inlineImage == null) {
+                                    skippedFirstImage = true
+                                    continue
+                                }
+                                // Additional images are sent separately
+                                // Note: On Signal, only one image per message is supported
+                                logger.info("Sending additional image attachment (${attachment.data.size / 1024}KB)")
                                 bridgeManager.send(chatId, OutgoingMessage.Image(
                                     data = attachment.data,
                                     mimeType = attachment.mimeType,
@@ -513,7 +577,7 @@ class ServiceOrchestrator(
                     conversations[chatId] = conversation.copy(
                         messages = conversation.messages + listOf(
                             ConversationMessage(ConversationRole.USER, messageText),
-                            ConversationMessage(ConversationRole.ASSISTANT, responseText),
+                            ConversationMessage(ConversationRole.ASSISTANT, finalText),
                         )
                     )
 
