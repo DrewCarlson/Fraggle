@@ -160,14 +160,7 @@ class ServiceOrchestrator(
         logger.info("Starting Fraggle services...")
 
         // Start API server first - always available even if bridges fail
-        apiServer?.let { server ->
-            server.start(wait = false)
-            val apiConfig = config.fraggle.api
-            logger.info("API server started on http://${apiConfig.host}:${apiConfig.port}")
-            if (config.fraggle.dashboard.enabled) {
-                logger.info("Dashboard available at http://${apiConfig.host}:${apiConfig.port}/")
-            }
-        }
+        apiServer?.start(wait = false)
 
         // Try to connect all registered bridges, but don't fail on errors
         if (bridgeManager.registeredBridges().isNotEmpty()) {
