@@ -1320,7 +1320,7 @@
 </code></pre></div>
 <h3 id="build-specific-module">Build Specific Module<a class="headerlink" href="#build-specific-module" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Core framework</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>./gradlew<span class="w"> </span>:fraggle:build
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>./gradlew<span class="w"> </span>:fraggle-agent:build
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Signal integration</span>
 <a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>./gradlew<span class="w"> </span>:fraggle-signal:build
@@ -1329,27 +1329,27 @@
 <a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>./gradlew<span class="w"> </span>:fraggle-skills:build
 <a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>
 <a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="c1"># CLI application</span>
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>./gradlew<span class="w"> </span>:app:build
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>./gradlew<span class="w"> </span>:fraggle-cli:build
 </code></pre></div>
 <h2 id="distribution">Distribution<a class="headerlink" href="#distribution" title="Permanent link">&para;</a></h2>
 <h3 id="create-runnable-distribution">Create Runnable Distribution<a class="headerlink" href="#create-runnable-distribution" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>./gradlew<span class="w"> </span>:app:installDist
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>./gradlew<span class="w"> </span>:fraggle-cli:installDist
 </code></pre></div>
-<p>Creates a runnable distribution at <code>app/build/install/app/</code>.</p>
+<p>Creates a runnable distribution at <code>fraggle-cli/build/install/fraggle-cli/</code>.</p>
 <p>Run with:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>./app/build/install/app/bin/app<span class="w"> </span>run
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>./fraggle-cli/build/install/fraggle-cli/bin/fraggle<span class="w"> </span>run
 </code></pre></div></p>
 <h3 id="create-distribution-archives">Create Distribution Archives<a class="headerlink" href="#create-distribution-archives" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>./gradlew<span class="w"> </span>:app:distZip
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>./gradlew<span class="w"> </span>:app:distTar
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>./gradlew<span class="w"> </span>:fraggle-cli:distZip
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>./gradlew<span class="w"> </span>:fraggle-cli:distTar
 </code></pre></div>
-<p>Creates archives at <code>app/build/distributions/</code>.</p>
+<p>Creates archives at <code>fraggle-cli/build/distributions/</code>.</p>
 <h3 id="build-fat-jar">Build Fat JAR<a class="headerlink" href="#build-fat-jar" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>./gradlew<span class="w"> </span>:app:shadowJar
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>./gradlew<span class="w"> </span>:fraggle-cli:shadowJar
 </code></pre></div>
-<p>Creates an executable JAR with all dependencies at <code>app/build/libs/app-all.jar</code>.</p>
+<p>Creates an executable JAR with all dependencies at <code>fraggle-cli/build/libs/fraggle.jar</code>.</p>
 <p>Run with:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>java<span class="w"> </span>-jar<span class="w"> </span>app/build/libs/app-all.jar<span class="w"> </span>run
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>java<span class="w"> </span>-jar<span class="w"> </span>fraggle-cli/build/libs/fraggle.jar<span class="w"> </span>run
 </code></pre></div></p>
 <h2 id="development-mode">Development Mode<a class="headerlink" href="#development-mode" title="Permanent link">&para;</a></h2>
 <p>When working on Fraggle itself, use the Gradle run task which configures <code>FRAGGLE_ROOT</code> for development:</p>
@@ -1362,17 +1362,17 @@
 <a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>cp<span class="w"> </span>config/fraggle.yaml<span class="w"> </span>runtime-dev/config/fraggle.yaml
 <a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>
 <a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="c1"># Run in dev mode (sets FRAGGLE_ROOT=runtime-dev/)</span>
-<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>./gradlew<span class="w"> </span>:app:run<span class="w"> </span>--args<span class="o">=</span><span class="s2">&quot;chat&quot;</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>./gradlew<span class="w"> </span>:fraggle-cli:run<span class="w"> </span>--args<span class="o">=</span><span class="s2">&quot;chat&quot;</span>
 </code></pre></div>
 <h2 id="dashboard-build">Dashboard Build<a class="headerlink" href="#dashboard-build" title="Permanent link">&para;</a></h2>
 <p>The web dashboard uses Kotlin/JS with Compose for Web:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Development build</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>./gradlew<span class="w"> </span>:dashboard:jsBrowserDevelopmentWebpack
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>./gradlew<span class="w"> </span>:fraggle-dashboard:jsBrowserDevelopmentDist
 <a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
 <a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># Production build</span>
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>./gradlew<span class="w"> </span>:dashboard:jsBrowserProductionWebpack
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>./gradlew<span class="w"> </span>:fraggle-dashboard:jsBrowserProductionDist
 </code></pre></div>
-<p>Output is at <code>dashboard/build/dist/js/productionExecutable/</code>.</p>
+<p>Output is at <code>fraggle-dashboard/build/vite/js/productionExecutable/</code>.</p>
 <h2 id="clean-build">Clean Build<a class="headerlink" href="#clean-build" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Clean all build outputs</span>
 <a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>./gradlew<span class="w"> </span>clean
