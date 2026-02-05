@@ -1,5 +1,14 @@
 package org.drewcarlson.fraggle
 
+import org.drewcarlson.fraggle.models.AgentConfig
+import org.drewcarlson.fraggle.models.FraggleConfig
+import org.drewcarlson.fraggle.models.MemoryConfig
+import org.drewcarlson.fraggle.models.PromptsConfig
+import org.drewcarlson.fraggle.models.ProviderType
+import org.drewcarlson.fraggle.models.RegisteredChatConfig
+import org.drewcarlson.fraggle.models.SandboxConfig
+import org.drewcarlson.fraggle.models.SandboxType
+import org.drewcarlson.fraggle.models.SignalBridgeConfig
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -26,8 +35,8 @@ class ConfigTest {
         }
 
         @Test
-        fun `AgentSettings has sensible defaults`() {
-            val settings = AgentSettings()
+        fun `AgentConfig has sensible defaults`() {
+            val settings = AgentConfig()
 
             assertEquals(0.7, settings.temperature)
             assertEquals(4096, settings.maxTokens)
@@ -36,16 +45,16 @@ class ConfigTest {
         }
 
         @Test
-        fun `SandboxSettings defaults to permissive`() {
-            val settings = SandboxSettings()
+        fun `SandboxConfig defaults to permissive`() {
+            val settings = SandboxConfig()
 
             assertEquals(SandboxType.PERMISSIVE, settings.type)
             assertEquals("./data/workspace", settings.workDir)
         }
 
         @Test
-        fun `PromptsSettings has sensible defaults`() {
-            val settings = PromptsSettings()
+        fun `PromptsConfig has sensible defaults`() {
+            val settings = PromptsConfig()
 
             assertEquals("./config/prompts", settings.promptsDir)
             assertEquals(20_000, settings.maxFileChars)
@@ -53,8 +62,8 @@ class ConfigTest {
         }
 
         @Test
-        fun `MemorySettings has sensible defaults`() {
-            val settings = MemorySettings()
+        fun `MemoryConfig has sensible defaults`() {
+            val settings = MemoryConfig()
 
             assertEquals("./data/memory", settings.baseDir)
         }
