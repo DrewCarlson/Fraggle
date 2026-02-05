@@ -12,7 +12,6 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.drewcarlson.fraggle.models.FraggleEvent
 
@@ -118,10 +117,11 @@ class WebSocketService(
                         while (isActive) {
                             try {
                                 val event = receiveDeserialized<FraggleEvent>()
+                                console.log("Received event: ${event::class.simpleName}")
                                 _events.emit(event)
                                 emitRefreshTrigger(event)
-                            } catch (_: WebsocketDeserializeException) {
-                                console.warn("Failed to deserialize WebSocket message")
+                            } catch (e: WebsocketDeserializeException) {
+                                console.warn("Failed to deserialize WebSocket message: ${e.message}")
                             }
                         }
                     } catch (e: CancellationException) {
@@ -184,9 +184,17 @@ class WebSocketService(
         scope.launch {
             try {
                 val json = jsonConfig.encodeToString(message)
-                wsSession?.send(Frame.Text(json))
+                console.log("Sending WebSocket message: $json")
+                val session = wsSession
+                if (session == null) {
+                    console.error("Cannot send message - WebSocket not connected")
+                    return@launch
+                }
+                session.send(Frame.Text(json))
+                console.log("WebSocket message sent successfully")
             } catch (e: Exception) {
                 console.error("Failed to send WebSocket message: ${e.message}")
+                e.printStackTrace()
             }
         }
     }

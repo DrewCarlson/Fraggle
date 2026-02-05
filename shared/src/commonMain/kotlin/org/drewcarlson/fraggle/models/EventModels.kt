@@ -1,5 +1,6 @@
 package org.drewcarlson.fraggle.models
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlin.time.Instant
 
@@ -14,6 +15,7 @@ sealed class FraggleEvent {
      * A new message was received.
      */
     @Serializable
+    @SerialName("message_received")
     data class MessageReceived(
         override val timestamp: Instant,
         val chatId: String,
@@ -26,6 +28,7 @@ sealed class FraggleEvent {
      * A response was sent.
      */
     @Serializable
+    @SerialName("response_sent")
     data class ResponseSent(
         override val timestamp: Instant,
         val chatId: String,
@@ -36,6 +39,7 @@ sealed class FraggleEvent {
      * Bridge connection status changed.
      */
     @Serializable
+    @SerialName("bridge_status_changed")
     data class BridgeStatusChanged(
         override val timestamp: Instant,
         val bridgeName: String,
@@ -47,6 +51,7 @@ sealed class FraggleEvent {
      * A scheduled task was triggered.
      */
     @Serializable
+    @SerialName("task_triggered")
     data class TaskTriggered(
         override val timestamp: Instant,
         val taskId: String,
@@ -58,6 +63,7 @@ sealed class FraggleEvent {
      * An error occurred.
      */
     @Serializable
+    @SerialName("error")
     data class Error(
         override val timestamp: Instant,
         val source: String,
@@ -68,6 +74,7 @@ sealed class FraggleEvent {
      * Bridge initialization requires user input.
      */
     @Serializable
+    @SerialName("bridge_init_prompt")
     data class BridgeInitPrompt(
         override val timestamp: Instant,
         val bridgeName: String,
@@ -81,6 +88,7 @@ sealed class FraggleEvent {
      * Bridge initialization progress update.
      */
     @Serializable
+    @SerialName("bridge_init_progress")
     data class BridgeInitProgress(
         override val timestamp: Instant,
         val bridgeName: String,
@@ -92,6 +100,7 @@ sealed class FraggleEvent {
      * Bridge initialization completed successfully.
      */
     @Serializable
+    @SerialName("bridge_init_complete")
     data class BridgeInitComplete(
         override val timestamp: Instant,
         val bridgeName: String,
@@ -103,6 +112,7 @@ sealed class FraggleEvent {
      * Bridge initialization encountered an error.
      */
     @Serializable
+    @SerialName("bridge_init_error")
     data class BridgeInitError(
         override val timestamp: Instant,
         val bridgeName: String,

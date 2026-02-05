@@ -1,5 +1,6 @@
 package org.drewcarlson.fraggle
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -180,7 +181,7 @@ class FraggleServicesImpl(
 
         override suspend fun submitInput(sessionId: String, input: String) {
             val session = activeSessions[sessionId] ?: run {
-                logger.warn("No active session found: $sessionId")
+                logger.warn("No active session found: $sessionId (active sessions: ${activeSessions.keys})")
                 emitEvent(FraggleEvent.BridgeInitError(
                     timestamp = Clock.System.now(),
                     bridgeName = "unknown",
@@ -191,7 +192,7 @@ class FraggleServicesImpl(
                 return
             }
 
-            logger.debug("Received input for session $sessionId")
+            logger.info("Received input for session $sessionId (bridge: ${session.bridgeName}, input length: ${input.length})")
 
             // Cancel any existing job and start new one with input
             session.job?.cancel()
@@ -216,12 +217,15 @@ class FraggleServicesImpl(
         }
 
         private suspend fun processInitStep(sessionId: String, session: InitSession, userInput: String?) {
+            logger.info("Processing init step for ${session.bridgeName} (session: $sessionId, hasInput: ${userInput != null})")
             try {
                 val result = session.initializer.initialize(userInput)
+                logger.info("Init step result for ${session.bridgeName}: ${result::class.simpleName}")
                 val now = Clock.System.now()
 
                 when (result) {
                     is InitStepResult.Success -> {
+                        logger.info("Init success for ${session.bridgeName}: ${result.message}")
                         result.message?.let { message ->
                             emitEvent(FraggleEvent.BridgeInitProgress(
                                 timestamp = now,
@@ -235,6 +239,7 @@ class FraggleServicesImpl(
                     }
 
                     is InitStepResult.PromptRequired -> {
+                        logger.info("Emitting BridgeInitPrompt for ${session.bridgeName}: ${result.prompt}")
                         emitEvent(FraggleEvent.BridgeInitPrompt(
                             timestamp = now,
                             bridgeName = session.bridgeName,
@@ -243,9 +248,11 @@ class FraggleServicesImpl(
                             helpText = result.helpText,
                             sensitive = result.sensitive,
                         ))
+                        logger.info("BridgeInitPrompt emitted successfully")
                     }
 
                     is InitStepResult.Error -> {
+                        logger.warn("Init error for ${session.bridgeName}: ${result.message} (recoverable: ${result.recoverable})")
                         emitEvent(FraggleEvent.BridgeInitError(
                             timestamp = now,
                             bridgeName = session.bridgeName,
@@ -261,6 +268,7 @@ class FraggleServicesImpl(
                     }
 
                     is InitStepResult.Complete -> {
+                        logger.info("Init complete for ${session.bridgeName}: ${result.message}")
                         emitEvent(FraggleEvent.BridgeInitComplete(
                             timestamp = now,
                             bridgeName = session.bridgeName,
@@ -280,8 +288,11 @@ class FraggleServicesImpl(
                         logger.info("Bridge initialization complete for ${session.bridgeName}")
                     }
                 }
+            } catch (e: CancellationException) {
+                logger.info("Init step cancelled for ${session.bridgeName}")
+                throw e // Re-throw to properly cancel the coroutine
             } catch (e: Exception) {
-                logger.error("Error during bridge initialization: ${e.message}", e)
+                logger.error("Error during bridge initialization for ${session.bridgeName}: ${e.message}", e)
                 emitEvent(FraggleEvent.BridgeInitError(
                     timestamp = Clock.System.now(),
                     bridgeName = session.bridgeName,
