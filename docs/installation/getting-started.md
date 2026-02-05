@@ -104,6 +104,7 @@ $FRAGGLE_ROOT/
 │       ├── IDENTITY.md     # Agent identity/personality
 │       └── USER.md         # User-specific instructions
 ├── data/
+│   ├── apps/               # Auto-installed applications (signal-cli, etc.)
 │   ├── memory/             # Conversation memory storage
 │   └── workspace/          # Sandbox working directory
 └── logs/

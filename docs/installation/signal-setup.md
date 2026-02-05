@@ -4,26 +4,54 @@ This guide covers setting up Signal integration for Fraggle.
 
 ## Prerequisites
 
-- [signal-cli](https://github.com/AsamK/signal-cli) installed
 - A phone number to register with Signal
+- **signal-cli** (automatically installed by Fraggle, or manually installed)
 
 ## Installing signal-cli
 
-### macOS (Homebrew)
+### Automatic Installation (Recommended)
+
+Fraggle can automatically download and install signal-cli when it's not found in your system PATH. This is enabled by default and requires no manual setup.
+
+When you first run Fraggle with Signal bridge enabled, it will:
+
+1. Check if signal-cli is available in your system PATH
+2. If not found, download the appropriate version to `data/apps/signal-cli-{version}/`
+3. On Linux: Downloads the native binary for better performance
+4. On macOS/Windows: Downloads the Java-based version
+
+You can control this behavior with the `auto_install` and `signal_cli_version` configuration options.
+
+### Manual Installation
+
+If you prefer to install signal-cli manually, or if automatic installation fails:
+
+#### macOS (Homebrew)
 
 ```bash
 brew install signal-cli
 ```
 
-### Linux
+#### Linux (Native Binary)
 
-Download the latest release from [signal-cli releases](https://github.com/AsamK/signal-cli/releases):
+Download the native binary for better performance:
 
 ```bash
-# Example for version 0.13.0
-wget https://github.com/AsamK/signal-cli/releases/download/v0.13.0/signal-cli-0.13.0.tar.gz
-tar xf signal-cli-0.13.0.tar.gz
-sudo mv signal-cli-0.13.0 /opt/signal-cli
+# Example for version 0.13.23
+wget https://github.com/AsamK/signal-cli/releases/download/v0.13.23/signal-cli-0.13.23-Linux-native.tar.gz
+tar xf signal-cli-0.13.23-Linux-native.tar.gz
+sudo mv signal-cli /usr/local/bin/signal-cli
+```
+
+#### Linux/macOS (Java Version)
+
+If you prefer the Java-based version:
+
+```bash
+# Example for version 0.13.23
+wget https://github.com/AsamK/signal-cli/releases/download/v0.13.23/signal-cli-0.13.23.tar.gz
+tar xf signal-cli-0.13.23.tar.gz
+sudo mv signal-cli-0.13.23 /opt/signal-cli
 sudo ln -s /opt/signal-cli/bin/signal-cli /usr/local/bin/signal-cli
 ```
 
@@ -73,7 +101,13 @@ fraggle:
       trigger: "@fraggle"             # Trigger for group messages
       respond_to_direct_messages: true
       show_typing_indicator: true
+      # Auto-installation settings (optional)
+      auto_install: true              # Auto-download signal-cli if not found
+      signal_cli_version: "0.13.23"   # Version to download
 ```
+
+!!! tip "Automatic Installation"
+    With `auto_install: true` (the default), you don't need to install signal-cli manually. Fraggle will download it automatically on first run if it's not found in your system PATH.
 
 ### Configuration Options
 
@@ -83,7 +117,9 @@ fraggle:
 | `enabled`                     | Whether Signal bridge is active                | `true` if phone is set     |
 | `config_dir`                  | Directory for Signal configuration             | `~/.config/fraggle/signal` |
 | `trigger`                     | Prefix to trigger bot in group chats           | `@fraggle`                 |
-| `signal_cli_path`             | Path to signal-cli (null = use PATH)           | `null`                     |
+| `signal_cli_path`             | Path to signal-cli (null = use PATH or auto-install) | `null`                |
+| `auto_install`                | Automatically download signal-cli if not found | `true`                     |
+| `signal_cli_version`          | Version of signal-cli to auto-install          | `0.13.23`                  |
 | `respond_to_direct_messages`  | Respond to DMs without trigger                 | `true`                     |
 | `show_typing_indicator`       | Show typing indicator while processing         | `true`                     |
 
@@ -144,7 +180,7 @@ Fraggle supports Signal's text formatting. The LLM can use markdown-like syntax 
 
 ### "Messages not being received"
 
-1. Run in interactive mode first to verify the agent works: `./gradlew :app:run --args="chat"`
+1. Run in interactive mode first to verify the agent works: `./bin/fraggle chat`
 2. Check logs at `$FRAGGLE_ROOT/logs/fraggle.log`
 3. Try receiving messages manually: `signal-cli -u +1234567890 receive`
 
@@ -154,6 +190,39 @@ Ensure the user running Fraggle has:
 
 - Read/write access to `config_dir`
 - Execute permission on `signal-cli`
+
+### Auto-installation issues
+
+If automatic installation of signal-cli fails:
+
+1. Check internet connectivity - Fraggle needs to download from GitHub releases
+2. Verify write permissions to `data/apps/` directory
+3. Check logs for specific download or extraction errors
+4. On Linux, ensure `tar` command is available for extraction
+5. Try manual installation instead (see above)
+
+To disable auto-installation and use a manually installed version:
+
+```yaml
+fraggle:
+  bridges:
+    signal:
+      auto_install: false
+      signal_cli_path: /path/to/signal-cli  # Optional: specify explicit path
+```
+
+### Updating signal-cli version
+
+To use a different version of signal-cli:
+
+```yaml
+fraggle:
+  bridges:
+    signal:
+      signal_cli_version: "0.13.24"  # Specify desired version
+```
+
+Fraggle will download the new version on next startup. Old versions in `data/apps/` can be manually deleted.
 
 ## Security Considerations
 

@@ -41,7 +41,9 @@ fraggle:
       phone: "+1234567890"            # Your Signal phone number
       config_dir: ~/.config/fraggle/signal
       trigger: "@fraggle"             # Prefix to trigger bot in groups
-      signal_cli_path: null           # Path to signal-cli (null = use PATH)
+      signal_cli_path: null           # Path to signal-cli (null = auto-detect)
+      auto_install: true              # Auto-download signal-cli if not found
+      signal_cli_version: "0.13.23"   # Version to auto-install
       respond_to_direct_messages: true
       show_typing_indicator: true
 
@@ -117,7 +119,21 @@ Configures the LLM provider connection.
 
 Chat platform integrations. Currently supports Signal.
 
-See [Signal Setup](signal-setup.md) for detailed Signal configuration.
+**Signal Bridge** - Fraggle can automatically download and install signal-cli if it's not found in your system PATH. This is enabled by default (`auto_install: true`). On Linux, the native binary is downloaded for better performance; on other platforms, the Java-based version is used.
+
+| Option                       | Description                             | Default                    |
+|------------------------------|-----------------------------------------|----------------------------|
+| `phone`                      | Signal phone number (with country code) | Required                   |
+| `enabled`                    | Whether bridge is active                | `true` if phone is set     |
+| `config_dir`                 | Directory for Signal configuration      | `~/.config/fraggle/signal` |
+| `trigger`                    | Prefix to trigger bot in group chats    | `@fraggle`                 |
+| `signal_cli_path`            | Path to signal-cli (null = auto-detect) | `null`                     |
+| `auto_install`               | Auto-download signal-cli if not found   | `true`                     |
+| `signal_cli_version`         | Version of signal-cli to auto-install   | `0.13.23`                  |
+| `respond_to_direct_messages` | Respond to DMs without trigger          | `true`                     |
+| `show_typing_indicator`      | Show typing indicator while processing  | `true`                     |
+
+See [Signal Setup](signal-setup.md) for detailed Signal configuration and registration.
 
 ### Prompts
 

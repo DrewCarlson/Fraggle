@@ -29,9 +29,25 @@ data class SignalConfig(
 
     /**
      * Path to signal-cli executable.
-     * If null, assumes signal-cli is in PATH.
+     * If null, assumes signal-cli is in PATH or uses auto-installed version.
      */
     val signalCliPath: String? = null,
+
+    /**
+     * Whether to automatically download and install signal-cli if not found.
+     */
+    val autoInstall: Boolean = true,
+
+    /**
+     * Version of signal-cli to auto-install.
+     */
+    val signalCliVersion: String = "0.13.23",
+
+    /**
+     * Base directory for app installations (e.g., data/apps).
+     * Used when auto-installing signal-cli.
+     */
+    val appsDir: String? = null,
 
     /**
      * Whether to respond to messages in direct chats without trigger.

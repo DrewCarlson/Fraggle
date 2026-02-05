@@ -21,9 +21,21 @@ import kotlin.io.path.exists
  */
 class SignalBridgeInitializer(
     private val config: SignalConfig,
+    private val installer: SignalCliInstaller? = createInstaller(config),
 ) : BridgeInitializer {
 
     private val logger = LoggerFactory.getLogger(SignalBridgeInitializer::class.java)
+
+    companion object {
+        private fun createInstaller(config: SignalConfig): SignalCliInstaller? {
+            if (!config.autoInstall) return null
+            val appsDir = config.appsDir?.let { java.nio.file.Path.of(it) }
+                ?: java.nio.file.Path.of("data/apps")
+            return SignalCliInstaller(appsDir, config.signalCliVersion)
+        }
+    }
+
+    private var resolvedCliPath: String? = null
 
     override val bridgeName = "signal"
     override val description = "Register Signal account with phone verification"
@@ -194,9 +206,46 @@ class SignalBridgeInitializer(
         lastError = null
     }
 
+    private suspend fun resolveSignalCliPath(): String {
+        // Use explicit path if configured
+        config.signalCliPath?.let { return it }
+
+        // Use cached path if already resolved
+        resolvedCliPath?.let { return it }
+
+        // Try auto-install if enabled
+        if (config.autoInstall && installer != null) {
+            // Check if already installed
+            installer.getSignalCliPath()?.let {
+                resolvedCliPath = it.toString()
+                logger.info("Using installed signal-cli at $it")
+                return it.toString()
+            }
+
+            // Check if in PATH before downloading
+            if (SignalCliInstaller.isInPath()) {
+                resolvedCliPath = "signal-cli"
+                logger.info("Using signal-cli from system PATH")
+                return "signal-cli"
+            }
+
+            // Install signal-cli
+            val installed = installer.ensureInstalled()
+            if (installed != null) {
+                resolvedCliPath = installed.toString()
+                return installed.toString()
+            }
+        }
+
+        // Fall back to system PATH
+        resolvedCliPath = "signal-cli"
+        return "signal-cli"
+    }
+
     private suspend fun runSignalCli(vararg args: String): CommandResult {
+        val cli = resolveSignalCliPath()
+
         return withContext(Dispatchers.IO) {
-            val cli = config.signalCliPath ?: "signal-cli"
             val command = listOf(
                 cli,
                 "-a", config.phoneNumber,

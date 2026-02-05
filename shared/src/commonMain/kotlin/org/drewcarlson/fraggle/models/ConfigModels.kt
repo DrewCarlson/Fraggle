@@ -106,8 +106,16 @@ data class SignalBridgeConfig(
     val trigger: String? = "@fraggle",
 
     @SerialName("signal_cli_path")
-    @Documented(name = "Signal CLI Path", description = "Path to signal-cli executable. If null, uses system PATH")
+    @Documented(name = "Signal CLI Path", description = "Path to signal-cli executable. If null, uses system PATH or auto-installed version")
     val signalCliPath: String? = null,
+
+    @SerialName("auto_install")
+    @Documented(name = "Auto Install", description = "Whether to automatically download and install signal-cli if not found in PATH")
+    val autoInstall: Boolean = true,
+
+    @SerialName("signal_cli_version")
+    @Documented(name = "Signal CLI Version", description = "Version of signal-cli to auto-install")
+    val signalCliVersion: String = "0.13.23",
 
     @SerialName("respond_to_direct_messages")
     @Documented(name = "Respond to DMs", description = "Whether to respond to direct messages without a trigger")

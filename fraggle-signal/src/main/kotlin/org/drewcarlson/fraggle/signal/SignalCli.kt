@@ -39,6 +39,7 @@ sealed class ConnectionState {
  * This class uses JSON-RPC mode for bidirectional communication.
  *
  * Features:
+ * - Automatic signal-cli installation if not found in PATH
  * - Automatic reconnection on unexpected disconnects
  * - Exponential backoff for reconnection attempts
  * - Connection state tracking
@@ -65,7 +66,16 @@ class SignalCli(
     private val maxReconnectAttempts: Int = 5,
     private val initialReconnectDelayMs: Long = 1000,
     private val maxReconnectDelayMs: Long = 30000,
+    private val installer: SignalCliInstaller? = createInstaller(config),
 ) {
+    companion object {
+        private fun createInstaller(config: SignalConfig): SignalCliInstaller? {
+            if (!config.autoInstall) return null
+            val appsDir = config.appsDir?.let { java.nio.file.Path.of(it) }
+                ?: java.nio.file.Path.of("data/apps")
+            return SignalCliInstaller(appsDir, config.signalCliVersion)
+        }
+    }
     private val logger = LoggerFactory.getLogger(SignalCli::class.java)
     private val json = Json {
         ignoreUnknownKeys = true
@@ -510,14 +520,60 @@ class SignalCli(
         }
     }
 
-    private fun buildCommand(): List<String> {
-        val cli = config.signalCliPath ?: "signal-cli"
+    private var resolvedCliPath: String? = null
+
+    private suspend fun buildCommand(): List<String> {
+        val cli = resolveSignalCliPath()
         return listOf(
             cli,
             "-a", config.phoneNumber,
             "--config", config.configDirPath().toString(),
             "jsonRpc"
         )
+    }
+
+    /**
+     * Resolve the path to signal-cli executable.
+     * Priority:
+     * 1. Explicit path from config
+     * 2. Cached resolved path
+     * 3. Auto-installed version
+     * 4. System PATH
+     */
+    private suspend fun resolveSignalCliPath(): String {
+        // Use explicit path if configured
+        config.signalCliPath?.let { return it }
+
+        // Use cached path if already resolved
+        resolvedCliPath?.let { return it }
+
+        // Try auto-install if enabled
+        if (config.autoInstall && installer != null) {
+            // Check if already installed
+            installer.getSignalCliPath()?.let {
+                resolvedCliPath = it.toString()
+                logger.info("Using installed signal-cli at $it")
+                return it.toString()
+            }
+
+            // Check if in PATH before downloading
+            if (SignalCliInstaller.isInPath()) {
+                resolvedCliPath = "signal-cli"
+                logger.info("Using signal-cli from system PATH")
+                return "signal-cli"
+            }
+
+            // Install signal-cli
+            val installed = installer.ensureInstalled()
+            if (installed != null) {
+                resolvedCliPath = installed.toString()
+                return installed.toString()
+            }
+        }
+
+        // Fall back to system PATH
+        resolvedCliPath = "signal-cli"
+        return "signal-cli"
     }
 
     private suspend fun readResponses() {
