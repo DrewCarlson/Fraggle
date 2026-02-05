@@ -26,7 +26,7 @@ fraggle:
     signal:
       enabled: true
       phone: ""                       # Your Signal phone number (e.g., "+1234567890")
-      config_dir: ~/.config/fraggle/signal
+      config_dir: ./config/apps/signal
       trigger: "@fraggle"             # Prefix to trigger the bot in groups (null for all messages)
       # signal_cli_path: /usr/local/bin/signal-cli  # Optional: path to signal-cli
       respond_to_direct_messages: true

@@ -39,7 +39,7 @@ fraggle:
     signal:
       enabled: true
       phone: "+1234567890"            # Your Signal phone number
-      config_dir: ~/.config/fraggle/signal
+      config_dir: ./config/apps/signal
       trigger: "@fraggle"             # Prefix to trigger bot in groups
       signal_cli_path: null           # Path to signal-cli (null = auto-detect)
       auto_install: true              # Auto-download signal-cli if not found
