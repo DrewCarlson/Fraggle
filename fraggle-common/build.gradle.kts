@@ -16,7 +16,7 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                api(project(":documented-annotations"))
+                api(project(":libs:documented-annotations"))
                 api(libs.kotlinx.serialization.json)
                 api(libs.kotlinx.datetime)
             }
@@ -34,7 +34,7 @@ kotlin {
 }
 
 dependencies {
-    add("kspJvm", project(":documented-processor"))
+    add("kspJvm", project(":libs:documented-processor"))
 }
 
 // Ensure KSP runs before common compilation

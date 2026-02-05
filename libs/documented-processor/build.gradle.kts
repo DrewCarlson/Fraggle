@@ -10,7 +10,7 @@ kotlin {
 }
 
 dependencies {
-    implementation(project(":documented-annotations"))
+    implementation(project(":libs:documented-annotations"))
     implementation(libs.ksp.api)
     implementation(libs.kotlinpoet)
     implementation(libs.kotlinpoet.ksp)

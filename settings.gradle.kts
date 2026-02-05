@@ -16,10 +16,8 @@ pluginManagement {
     }
 }
 
-include(":documented-annotations")
-include(":documented-processor")
-project(":documented-annotations").projectDir = file("libs/documented-annotations")
-project(":documented-processor").projectDir = file("libs/documented-processor")
+include(":libs:documented-annotations")
+include(":libs:documented-processor")
 
 include(":fraggle-common")
 include(":fraggle-agent")
