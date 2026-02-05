@@ -7,7 +7,7 @@ Fraggle is a Kotlin-based AI assistant framework that integrates with messaging 
 <div class="grid cards" markdown>
 
 - :material-chat-processing: **Chat Bridge Integration**
-  Connect to messaging platforms like Signal, with support for both direct and group conversations.
+  Connect to messaging platforms like Signal and Discord, with support for direct conversations.
 
 - :material-robot: **ReAct Agent Loop**
   Iterative reasoning and acting pattern for reliable tool use with any compatible LLM.
@@ -50,6 +50,7 @@ Fraggle/
 ├── fraggle-cli/            # CLI application entry point
 ├── fraggle-agent/          # Core agent, provider, and skill abstractions
 ├── fraggle-signal/         # Signal messaging integration
+├── fraggle-discord/        # Discord bot integration
 ├── fraggle-skills/         # Built-in skill implementations
 ├── fraggle-api/            # REST API server
 ├── fraggle-dashboard/      # Web dashboard (Compose for Web)

@@ -53,8 +53,18 @@ class InlineImageProcessor {
     data class ProcessResult(
         /** The text with inline image syntax removed */
         val cleanedText: String,
-        /** The extracted image, if any */
+        /** The extracted image, if any (for single-image processing) */
         val image: InlineImage?,
+    )
+
+    /**
+     * Result of processing text for multiple inline images.
+     */
+    data class MultiImageProcessResult(
+        /** The text with all inline image syntax removed */
+        val cleanedText: String,
+        /** All extracted images */
+        val images: List<InlineImage>,
     )
 
     /**
@@ -213,10 +223,76 @@ class InlineImageProcessor {
     }
 
     /**
+     * Process text for ALL inline image syntax (for platforms supporting multiple images).
+     * Extracts all image references, downloads them, and returns cleaned text.
+     *
+     * @param text The text to process
+     * @param maxImages Maximum number of images to process (default 10 for Discord)
+     * @return MultiImageProcessResult with cleaned text and list of images
+     */
+    suspend fun processAll(text: String, maxImages: Int = 10): MultiImageProcessResult {
+        val matches = IMAGE_PATTERN.findAll(text).toList()
+        if (matches.isEmpty()) {
+            return MultiImageProcessResult(text, emptyList())
+        }
+
+        val images = mutableListOf<InlineImage>()
+        var remainingText = text
+
+        for (match in matches.take(maxImages)) {
+            val imageUrl = match.groupValues[1].trim()
+            logger.debug("Found inline image reference: $imageUrl")
+
+            // Remove this image syntax from the text
+            remainingText = remainingText.replaceFirst(match.value, "")
+
+            // Try to load the image
+            val image = try {
+                when {
+                    imageUrl.startsWith("http://") || imageUrl.startsWith("https://") -> {
+                        downloadRemoteImage(imageUrl)
+                    }
+                    imageUrl.startsWith("file://") -> {
+                        loadLocalImage(imageUrl.removePrefix("file://"))
+                    }
+                    imageUrl.startsWith("/") || imageUrl.matches(Regex("^[a-zA-Z]:.*")) -> {
+                        loadLocalImage(imageUrl)
+                    }
+                    else -> {
+                        logger.warn("Unsupported image URL format: $imageUrl")
+                        null
+                    }
+                }
+            } catch (e: Exception) {
+                logger.error("Failed to load inline image: ${e.message}")
+                null
+            }
+
+            if (image != null) {
+                images.add(image)
+            }
+        }
+
+        // Warn if we truncated images
+        if (matches.size > maxImages) {
+            logger.warn("Truncated ${matches.size - maxImages} images (max $maxImages)")
+        }
+
+        return MultiImageProcessResult(remainingText.trim(), images)
+    }
+
+    /**
      * Check if text contains any inline image syntax.
      */
     fun hasInlineImage(text: String): Boolean {
         return IMAGE_PATTERN.containsMatchIn(text)
+    }
+
+    /**
+     * Count the number of inline images in the text.
+     */
+    fun countInlineImages(text: String): Int {
+        return IMAGE_PATTERN.findAll(text).count()
     }
 
     /**

@@ -54,6 +54,7 @@ nav:
       - Getting Started: installation/getting-started.md
       - Configuration: installation/configuration.md
       - Signal Setup: installation/signal-setup.md
+      - Discord Setup: installation/discord-setup.md
   - Architecture:
       - Overview: architecture/overview.md
       - Agent System: architecture/agent.md

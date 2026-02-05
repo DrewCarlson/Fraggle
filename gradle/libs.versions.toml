@@ -2,7 +2,7 @@
 kotlin = "2.3.0"
 ksp = "2.3.5"
 kotlinpoet = "2.2.0"
-ktor = "3.4.0"
+ktor = "3.2.3"
 logback = "1.5.13"
 kotlinx-coroutines = "1.10.2"
 kotlinx-serialization = "1.10.0"
@@ -17,6 +17,7 @@ kover = "0.9.1"
 compose = "1.11.0-alpha02"
 kotlinjs-wrappers = "2026.2.2"
 routing-compose = "0.5.0"
+kord = "0.17.0"
 
 [libraries]
 # Ktor Server
@@ -81,6 +82,9 @@ logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "lo
 
 # Browser Automation
 playwright = { module = "com.microsoft.playwright:playwright", version.ref = "playwright" }
+
+# Discord
+kord-core = { module = "dev.kord:kord-core-jvm", version.ref = "kord" }
 
 # KSP
 ksp-api = { module = "com.google.devtools.ksp:symbol-processing-api", version.ref = "ksp" }

@@ -343,12 +343,62 @@ private fun CompleteView(message: String) {
                 Div({
                     style {
                         fontWeight("600")
-                        marginBottom(4.px)
+                        marginBottom(8.px)
                     }
                 }) {
                     Text("Setup Complete")
                 }
-                Text(message)
+                // Render message with clickable URLs and line breaks
+                FormattedMessage(message)
+            }
+        }
+    }
+}
+
+/**
+ * Renders text with URLs converted to clickable links and line breaks preserved.
+ */
+@Composable
+private fun FormattedMessage(message: String) {
+    val urlRegex = Regex("""https?://[^\s]+""")
+
+    // Split by lines first to preserve line breaks
+    message.lines().forEachIndexed { lineIndex, line ->
+        if (lineIndex > 0) {
+            Br()
+        }
+
+        // Find URLs in this line
+        val matches = urlRegex.findAll(line).toList()
+
+        if (matches.isEmpty()) {
+            Text(line)
+        } else {
+            var lastEnd = 0
+            matches.forEach { match ->
+                // Text before the URL
+                if (match.range.first > lastEnd) {
+                    Text(line.substring(lastEnd, match.range.first))
+                }
+                // The URL as a link
+                A(
+                    href = match.value,
+                    attrs = {
+                        attr("target", "_blank")
+                        attr("rel", "noopener noreferrer")
+                        style {
+                            color(Color("#7289da"))
+                            property("word-break", "break-all")
+                        }
+                    }
+                ) {
+                    Text(match.value)
+                }
+                lastEnd = match.range.last + 1
+            }
+            // Text after the last URL
+            if (lastEnd < line.length) {
+                Text(line.substring(lastEnd))
             }
         }
     }

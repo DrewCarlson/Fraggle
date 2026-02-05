@@ -40,6 +40,13 @@ data class ChatPlatform(
     val maxMessageLength: Int = 0,
 
     /**
+     * Whether an activate action should always be available in the UI.
+     * When true, users can access setup at any time (e.g., to get OAuth links).
+     * When false, setup is only shown when the bridge is not initialized.
+     */
+    val persistentActivation: Boolean = false,
+
+    /**
      * Additional notes about the platform for the AI to consider.
      */
     val notes: String? = null,

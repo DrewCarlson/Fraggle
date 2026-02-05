@@ -18,6 +18,10 @@ import org.drewcarlson.fraggle.models.FraggleEvent
 import org.drewcarlson.fraggle.models.ProviderType
 import org.drewcarlson.fraggle.models.SandboxType
 import org.drewcarlson.fraggle.models.SignalBridgeConfig
+import org.drewcarlson.fraggle.models.DiscordBridgeConfig
+import org.drewcarlson.fraggle.discord.DiscordBridge
+import org.drewcarlson.fraggle.discord.DiscordBridgeInitializer
+import org.drewcarlson.fraggle.discord.DiscordConfig
 import org.drewcarlson.fraggle.prompt.PromptConfig
 import org.drewcarlson.fraggle.prompt.PromptManager
 import org.drewcarlson.fraggle.provider.LLMProvider
@@ -64,6 +68,7 @@ class ServiceOrchestrator(
     private lateinit var initializerRegistry: BridgeInitializerRegistry
     private var messageRouter: MessageRouter? = null
     private var messageJob: Job? = null
+    private var discordBridge: DiscordBridge? = null
 
     // Playwright integration (optional)
     private var playwrightFetcher: PlaywrightFetcher? = null
@@ -353,8 +358,14 @@ class ServiceOrchestrator(
             }
         }
 
+        // Initialize Discord bridge if configured
+        config.fraggle.bridges.discord?.let { discordConfig ->
+            if (discordConfig.enabled) {
+                initializeDiscordBridge(discordConfig)
+            }
+        }
+
         // Future: Add other bridge initializations here
-        // config.fraggle.bridges.discord?.let { ... }
         // config.fraggle.bridges.telegram?.let { ... }
 
         if (bridgeManager.registeredBridges().isEmpty()) {
@@ -386,6 +397,31 @@ class ServiceOrchestrator(
         logger.info("Signal bridge initialized for ${settings.phone}")
     }
 
+    private fun initializeDiscordBridge(settings: DiscordBridgeConfig) {
+        val discordConfig = DiscordConfig(
+            token = settings.token,
+            clientId = settings.clientId,
+            clientSecret = settings.clientSecret,
+            oauthRedirectUri = settings.oauthRedirectUri,
+            triggerPrefix = settings.trigger,
+            respondToDirectMessages = settings.respondToDirectMessages,
+            showTypingIndicator = settings.showTypingIndicator,
+            maxImagesPerMessage = settings.maxImagesPerMessage,
+            maxFileSizeBytes = settings.maxFileSizeMb.toLong() * 1024 * 1024,
+            allowedGuildIds = settings.allowedGuildIds,
+            allowedChannelIds = settings.allowedChannelIds,
+        )
+
+        val bridge = DiscordBridge(discordConfig, scope)
+        bridgeManager.register("discord", bridge)
+        discordBridge = bridge
+
+        // Register the bridge initializer for interactive setup
+        initializerRegistry.register("discord", DiscordBridgeInitializer(discordConfig))
+
+        logger.info("Discord bridge initialized")
+    }
+
     /**
      * Initialize the API server if enabled in configuration.
      */
@@ -409,6 +445,7 @@ class ServiceOrchestrator(
             configPath = configPath,
             initializerRegistry = initializerRegistry,
             scope = scope,
+            discordBridge = discordBridge,
             startTime = startTime,
         )
 
@@ -484,51 +521,62 @@ class ServiceOrchestrator(
                     val responseText = response.contentOrError()
                     val toolAttachments = response.collectAttachments()
 
-                    // Process inline images (e.g., [[image:url]])
-                    val processedResponse = if (platform.supportsAttachments) {
-                        inlineImageProcessor.process(responseText)
-                    } else {
-                        // Strip inline image syntax if platform doesn't support attachments
-                        InlineImageProcessor.ProcessResult(
-                            inlineImageProcessor.stripInlineImages(responseText),
-                            null
-                        )
+                    // Determine if platform supports multiple images (Discord = 10, Signal = 1)
+                    val maxImages = when (platform.name) {
+                        "Discord" -> 10
+                        else -> 1
                     }
 
-                    // Determine the final text to send/store
-                    val finalText = processedResponse.cleanedText
-
-                    // Determine primary image to combine with text:
-                    // 1. Prefer inline image from [[image:url]] syntax
-                    // 2. Fall back to first tool-generated image attachment
-                    val inlineImage = processedResponse.image
-                    val firstToolImage = toolAttachments.filterIsInstance<ResponseAttachment.Image>().firstOrNull()
-                    val primaryImage = inlineImage ?: firstToolImage
-
-                    // Send response - combine text with primary image if present
-                    if (primaryImage != null && platform.supportsAttachments) {
-                        val imageData: ByteArray
-                        val imageMimeType: String
-                        val isFromTool: Boolean
-
-                        if (inlineImage != null) {
-                            imageData = inlineImage.data
-                            imageMimeType = inlineImage.mimeType
-                            isFromTool = false
-                            logger.info("Sending response with inline image (${imageData.size / 1024}KB)")
+                    // Process inline images (e.g., [[image:url]])
+                    val (finalText, inlineImages) = if (platform.supportsAttachments) {
+                        if (maxImages > 1) {
+                            // Multi-image processing for Discord
+                            val result = inlineImageProcessor.processAll(responseText, maxImages)
+                            result.cleanedText to result.images
                         } else {
-                            imageData = firstToolImage!!.data
-                            imageMimeType = firstToolImage.mimeType
-                            isFromTool = true
-                            logger.info("Sending response with tool-generated image (${imageData.size / 1024}KB)")
+                            // Single-image processing for Signal
+                            val result = inlineImageProcessor.process(responseText)
+                            result.cleanedText to listOfNotNull(result.image)
+                        }
+                    } else {
+                        // Strip inline image syntax if platform doesn't support attachments
+                        inlineImageProcessor.stripInlineImages(responseText) to emptyList()
+                    }
+
+                    // Collect all images: inline images first, then tool-generated images
+                    val toolImages = toolAttachments.filterIsInstance<ResponseAttachment.Image>()
+                    val allImages = inlineImages.map { it.data to it.mimeType } +
+                        toolImages.map { it.data to it.mimeType }
+
+                    // Discord: Send multiple images in one message with text
+                    // Signal: Send single image with text
+                    if (allImages.isNotEmpty() && platform.supportsAttachments) {
+                        val imagesToSend = allImages.take(maxImages)
+                        if (allImages.size > maxImages) {
+                            logger.warn("Truncating images from ${allImages.size} to $maxImages")
                         }
 
-                        // Send as a single message with text + image attachment
-                        bridgeManager.send(chatId, OutgoingMessage.Image(
-                            data = imageData,
-                            mimeType = imageMimeType,
-                            caption = finalText.takeIf { it.isNotBlank() },
-                        ))
+                        if (imagesToSend.size == 1) {
+                            // Single image - use standard OutgoingMessage.Image
+                            val (imageData, mimeType) = imagesToSend.first()
+                            logger.info("Sending response with image (${imageData.size / 1024}KB)")
+                            bridgeManager.send(chatId, OutgoingMessage.Image(
+                                data = imageData,
+                                mimeType = mimeType,
+                                caption = finalText.takeIf { it.isNotBlank() },
+                            ))
+                        } else {
+                            // Multiple images - for Discord, send first with caption, rest without
+                            logger.info("Sending response with ${imagesToSend.size} images")
+                            imagesToSend.forEachIndexed { index, (imageData, mimeType) ->
+                                bridgeManager.send(chatId, OutgoingMessage.Image(
+                                    data = imageData,
+                                    mimeType = mimeType,
+                                    // Only first image gets the caption
+                                    caption = if (index == 0) finalText.takeIf { it.isNotBlank() } else null,
+                                ))
+                            }
+                        }
                     } else {
                         // Send text only
                         bridgeManager.send(chatId, OutgoingMessage.Text(finalText))
@@ -541,26 +589,11 @@ class ServiceOrchestrator(
                         content = finalText,
                     ))
 
-                    // Send any remaining attachments (files, additional images beyond the first)
-                    val sentPrimaryImage = primaryImage != null && platform.supportsAttachments
-                    var skippedFirstImage = false
-
+                    // Send any remaining file attachments
                     for (attachment in toolAttachments) {
                         when (attachment) {
                             is ResponseAttachment.Image -> {
-                                // Skip the first image if it was combined with text
-                                if (sentPrimaryImage && !skippedFirstImage && inlineImage == null) {
-                                    skippedFirstImage = true
-                                    continue
-                                }
-                                // Additional images are sent separately
-                                // Note: On Signal, only one image per message is supported
-                                logger.info("Sending additional image attachment (${attachment.data.size / 1024}KB)")
-                                bridgeManager.send(chatId, OutgoingMessage.Image(
-                                    data = attachment.data,
-                                    mimeType = attachment.mimeType,
-                                    caption = attachment.caption,
-                                ))
+                                // Already handled above
                             }
                             is ResponseAttachment.File -> {
                                 logger.info("Sending file attachment: ${attachment.filename}")

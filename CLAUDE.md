@@ -36,12 +36,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Architecture
 
-Fraggle is a Kotlin-based AI assistant that integrates with messaging platforms (currently Signal) using a local LLM provider (LM Studio).
+Fraggle is a Kotlin-based AI assistant that integrates with messaging platforms (Signal, Discord) using a local LLM provider (LM Studio).
 
 ### Module Structure
 
 - **`fraggle-agent`** - Core framework: agent loop, LLM provider interface, skill system, memory storage, sandbox abstraction, chat bridge interface
 - **`fraggle-signal`** - Signal messenger integration with message routing and text formatting
+- **`fraggle-discord`** - Discord bot integration using Kord 0.17.0, supports multiple image attachments (up to 10)
 - **`fraggle-skills`** - Built-in skills: filesystem, web fetching, shell execution, task scheduling
 - **`fraggle-cli`** - CLI application using Clikt, configuration loading, service orchestration
 - **`fraggle-api`** - Optional Ktor REST API server
@@ -77,6 +78,7 @@ skill("my_skill") {
 
 - Kotlin 2.3.0 on JDK 21
 - Ktor 3.4.0 (HTTP client/server)
+- Kord 0.17.0 (Discord API)
 - kotlinx-coroutines for async operations
 - KAML for YAML parsing
 - Clikt for CLI

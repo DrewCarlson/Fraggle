@@ -16,6 +16,8 @@ import org.drewcarlson.fraggle.chat.InitStepResult
 import org.drewcarlson.fraggle.memory.MemoryStore
 import org.drewcarlson.fraggle.models.*
 import org.drewcarlson.fraggle.signal.SignalBridge
+import org.drewcarlson.fraggle.discord.DiscordBridge
+import org.drewcarlson.fraggle.discord.DiscordOAuth
 import org.drewcarlson.fraggle.skill.SkillRegistry
 import org.drewcarlson.fraggle.skills.scheduling.ScheduledTask
 import org.drewcarlson.fraggle.skills.scheduling.TaskScheduler
@@ -41,6 +43,7 @@ class FraggleServicesImpl(
     private val configPath: Path,
     private val initializerRegistry: BridgeInitializerRegistry,
     private val scope: CoroutineScope,
+    private val discordBridge: DiscordBridge? = null,
     private val startTime: Instant = Clock.System.now(),
 ) : FraggleServices {
 
@@ -56,6 +59,15 @@ class FraggleServicesImpl(
     override val config: ConfigService = ConfigServiceImpl()
 
     override val bridgeInit: BridgeInitService = BridgeInitServiceImpl()
+
+    override val discordOAuth: DiscordOAuthService? = discordBridge?.let { bridge ->
+        val config = fraggleConfig.fraggle.bridges.discord
+        if (config != null && config.clientSecret != null && config.oauthRedirectUri != null) {
+            DiscordOAuthServiceImpl(bridge, config)
+        } else {
+            null
+        }
+    }
 
     override suspend fun getStatus(): SystemStatus {
         val runtime = Runtime.getRuntime()
@@ -320,6 +332,63 @@ class FraggleServicesImpl(
                 activeSessions.remove(sessionId)
                 session.initializer.reset()
             }
+        }
+    }
+
+    private inner class DiscordOAuthServiceImpl(
+        private val bridge: DiscordBridge,
+        private val discordConfig: DiscordBridgeConfig,
+    ) : DiscordOAuthService {
+        private var oauth: DiscordOAuth? = null
+
+        private fun getOrCreateOAuth(): DiscordOAuth? {
+            if (oauth != null) return oauth
+
+            val clientId = discordConfig.clientId
+                ?: discordConfig.token.split(".").firstOrNull()
+                ?: return null
+            val clientSecret = discordConfig.clientSecret ?: return null
+            val redirectUri = discordConfig.oauthRedirectUri ?: return null
+
+            oauth = DiscordOAuth(clientId, clientSecret, redirectUri)
+            return oauth
+        }
+
+        override fun isConfigured(): Boolean {
+            return !discordConfig.clientSecret.isNullOrBlank() &&
+                    !discordConfig.oauthRedirectUri.isNullOrBlank()
+        }
+
+        override fun getAuthorizationUrl(state: String?): String? {
+            return getOrCreateOAuth()?.getAuthorizationUrl(state)
+        }
+
+        override suspend fun handleCallback(code: String, state: String?): OAuthCallbackResult {
+            val oauthClient = getOrCreateOAuth()
+                ?: return OAuthCallbackResult.Error("OAuth not configured")
+
+            // Exchange code for token
+            val tokenResponse = oauthClient.exchangeCode(code)
+                ?: return OAuthCallbackResult.Error("Failed to exchange authorization code")
+
+            // Get user info
+            val user = oauthClient.getCurrentUser(tokenResponse.accessToken)
+                ?: return OAuthCallbackResult.Error("Failed to get user information")
+
+            // Send welcome DM using the bot
+            if (!bridge.isConnected()) {
+                logger.warn("Discord bridge not connected, cannot send welcome DM")
+                return OAuthCallbackResult.Error("Discord bot not connected")
+            }
+
+            val dmSent = bridge.sendWelcomeDm(user.id)
+            if (!dmSent) {
+                logger.warn("Failed to send welcome DM to user ${user.id}")
+                // Still return success - the user authorized, we just couldn't DM
+            }
+
+            logger.info("Discord OAuth callback completed for user ${user.username} (${user.id})")
+            return OAuthCallbackResult.Success(user.id, user.username)
         }
     }
 }

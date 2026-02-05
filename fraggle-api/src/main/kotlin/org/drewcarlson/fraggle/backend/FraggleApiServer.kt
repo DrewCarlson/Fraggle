@@ -106,6 +106,7 @@ fun createApiServer(
                 statusRoutes(services)
                 conversationRoutes(services)
                 bridgeRoutes(services)
+                discordOAuthRoutes(services)
                 skillRoutes(services)
                 memoryRoutes(services)
                 schedulerRoutes(services)

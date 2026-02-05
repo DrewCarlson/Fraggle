@@ -38,6 +38,7 @@ jobs:
             fraggle-api/**
             fraggle-agent/**
             fraggle-signal/**
+            fraggle-discord/**
             fraggle-skills/**
             fraggle-common/**
             fraggle-dashboard/**

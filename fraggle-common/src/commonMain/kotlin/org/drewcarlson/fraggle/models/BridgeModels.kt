@@ -11,6 +11,8 @@ data class BridgeInfo(
     val platform: String,
     val connected: Boolean,
     val initialized: Boolean,
+    /** When true, setup action is always available (e.g., to get OAuth link) */
+    val persistentActivation: Boolean = false,
 )
 
 /**

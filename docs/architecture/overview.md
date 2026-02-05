@@ -13,6 +13,7 @@ Fraggle/
 │   ├── skill/              # Skill system and DSL
 │   └── sandbox/            # Execution sandbox
 ├── fraggle-signal/         # Signal messenger bridge
+├── fraggle-discord/        # Discord bot bridge
 ├── fraggle-skills/         # Built-in skill implementations
 ├── fraggle-common/         # Shared models (Kotlin Multiplatform)
 ├── fraggle-api/            # REST API server

@@ -52,6 +52,11 @@ interface FraggleServices {
     val bridgeInit: BridgeInitService
 
     /**
+     * Access to Discord OAuth operations.
+     */
+    val discordOAuth: DiscordOAuthService?
+
+    /**
      * Real-time event stream for WebSocket clients.
      */
     val events: SharedFlow<FraggleEvent>

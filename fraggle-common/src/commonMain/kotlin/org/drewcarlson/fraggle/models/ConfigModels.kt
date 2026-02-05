@@ -80,6 +80,8 @@ enum class ProviderType {
 data class BridgesConfig(
     @Documented(name = "Signal", description = "Signal messenger bridge configuration")
     val signal: SignalBridgeConfig? = null,
+    @Documented(name = "Discord", description = "Discord bot bridge configuration")
+    val discord: DiscordBridgeConfig? = null,
 )
 
 /**
@@ -126,6 +128,61 @@ data class SignalBridgeConfig(
     val showTypingIndicator: Boolean = true,
 )
 
+/**
+ * Discord bridge configuration.
+ */
+@Serializable
+@Documented(
+    name = "Discord",
+    description = "Configuration for Discord bot integration",
+    extras = ["icon=bi-discord"],
+)
+data class DiscordBridgeConfig(
+    @Documented(name = "Token", description = "Discord bot token from the Developer Portal", secret = true)
+    val token: String = "",
+
+    @Documented(name = "Enabled", description = "Whether this bridge is enabled")
+    val enabled: Boolean = token.isNotBlank(),
+
+    @SerialName("client_id")
+    @Documented(name = "Client ID", description = "Application client ID for OAuth2 (optional, extracted from token if not set)")
+    val clientId: String? = null,
+
+    @SerialName("client_secret")
+    @Documented(name = "Client Secret", description = "Application client secret for OAuth2 user installation flow", secret = true)
+    val clientSecret: String? = null,
+
+    @SerialName("oauth_redirect_uri")
+    @Documented(name = "OAuth Redirect URI", description = "OAuth2 callback URL (must match Discord Developer Portal settings)")
+    val oauthRedirectUri: String? = null,
+
+    @Documented(name = "Trigger", description = "Trigger prefix for guild messages (e.g., '!fraggle'). Set to null to respond to all messages")
+    val trigger: String? = "!fraggle",
+
+    @SerialName("respond_to_direct_messages")
+    @Documented(name = "Respond to DMs", description = "Whether to respond to direct messages without a trigger")
+    val respondToDirectMessages: Boolean = true,
+
+    @SerialName("show_typing_indicator")
+    @Documented(name = "Typing Indicator", description = "Whether to show typing indicator while processing")
+    val showTypingIndicator: Boolean = true,
+
+    @SerialName("max_images_per_message")
+    @Documented(name = "Max Images", description = "Maximum number of images to attach per message (Discord allows up to 10)")
+    val maxImagesPerMessage: Int = 10,
+
+    @SerialName("max_file_size_mb")
+    @Documented(name = "Max File Size (MB)", description = "Maximum file size in MB (10 free, 50 Nitro Basic, 500 Nitro)")
+    val maxFileSizeMb: Int = 10,
+
+    @SerialName("allowed_guild_ids")
+    @Documented(name = "Allowed Guilds", description = "List of guild IDs the bot can operate in (empty = all guilds)")
+    val allowedGuildIds: List<String> = emptyList(),
+
+    @SerialName("allowed_channel_ids")
+    @Documented(name = "Allowed Channels", description = "List of channel IDs the bot can respond in (empty = all channels)")
+    val allowedChannelIds: List<String> = emptyList(),
+)
 
 @Serializable
 @Documented(

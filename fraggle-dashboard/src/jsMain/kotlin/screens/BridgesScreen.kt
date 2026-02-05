@@ -82,9 +82,9 @@ fun BridgesScreen(wsService: WebSocketService) {
                                 platform = bridge.platform,
                                 isConnected = bridge.connected,
                                 isInitialized = bridge.initialized,
+                                persistentActivation = bridge.persistentActivation,
                                 onSetup = { initializingBridge = bridge.name },
                                 onConnect = { /* TODO: implement connect via API */ },
-                                onDisconnect = { /* TODO: implement disconnect via API */ },
                             )
                         }
                     }
@@ -112,9 +112,9 @@ private fun BridgeCard(
     platform: String,
     isConnected: Boolean,
     isInitialized: Boolean,
+    persistentActivation: Boolean,
     onSetup: () -> Unit,
     onConnect: () -> Unit,
-    onDisconnect: () -> Unit,
 ) {
     val icon = when (platform.lowercase()) {
         "signal" -> "bi-signal"
@@ -157,37 +157,24 @@ private fun BridgeCard(
             }
         }
 
-        // Button logic based on state
-        when {
-            !isInitialized -> {
-                // Not initialized - show Setup button
-                Button({
-                    classes(DashboardStyles.button, DashboardStyles.buttonSmall, DashboardStyles.buttonPrimary)
-                    onClick { onSetup() }
-                }) {
-                    I({ classes("bi", "bi-gear") })
-                    Text("Setup")
-                }
-            }
-            !isConnected -> {
-                // Initialized but not connected - show Connect button
-                Button({
-                    classes(DashboardStyles.button, DashboardStyles.buttonSmall, DashboardStyles.buttonPrimary)
-                    onClick { onConnect() }
-                }) {
-                    I({ classes("bi", "bi-plug") })
-                    Text("Connect")
-                }
-            }
-            else -> {
-                // Connected - show Disconnect button
-                Button({
-                    classes(DashboardStyles.button, DashboardStyles.buttonSmall, DashboardStyles.buttonOutline)
-                    onClick { onDisconnect() }
-                }) {
-                    I({ classes("bi", "bi-x-circle") })
-                    Text("Disconnect")
-                }
+        val (label, action, icon) = when {
+            // Not initialized - show Setup button
+            !isInitialized -> Triple("Setup", onSetup, "bi-gear")
+            // Initialized but not connected - show Connect button
+            !isConnected -> Triple("Connect", onConnect, "bi-plug")
+            // Setup always available - show setup button regardless of state
+            persistentActivation -> Triple("Active", onSetup, "bi-link-45deg")
+            // When connected, no button needed
+            else -> Triple(null, null, null)
+        }
+
+        if (label != null && action != null && icon != null) {
+            Button({
+                classes(DashboardStyles.button, DashboardStyles.buttonSmall, DashboardStyles.buttonPrimary)
+                onClick { action() }
+            }) {
+                I({ classes("bi", icon) })
+                Text(label)
             }
         }
     }

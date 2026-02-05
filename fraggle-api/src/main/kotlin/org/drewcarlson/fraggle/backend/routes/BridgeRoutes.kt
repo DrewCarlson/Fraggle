@@ -18,14 +18,15 @@ fun Route.bridgeRoutes(services: FraggleServices) {
          * List all configured bridges and their status.
          */
         get {
-            val bridges = services.bridges.registeredBridges().map { name ->
-                val bridge = services.bridges.getBridge(name)
+            val bridges = services.bridges.registeredBridges().mapNotNull { name ->
+                val bridge = services.bridges.getBridge(name) ?: return@mapNotNull null
                 val initialized = services.bridgeInit.isInitialized(name)
                 BridgeInfo(
                     name = name,
-                    platform = bridge?.platform?.name ?: "Unknown",
-                    connected = bridge?.isConnected() ?: false,
+                    platform = bridge.platform.name,
+                    connected = bridge.isConnected(),
                     initialized = initialized,
+                    persistentActivation = bridge.platform.persistentActivation,
                 )
             }
             call.respond(bridges)
