@@ -6,6 +6,8 @@ import org.drewcarlson.fraggle.chat.BridgeInitializer
 import org.drewcarlson.fraggle.chat.InitStepResult
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
+import kotlin.io.path.Path
+import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 
 /**
@@ -54,7 +56,7 @@ class SignalBridgeInitializer(
 
     override suspend fun isInitialized(): Boolean {
         // Check if signal-cli data directory exists with account data
-        val configPath = config.configDirPath()
+        val configPath = Path(config.configDir)
         val dataDir = configPath.resolve("data")
         val accountsDir = dataDir.resolve("accounts.json")
 
@@ -88,8 +90,7 @@ class SignalBridgeInitializer(
                 }
 
                 // Ensure config directory exists
-                val configPath = config.configDirPath()
-                configPath.toFile().mkdirs()
+                Path(config.configDir).createDirectories()
 
                 state = State.AWAITING_CAPTCHA
                 InitStepResult.PromptRequired(
@@ -249,7 +250,7 @@ class SignalBridgeInitializer(
             val command = listOf(
                 cli,
                 "-a", config.phoneNumber,
-                "--config", config.configDirPath().toString(),
+                "--config", config.configDir,
             ) + args.toList()
 
             logger.debug("Running: ${command.joinToString(" ")}")

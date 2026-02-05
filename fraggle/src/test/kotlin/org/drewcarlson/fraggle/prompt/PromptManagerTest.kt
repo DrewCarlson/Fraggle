@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
+import kotlin.io.path.createDirectory
 import kotlin.io.path.exists
 import kotlin.io.path.writeText
 import kotlin.test.assertEquals
@@ -371,7 +372,7 @@ class PromptManagerTest {
         fun `falls back to resources when workspace file unreadable`() {
             // Create a directory with the same name as the file to make it unreadable
             promptsDir.createDirectories()
-            promptsDir.resolve("SYSTEM.md").toFile().mkdirs()
+            promptsDir.resolve("SYSTEM.md").createDirectory()
 
             // This should fall back to resource and not crash
             manager.initialize()

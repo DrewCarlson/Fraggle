@@ -527,7 +527,7 @@ class SignalCli(
         return listOf(
             cli,
             "-a", config.phoneNumber,
-            "--config", config.configDirPath().toString(),
+            "--config", config.configDir,
             "jsonRpc"
         )
     }

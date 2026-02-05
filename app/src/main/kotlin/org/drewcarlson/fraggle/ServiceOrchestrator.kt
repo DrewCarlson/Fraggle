@@ -351,7 +351,7 @@ class ServiceOrchestrator(
     private fun initializeSignalBridge(settings: SignalBridgeConfig) {
         val signalConfig = SignalConfig(
             phoneNumber = settings.phone,
-            configDir = settings.configDir,
+            configDir = resolvePath(settings.configDir).toString(),
             triggerPrefix = settings.trigger,
             signalCliPath = settings.signalCliPath,
             autoInstall = settings.autoInstall,

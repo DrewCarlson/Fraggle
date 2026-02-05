@@ -3,7 +3,6 @@ package org.drewcarlson.fraggle.sandbox
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import java.io.File
 import java.nio.file.Path
 import kotlin.io.path.*
 import kotlin.time.Duration
@@ -251,18 +250,18 @@ class PermissiveSandbox(
                 }
 
                 val files = if (recursive) {
-                    resolvedPath.toFile().walkTopDown().toList()
+                    resolvedPath.walk().toList()
                 } else {
-                    resolvedPath.listDirectoryEntries().map { it.toFile() }
+                    resolvedPath.listDirectoryEntries()
                 }
 
                 val fileInfos = files.map { file ->
                     FileInfo(
-                        path = file.absolutePath,
+                        path = file.absolutePathString(),
                         name = file.name,
-                        isDirectory = file.isDirectory,
-                        size = if (file.isFile) file.length() else 0,
-                        lastModified = file.lastModified(),
+                        isDirectory = file.isDirectory(),
+                        size = if (file.isRegularFile()) file.fileSize() else 0,
+                        lastModified = file.getLastModifiedTime().toMillis(),
                     )
                 }
 
@@ -338,7 +337,7 @@ class PermissiveSandbox(
 
                 val body = try {
                     connection.inputStream.bufferedReader().readText()
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     connection.errorStream?.bufferedReader()?.readText() ?: ""
                 }
 

@@ -309,9 +309,12 @@ class InitBridgeCommand : CliktCommand(name = "init-bridge") {
             if (signalConfig.enabled && signalConfig.phone.isNotBlank()) {
                 val signalInitConfig = SignalConfig(
                     phoneNumber = signalConfig.phone,
-                    configDir = signalConfig.configDir,
+                    configDir = FraggleEnvironment.resolvePath(signalConfig.configDir).toString(),
                     triggerPrefix = signalConfig.trigger,
                     signalCliPath = signalConfig.signalCliPath,
+                    autoInstall = signalConfig.autoInstall,
+                    signalCliVersion = signalConfig.signalCliVersion,
+                    appsDir = FraggleEnvironment.dataDir.resolve("apps").toString(),
                 )
                 registry.register("signal", SignalBridgeInitializer(signalInitConfig))
             }

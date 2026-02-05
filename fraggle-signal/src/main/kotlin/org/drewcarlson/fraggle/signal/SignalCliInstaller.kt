@@ -4,7 +4,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
 import java.io.BufferedInputStream
-import java.io.FileOutputStream
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -37,14 +36,14 @@ class SignalCliInstaller(
                     .start()
                 val exitCode = process.waitFor()
                 exitCode == 0
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Try Windows-style check
                 try {
                     val process = ProcessBuilder("where", "signal-cli")
                         .redirectErrorStream(true)
                         .start()
                     process.waitFor() == 0
-                } catch (e2: Exception) {
+                } catch (_: Exception) {
                     false
                 }
             }
@@ -105,6 +104,7 @@ class SignalCliInstaller(
      *
      * @return The path to the signal-cli executable, or null if installation failed.
      */
+    @OptIn(ExperimentalPathApi::class)
     suspend fun install(): Path? = withContext(Dispatchers.IO) {
         try {
             // Create apps directory if needed
@@ -146,7 +146,7 @@ class SignalCliInstaller(
             logger.error("Failed to install signal-cli: ${e.message}", e)
             // Clean up partial installation
             try {
-                installDir.toFile().deleteRecursively()
+                installDir.deleteRecursively()
             } catch (e2: Exception) {
                 logger.debug("Failed to clean up partial installation: ${e2.message}")
             }
@@ -160,7 +160,7 @@ class SignalCliInstaller(
         connection.readTimeout = 60_000
 
         BufferedInputStream(connection.getInputStream()).use { input ->
-            FileOutputStream(destination.toFile()).use { output ->
+            destination.outputStream().use { output ->
                 val buffer = ByteArray(8192)
                 var bytesRead: Int
                 var totalBytes = 0L
@@ -214,9 +214,11 @@ class SignalCliInstaller(
     /**
      * Uninstall signal-cli.
      */
+    @OptIn(ExperimentalPathApi::class)
     fun uninstall(): Boolean {
         return try {
-            installDir.toFile().deleteRecursively()
+            installDir.deleteRecursively()
+            true
         } catch (e: Exception) {
             logger.error("Failed to uninstall signal-cli: ${e.message}")
             false

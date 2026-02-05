@@ -20,6 +20,7 @@ class MessageRouterTest {
         registeredChats: List<RegisteredChat> = emptyList(),
     ): SignalConfig = SignalConfig(
         phoneNumber = "+1234567890",
+        configDir = "/tmp/signal-test",
         triggerPrefix = triggerPrefix,
         respondToDirectMessages = respondToDirectMessages,
         registeredChats = registeredChats,

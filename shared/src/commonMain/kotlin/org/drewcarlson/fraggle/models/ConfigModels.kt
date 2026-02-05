@@ -100,7 +100,7 @@ data class SignalBridgeConfig(
 
     @SerialName("config_dir")
     @Documented(name = "Config Directory", description = "Directory where Signal configuration is stored")
-    val configDir: String = "~/.config/fraggle/signal",
+    val configDir: String = "./config/app/signal",
 
     @Documented(name = "Trigger", description = "Trigger prefix for group messages (e.g., '@fraggle'). Set to null to respond to all messages")
     val trigger: String? = "@fraggle",

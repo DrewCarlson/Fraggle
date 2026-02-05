@@ -1,8 +1,6 @@
 package org.drewcarlson.fraggle.signal
 
 import kotlinx.serialization.Serializable
-import java.nio.file.Path
-import kotlin.io.path.Path
 
 /**
  * Configuration for Signal integration.
@@ -15,10 +13,10 @@ data class SignalConfig(
     val phoneNumber: String,
 
     /**
-     * Path to signal-cli configuration directory.
-     * Defaults to ~/.config/fraggle/signal
+     * Absolute path to signal-cli configuration directory.
+     * Should be resolved by the caller before constructing SignalConfig.
      */
-    val configDir: String = defaultConfigDir(),
+    val configDir: String,
 
     /**
      * Trigger prefix that activates the bot in group chats.
@@ -69,15 +67,7 @@ data class SignalConfig(
      * Whether to show typing indicators when processing.
      */
     val showTypingIndicator: Boolean = true,
-) {
-    fun configDirPath(): Path = Path(configDir.replace("~", System.getProperty("user.home")))
-
-    companion object {
-        fun defaultConfigDir(): String {
-            return "${System.getProperty("user.home")}/.config/fraggle/signal"
-        }
-    }
-}
+)
 
 /**
  * A registered chat configuration.

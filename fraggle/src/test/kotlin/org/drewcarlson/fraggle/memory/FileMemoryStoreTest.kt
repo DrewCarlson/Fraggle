@@ -9,6 +9,7 @@ import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 import kotlin.io.path.exists
 import kotlin.io.path.readText
+import kotlin.io.path.writeText
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
@@ -41,7 +42,7 @@ class FileMemoryStoreTest {
         fun `load parses facts from markdown file`() = runTest {
             // Create memory file manually
             val globalFile = tempDir.resolve("global.md")
-            globalFile.toFile().writeText("""
+            globalFile.writeText("""
                 # Memory
 
                 - First fact
@@ -60,7 +61,7 @@ class FileMemoryStoreTest {
         @Test
         fun `load ignores non-fact lines`() = runTest {
             val globalFile = tempDir.resolve("global.md")
-            globalFile.toFile().writeText("""
+            globalFile.writeText("""
                 # Memory
 
                 Some random text
@@ -79,7 +80,7 @@ class FileMemoryStoreTest {
         @Test
         fun `load sets lastUpdated from file modification time`() = runTest {
             val globalFile = tempDir.resolve("global.md")
-            globalFile.toFile().writeText("# Memory\n\n- Test fact")
+            globalFile.writeText("# Memory\n\n- Test fact")
 
             val memory = store.load(MemoryScope.Global)
 
@@ -174,7 +175,7 @@ class FileMemoryStoreTest {
 
         @Test
         fun `append adds fact to existing file`() = runTest {
-            tempDir.resolve("global.md").toFile().writeText("# Memory\n\n- Existing fact")
+            tempDir.resolve("global.md").writeText("# Memory\n\n- Existing fact")
 
             store.append(MemoryScope.Global, Fact("Appended fact"))
 
