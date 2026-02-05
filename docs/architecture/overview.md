@@ -17,7 +17,8 @@ Fraggle/
 ├── fraggle-common/         # Shared models (Kotlin Multiplatform)
 ├── fraggle-api/            # REST API server
 ├── fraggle-dashboard/      # Web dashboard (Compose for Web)
-└── documented-*            # Annotation processor for config docs
+└── libs/
+    └── documented-*        # Annotation processor for config docs
 ```
 
 ## Core Components

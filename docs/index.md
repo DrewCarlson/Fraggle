@@ -54,6 +54,7 @@ Fraggle/
 ├── fraggle-api/            # REST API server
 ├── fraggle-dashboard/      # Web dashboard (Compose for Web)
 ├── fraggle-common/         # Shared models (Kotlin Multiplatform)
+├── libs/                   # Internal libraries
 └── config/                 # Example configuration files
 ```
 
