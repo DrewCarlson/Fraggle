@@ -17,7 +17,7 @@ fun Application.configureDashboard(staticPath: Path?) {
         !staticPath.exists() &&
         javaClass.classLoader?.getResource("dashboard") != null
     ) {
-        log.debug("This instance will serve the dashboard from jar resources.")
+        log.info("This instance will serve the dashboard from jar resources.")
         routing {
             singlePageApplication {
                 filesPath = "dashboard"
@@ -26,7 +26,7 @@ fun Application.configureDashboard(staticPath: Path?) {
             }
         }
     } else if (staticPath.exists()) {
-        log.debug("This instance will serve the dashboard from '{}'.", staticPath)
+        log.info("This instance will serve the dashboard from '{}'.", staticPath)
         routing {
             singlePageApplication {
                 filesPath = staticPath.absolutePathString()
