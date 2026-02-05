@@ -62,16 +62,21 @@ class FraggleServicesImpl(
 
     override suspend fun getStatus(): SystemStatus {
         val runtime = Runtime.getRuntime()
+        val registeredBridges = bridges.registeredBridges()
+        val uninitialized = registeredBridges.filter { name ->
+            !bridgeInit.isInitialized(name)
+        }
         return SystemStatus(
             uptime = Clock.System.now() - startTime,
             activeConversations = conversationMap.size,
-            connectedBridges = bridges.registeredBridges().count { bridges.isConnected(it) },
+            connectedBridges = registeredBridges.count { bridges.isConnected(it) },
             availableSkills = skills.all().size,
             scheduledTasks = taskScheduler.listPendingTasks().size,
             memoryUsage = MemoryUsage(
                 heapUsed = runtime.totalMemory() - runtime.freeMemory(),
                 heapMax = runtime.maxMemory(),
             ),
+            uninitializedBridges = uninitialized,
         )
     }
 

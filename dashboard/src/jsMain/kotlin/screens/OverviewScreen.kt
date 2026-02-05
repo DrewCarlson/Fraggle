@@ -5,6 +5,7 @@ import DataState
 import DashboardStyles
 import WebSocketService
 import androidx.compose.runtime.*
+import app.softwork.routingcompose.Router
 import kotlinx.coroutines.delay
 import org.drewcarlson.fraggle.models.SystemStatus
 import org.jetbrains.compose.web.css.*
@@ -62,6 +63,8 @@ fun OverviewScreen(statusState: DataState<SystemStatus>, wsService: WebSocketSer
                 }
             }
 
+            val router = Router.current
+
             Div({
                 classes(DashboardStyles.cardGrid)
             }) {
@@ -72,12 +75,10 @@ fun OverviewScreen(statusState: DataState<SystemStatus>, wsService: WebSocketSer
                     iconBgColor = "#6366f11a",
                     iconColor = "#6366f1",
                 )
-                StatCard(
-                    title = "Connected Bridges",
-                    value = status.connectedBridges.toString(),
-                    icon = "bi-plug",
-                    iconBgColor = "#22c55e1a",
-                    iconColor = "#22c55e",
+                BridgesStatCard(
+                    connectedCount = status.connectedBridges,
+                    uninitializedBridges = status.uninitializedBridges,
+                    onClick = { router.navigate("/bridges") },
                 )
                 StatCard(
                     title = "Available Skills",
@@ -193,6 +194,76 @@ private fun StatCard(
                 classes(DashboardStyles.statTitle)
             }) {
                 Text(title)
+            }
+        }
+    }
+}
+
+@Composable
+private fun BridgesStatCard(
+    connectedCount: Int,
+    uninitializedBridges: List<String>,
+    onClick: () -> Unit,
+) {
+    val hasWarning = uninitializedBridges.isNotEmpty()
+    val tooltipText = if (hasWarning) {
+        "Needs setup: ${uninitializedBridges.joinToString(", ")}"
+    } else null
+
+    Div({
+        classes(DashboardStyles.statCard)
+        style {
+            cursor("pointer")
+        }
+        onClick { onClick() }
+        tooltipText?.let { title(it) }
+    }) {
+        Div({
+            classes(DashboardStyles.statIcon)
+            style {
+                backgroundColor(Color(if (hasWarning) "#f59e0b1a" else "#22c55e1a"))
+                color(Color(if (hasWarning) "#f59e0b" else "#22c55e"))
+            }
+        }) {
+            I({ classes("bi", "bi-plug") })
+        }
+        Div({
+            classes(DashboardStyles.statContent)
+        }) {
+            Div({
+                style {
+                    display(DisplayStyle.Flex)
+                    alignItems(AlignItems.Center)
+                    gap(8.px)
+                }
+            }) {
+                Span({
+                    classes(DashboardStyles.statValue)
+                }) {
+                    Text(connectedCount.toString())
+                }
+                if (hasWarning) {
+                    Span({
+                        style {
+                            display(DisplayStyle.Flex)
+                            alignItems(AlignItems.Center)
+                            gap(4.px)
+                            fontSize(12.px)
+                            color(Color("#f59e0b"))
+                            backgroundColor(Color("#f59e0b1a"))
+                            padding(2.px, 6.px)
+                            borderRadius(4.px)
+                        }
+                    }) {
+                        I({ classes("bi", "bi-exclamation-triangle-fill") })
+                        Text("${uninitializedBridges.size}")
+                    }
+                }
+            }
+            Span({
+                classes(DashboardStyles.statTitle)
+            }) {
+                Text("Connected Bridges")
             }
         }
     }

@@ -14,6 +14,7 @@ data class SystemStatus(
     val availableSkills: Int,
     val scheduledTasks: Int,
     val memoryUsage: MemoryUsage,
+    val uninitializedBridges: List<String> = emptyList(),
 )
 
 /**
