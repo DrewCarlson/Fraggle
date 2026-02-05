@@ -6,9 +6,6 @@ plugins {
     application
 }
 
-group = "org.drewcarlson"
-version = "0.0.1"
-
 application {
     mainClass.set("org.drewcarlson.fraggle.MainKt")
     applicationName = "fraggle"
