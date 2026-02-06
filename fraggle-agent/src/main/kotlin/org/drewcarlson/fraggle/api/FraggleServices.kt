@@ -1,9 +1,11 @@
 package org.drewcarlson.fraggle.api
 
 import kotlinx.coroutines.flow.SharedFlow
-import org.drewcarlson.fraggle.agent.Conversation
 import org.drewcarlson.fraggle.chat.ChatBridgeManager
 import org.drewcarlson.fraggle.memory.MemoryStore
+import org.drewcarlson.fraggle.models.ChatDetail
+import org.drewcarlson.fraggle.models.ChatMessageRecord
+import org.drewcarlson.fraggle.models.ChatSummary
 import org.drewcarlson.fraggle.models.ConfigResponse
 import org.drewcarlson.fraggle.models.FraggleEvent
 import org.drewcarlson.fraggle.models.ScheduledTaskInfo
@@ -16,11 +18,6 @@ import org.drewcarlson.fraggle.skill.SkillRegistry
  * without creating circular dependencies.
  */
 interface FraggleServices {
-    /**
-     * Access to active and historical conversations.
-     */
-    val conversations: ConversationService
-
     /**
      * Access to the memory store.
      */
@@ -40,6 +37,11 @@ interface FraggleServices {
      * Access to the task scheduler.
      */
     val scheduler: SchedulerService
+
+    /**
+     * Access to persisted chat history.
+     */
+    val chatHistory: ChatHistoryService
 
     /**
      * Access to configuration.
@@ -68,31 +70,6 @@ interface FraggleServices {
 }
 
 /**
- * Service for managing conversations.
- */
-interface ConversationService {
-    /**
-     * Get all active conversations.
-     */
-    fun getAll(): List<Conversation>
-
-    /**
-     * Get a specific conversation by ID.
-     */
-    fun get(id: String): Conversation?
-
-    /**
-     * Get conversations for a specific chat.
-     */
-    fun getByChat(chatId: String): Conversation?
-
-    /**
-     * Clear a conversation's history.
-     */
-    fun clear(id: String): Boolean
-}
-
-/**
  * Service for managing scheduled tasks.
  */
 interface SchedulerService {
@@ -110,6 +87,31 @@ interface SchedulerService {
      * Cancel a scheduled task.
      */
     fun cancelTask(id: String): Boolean
+}
+
+/**
+ * Service for accessing persisted chat history.
+ */
+interface ChatHistoryService {
+    /**
+     * List all chats with message counts.
+     */
+    fun listChats(limit: Int = 50, offset: Long = 0): List<ChatSummary>
+
+    /**
+     * Get a specific chat with statistics.
+     */
+    fun getChat(id: Long): ChatDetail?
+
+    /**
+     * Get messages for a chat.
+     */
+    fun getMessages(chatId: Long, limit: Int = 50, offset: Long = 0): List<ChatMessageRecord>
+
+    /**
+     * Total number of chats.
+     */
+    fun countChats(): Long
 }
 
 /**

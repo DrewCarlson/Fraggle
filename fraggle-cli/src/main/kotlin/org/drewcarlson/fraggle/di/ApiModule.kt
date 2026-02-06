@@ -8,10 +8,10 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import kotlinx.coroutines.CoroutineScope
 import org.drewcarlson.fraggle.FraggleServicesImpl
-import org.drewcarlson.fraggle.agent.Conversation
 import org.drewcarlson.fraggle.backend.createApiServer
 import org.drewcarlson.fraggle.chat.BridgeInitializerRegistry
 import org.drewcarlson.fraggle.chat.ChatBridgeManager
+import org.drewcarlson.fraggle.db.ChatHistoryStore
 import org.drewcarlson.fraggle.discord.DiscordBridge
 import org.drewcarlson.fraggle.memory.MemoryStore
 import org.drewcarlson.fraggle.models.ApiConfig
@@ -20,7 +20,6 @@ import org.drewcarlson.fraggle.models.FraggleConfig
 import org.drewcarlson.fraggle.skill.SkillRegistry
 import org.drewcarlson.fraggle.skills.scheduling.TaskScheduler
 import java.nio.file.Path
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Provides the API server and its dependencies.
@@ -35,24 +34,24 @@ interface ApiModule {
             skills: SkillRegistry,
             bridges: ChatBridgeManager,
             taskScheduler: TaskScheduler,
-            conversationMap: ConcurrentHashMap<String, Conversation>,
             config: FraggleConfig,
             configPath: Path,
             initializerRegistry: BridgeInitializerRegistry,
             scope: CoroutineScope,
             @DefaultHttpClient httpClient: HttpClient,
+            chatHistoryStore: ChatHistoryStore,
             discordBridge: DiscordBridge?,
         ): FraggleServicesImpl = FraggleServicesImpl(
             memory = memory,
             skills = skills,
             bridges = bridges,
             taskScheduler = taskScheduler,
-            conversationMap = conversationMap,
             fraggleConfig = config,
             configPath = configPath,
             initializerRegistry = initializerRegistry,
             scope = scope,
             httpClient = httpClient,
+            chatHistoryStore = chatHistoryStore,
             discordBridge = discordBridge,
         )
 

@@ -8,8 +8,8 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
-import org.drewcarlson.fraggle.agent.Conversation
 import org.drewcarlson.fraggle.api.*
+import org.drewcarlson.fraggle.db.ChatHistoryStore
 import org.drewcarlson.fraggle.chat.BridgeInitializer
 import org.drewcarlson.fraggle.chat.BridgeInitializerRegistry
 import org.drewcarlson.fraggle.chat.ChatBridgeManager
@@ -39,12 +39,12 @@ class FraggleServicesImpl(
     override val skills: SkillRegistry,
     override val bridges: ChatBridgeManager,
     private val taskScheduler: TaskScheduler,
-    private val conversationMap: ConcurrentHashMap<String, Conversation>,
     private val fraggleConfig: FraggleConfig,
     private val configPath: Path,
     private val initializerRegistry: BridgeInitializerRegistry,
     private val scope: CoroutineScope,
     private val httpClient: HttpClient,
+    private val chatHistoryStore: ChatHistoryStore,
     private val discordBridge: DiscordBridge? = null,
     private val startTime: Instant = Clock.System.now(),
 ) : FraggleServices {
@@ -54,7 +54,7 @@ class FraggleServicesImpl(
     private val _events = MutableSharedFlow<FraggleEvent>(replay = 1, extraBufferCapacity = 100)
     override val events: SharedFlow<FraggleEvent> = _events.asSharedFlow()
 
-    override val conversations: ConversationService = ConversationServiceImpl()
+    override val chatHistory: ChatHistoryService = ChatHistoryServiceImpl()
 
     override val scheduler: SchedulerService = SchedulerServiceImpl()
 
@@ -79,7 +79,7 @@ class FraggleServicesImpl(
         }
         return SystemStatus(
             uptime = Clock.System.now() - startTime,
-            activeConversations = conversationMap.size,
+            totalChats = chatHistoryStore.countChats(),
             connectedBridges = registeredBridges.count { bridges.isConnected(it) },
             availableSkills = skills.all().size,
             scheduledTasks = taskScheduler.listPendingTasks().size,
@@ -98,19 +98,60 @@ class FraggleServicesImpl(
         _events.emit(event)
     }
 
-    private inner class ConversationServiceImpl : ConversationService {
-        override fun getAll(): List<Conversation> = conversationMap.values.toList()
-
-        override fun get(id: String): Conversation? = conversationMap[id]
-
-        override fun getByChat(chatId: String): Conversation? =
-            conversationMap.values.find { it.chatId == chatId }
-
-        override fun clear(id: String): Boolean {
-            val conversation = conversationMap[id] ?: return false
-            conversationMap[id] = conversation.copy(messages = emptyList())
-            return true
+    private inner class ChatHistoryServiceImpl : ChatHistoryService {
+        override fun listChats(limit: Int, offset: Long): List<ChatSummary> {
+            return chatHistoryStore.listChats(limit, offset.toInt().toLong()).map { chat ->
+                ChatSummary(
+                    id = chat.id,
+                    platform = chat.platform,
+                    externalId = chat.externalId,
+                    name = chat.name,
+                    isGroup = chat.isGroup,
+                    messageCount = chatHistoryStore.countMessages(chat.id),
+                    createdAt = chat.createdAt,
+                    lastActiveAt = chat.lastActiveAt,
+                )
+            }
         }
+
+        override fun getChat(id: Long): ChatDetail? {
+            val chat = chatHistoryStore.getChatById(id) ?: return null
+            val stats = chatHistoryStore.getChatStats(chat.id)
+            return ChatDetail(
+                id = chat.id,
+                platform = chat.platform,
+                externalId = chat.externalId,
+                name = chat.name,
+                isGroup = chat.isGroup,
+                createdAt = chat.createdAt,
+                lastActiveAt = chat.lastActiveAt,
+                stats = ChatStatsInfo(
+                    totalMessages = stats.totalMessages,
+                    incomingMessages = stats.incomingMessages,
+                    outgoingMessages = stats.outgoingMessages,
+                    firstMessageAt = stats.firstMessageAt,
+                    lastMessageAt = stats.lastMessageAt,
+                    avgProcessingDuration = stats.avgProcessingDuration,
+                ),
+            )
+        }
+
+        override fun getMessages(chatId: Long, limit: Int, offset: Long): List<ChatMessageRecord> {
+            return chatHistoryStore.getMessages(chatId, limit, offset).map { msg ->
+                ChatMessageRecord(
+                    id = msg.id,
+                    senderId = msg.senderId,
+                    senderName = msg.senderName,
+                    senderIsBot = msg.senderIsBot,
+                    contentType = msg.contentType.name,
+                    direction = msg.direction.name,
+                    timestamp = msg.timestamp,
+                    processingDuration = msg.processingDuration,
+                )
+            }
+        }
+
+        override fun countChats(): Long = chatHistoryStore.countChats()
     }
 
     private inner class SchedulerServiceImpl : SchedulerService {

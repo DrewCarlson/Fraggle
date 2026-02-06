@@ -9,7 +9,7 @@ import kotlin.time.Duration
 @Serializable
 data class SystemStatus(
     val uptime: Duration,
-    val activeConversations: Int,
+    val totalChats: Long,
     val connectedBridges: Int,
     val availableSkills: Int,
     val scheduledTasks: Int,

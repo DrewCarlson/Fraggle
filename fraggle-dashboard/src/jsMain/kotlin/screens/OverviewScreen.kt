@@ -71,8 +71,8 @@ fun OverviewScreen(statusState: DataState<SystemStatus>, wsService: WebSocketSer
                 classes(DashboardStyles.cardGrid)
             }) {
                 StatCard(
-                    title = "Active Conversations",
-                    value = status.activeConversations.toString(),
+                    title = "Total Chats",
+                    value = status.totalChats.toString(),
                     icon = "bi-chat-dots",
                     iconBgColor = "#6366f11a",
                     iconColor = "#6366f1",

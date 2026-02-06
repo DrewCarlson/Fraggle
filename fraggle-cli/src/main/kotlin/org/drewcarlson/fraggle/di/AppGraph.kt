@@ -8,7 +8,6 @@ import io.ktor.server.netty.*
 import kotlinx.coroutines.CoroutineScope
 import org.drewcarlson.fraggle.FraggleServicesImpl
 import org.drewcarlson.fraggle.ServiceOrchestrator
-import org.drewcarlson.fraggle.agent.Conversation
 import org.drewcarlson.fraggle.agent.FraggleAgent
 import org.drewcarlson.fraggle.agent.InlineImageProcessor
 import org.drewcarlson.fraggle.db.ChatHistoryStore
@@ -27,7 +26,6 @@ import org.drewcarlson.fraggle.skill.SkillRegistry
 import org.drewcarlson.fraggle.skills.scheduling.TaskScheduler
 import org.drewcarlson.fraggle.skills.web.PlaywrightFetcher
 import java.nio.file.Path
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Main application dependency graph.
@@ -83,9 +81,6 @@ interface AppGraph {
 
     /** Inline image processor (auto-constructed via @Inject) */
     val inlineImageProcessor: InlineImageProcessor
-
-    /** Conversation map (shared mutable state) */
-    val conversationMap: ConcurrentHashMap<String, Conversation>
 
     /** API services implementation */
     val fraggleServices: FraggleServicesImpl

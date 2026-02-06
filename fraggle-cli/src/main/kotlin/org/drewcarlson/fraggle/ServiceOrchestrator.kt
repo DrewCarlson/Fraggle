@@ -48,7 +48,6 @@ class ServiceOrchestrator(
     private val initializerRegistry: BridgeInitializerRegistry,
     private val messageRouter: MessageRouter?,
     private val inlineImageProcessor: InlineImageProcessor,
-    private val conversations: ConcurrentHashMap<String, Conversation>,
     private val fraggleServices: FraggleServicesImpl,
     private val taskScheduler: TaskScheduler,
     private val playwrightFetcher: PlaywrightFetcher?,
@@ -62,6 +61,7 @@ class ServiceOrchestrator(
     private val apiServer: EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration>?,
 ) {
     private val logger = LoggerFactory.getLogger(ServiceOrchestrator::class.java)
+    private val conversations = ConcurrentHashMap<String, Conversation>()
     private var messageJob: Job? = null
 
     /**
@@ -385,23 +385,21 @@ class ServiceOrchestrator(
                     }
 
                     // Record outgoing message metadata
-                    if (chatRecord != null) {
-                        val outContentType = if (allImages.isNotEmpty() && platform.supportsAttachments) {
-                            MessageContentType.IMAGE
-                        } else {
-                            MessageContentType.TEXT
-                        }
-                        chatHistoryStore.recordMessage(MessageRecord(
-                            chatId = chatRecord.id,
-                            senderId = "fraggle",
-                            senderName = "Fraggle",
-                            senderIsBot = true,
-                            contentType = outContentType,
-                            direction = MessageDirection.OUTGOING,
-                            timestamp = Clock.System.now(),
-                            processingDuration = duration,
-                        ))
+                    val outContentType = if (allImages.isNotEmpty() && platform.supportsAttachments) {
+                        MessageContentType.IMAGE
+                    } else {
+                        MessageContentType.TEXT
                     }
+                    chatHistoryStore.recordMessage(MessageRecord(
+                        chatId = chatRecord.id,
+                        senderId = "fraggle",
+                        senderName = "Fraggle",
+                        senderIsBot = true,
+                        contentType = outContentType,
+                        direction = MessageDirection.OUTGOING,
+                        timestamp = Clock.System.now(),
+                        processingDuration = duration,
+                    ))
 
                     // Update conversation
                     conversations[chatId] = conversation.copy(

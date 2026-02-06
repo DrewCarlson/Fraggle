@@ -202,10 +202,10 @@ class WebSocketService(
     private suspend fun emitRefreshTrigger(event: FraggleEvent) {
         when (event) {
             is FraggleEvent.MessageReceived -> {
-                _refreshTriggers.emit(RefreshTrigger.Conversations)
+                _refreshTriggers.emit(RefreshTrigger.Chats)
             }
             is FraggleEvent.ResponseSent -> {
-                _refreshTriggers.emit(RefreshTrigger.Conversations)
+                _refreshTriggers.emit(RefreshTrigger.Chats)
             }
             is FraggleEvent.BridgeStatusChanged -> {
                 _refreshTriggers.emit(RefreshTrigger.Bridges)
@@ -247,7 +247,7 @@ class WebSocketService(
  */
 enum class RefreshTrigger {
     Status,
-    Conversations,
+    Chats,
     Bridges,
     Skills,
     Memory,

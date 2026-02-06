@@ -6,7 +6,6 @@ import dev.zacsweers.metro.SingleIn
 import io.ktor.client.*
 import kotlinx.coroutines.CoroutineScope
 import org.drewcarlson.fraggle.FraggleEnvironment
-import org.drewcarlson.fraggle.agent.Conversation
 import org.drewcarlson.fraggle.agent.FraggleAgent
 import org.drewcarlson.fraggle.chat.BridgeInitializerRegistry
 import org.drewcarlson.fraggle.chat.ChatBridgeManager
@@ -29,7 +28,6 @@ import org.drewcarlson.fraggle.provider.LMStudioProvider
 import org.drewcarlson.fraggle.sandbox.PermissiveSandbox
 import org.drewcarlson.fraggle.sandbox.Sandbox
 import org.drewcarlson.fraggle.skill.SkillRegistry
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.io.path.createDirectories
 import org.drewcarlson.fraggle.models.AgentConfig as ModelsAgentConfig
 import org.drewcarlson.fraggle.agent.AgentConfig as RuntimeAgentConfig
@@ -131,11 +129,6 @@ interface AgentModule {
         fun provideChatHistoryStore(database: FraggleDatabase): ChatHistoryStore {
             return ExposedChatHistoryStore(database.database)
         }
-
-        @Provides
-        @SingleIn(AppScope::class)
-        fun provideConversationMap(): ConcurrentHashMap<String, Conversation> =
-            ConcurrentHashMap()
 
         @Provides
         @SingleIn(AppScope::class)

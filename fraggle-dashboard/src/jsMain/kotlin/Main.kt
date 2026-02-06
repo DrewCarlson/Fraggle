@@ -58,7 +58,7 @@ fun App() {
     // Load status data with WebSocket refresh
     val (statusState, refreshStatus) = rememberRefreshableDataLoader(
         wsService = wsService,
-        refreshOn = setOf(RefreshTrigger.Status, RefreshTrigger.Bridges, RefreshTrigger.Conversations),
+        refreshOn = setOf(RefreshTrigger.Status, RefreshTrigger.Bridges, RefreshTrigger.Chats),
     ) {
         apiClient.get("${getApiBaseUrl()}/status").body<SystemStatus>()
     }
@@ -105,7 +105,7 @@ fun App() {
                     route("/") {
                         OverviewScreen(statusState, wsService)
                     }
-                    route("/conversations") {
+                    route("/chats") {
                         ConversationsScreen(wsService)
                     }
                     route("/bridges") {
@@ -175,8 +175,8 @@ private fun Sidebar(
             )
             NavItem(
                 icon = "bi-chat-dots",
-                label = "Conversations",
-                route = "/conversations",
+                label = "Chats",
+                route = "/chats",
                 router = router,
                 collapsed = collapsed,
             )
@@ -315,7 +315,7 @@ private fun ConnectionStatus(connectionState: ConnectionState) {
 
 private fun getPageTitle(path: String): String = when {
     path == "/" -> "Overview"
-    path.startsWith("/conversations") -> "Conversations"
+    path.startsWith("/chats") -> "Chat History"
     path.startsWith("/bridges") -> "Bridges"
     path.startsWith("/skills") -> "Skills"
     path.startsWith("/memory") -> "Memory"

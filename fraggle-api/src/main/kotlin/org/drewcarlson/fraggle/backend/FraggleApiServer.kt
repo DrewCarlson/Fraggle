@@ -104,7 +104,7 @@ fun createApiServer(
             // API routes
             route("/api/v1") {
                 statusRoutes(services)
-                conversationRoutes(services)
+                chatRoutes(services)
                 bridgeRoutes(services)
                 discordOAuthRoutes(services)
                 skillRoutes(services)
