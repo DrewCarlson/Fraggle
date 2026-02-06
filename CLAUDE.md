@@ -98,6 +98,42 @@ skill("my_skill") {
 
 **Service Orchestrator**: Thin lifecycle manager (~290 lines) that takes `AppGraph`, registers bridges/initializers, and runs the message loop. All service creation is handled by DI modules.
 
+### Database (Exposed ORM + SQLite)
+
+The application uses [JetBrains Exposed](https://github.com/JetBrains/Exposed) 1.0.0 with SQLite JDBC 3.51.1.0 for chat history and message metadata persistence. All database code lives in `fraggle-agent/src/main/kotlin/org/drewcarlson/fraggle/db/`.
+
+**Critical: Exposed 1.0 API packages.** Exposed 1.0.0 uses `v1`-namespaced packages — **not** the legacy `org.jetbrains.exposed.sql.*` packages:
+```kotlin
+// Correct (Exposed 1.0)
+import org.jetbrains.exposed.v1.core.*        // Table, Column, ColumnType, eq, and, isNotNull, SortOrder
+import org.jetbrains.exposed.v1.jdbc.*        // Database, SchemaUtils, insert, update, select, selectAll
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+
+// Wrong (pre-1.0 API)
+import org.jetbrains.exposed.sql.*
+```
+
+**Schema** (`Tables.kt`): Two tables — `ChatTable` (platform, externalId, name, isGroup, timestamps) and `MessageTable` (chatId FK, senderId, contentType enum, direction enum, timestamp, processingDuration). Message content is **not** stored — only metadata for analytics.
+
+**Custom column types** (`TimeColumns.kt`): `InstantColumnType` and `DurationColumnType` store `kotlin.time.Instant` and `kotlin.time.Duration` as epoch milliseconds (Long). Used via `Table.instant(name)` and `Table.duration(name)` extension functions.
+
+**Query patterns:**
+```kotlin
+// All operations wrapped in transaction(database) { ... }
+ChatTable.selectAll().where { ChatTable.externalId eq externalId }.singleOrNull()
+ChatTable.insert { it[platform] = value }[ChatTable.id]
+ChatTable.update({ ChatTable.id eq id }) { it[lastActiveAt] = now }
+MessageTable.selectAll().where { ... }.orderBy(MessageTable.timestamp, SortOrder.DESC).limit(limit).offset(offset)
+```
+
+**SQLite PRAGMA** must be set via connection URL params (not `exec()`):
+```kotlin
+val url = "jdbc:sqlite:$dbPath?journal_mode=WAL&foreign_keys=ON"
+Database.connect(url = url, driver = "org.sqlite.JDBC")
+```
+
+**DI wiring:** `DatabaseConfig` → `ConfigModule`, `FraggleDatabase` + `ChatHistoryStore` → `AgentModule`. Both are `@SingleIn(AppScope::class)` singletons. `FraggleDatabase.close()` uses `TransactionManager.closeAndUnregister(database)`.
+
 ### Configuration
 
 - Config file: `{FRAGGLE_ROOT}/config/fraggle.yaml`
@@ -109,6 +145,7 @@ skill("my_skill") {
 
 - Kotlin 2.3.0 on JDK 21
 - Metro 0.10.2 (compile-time dependency injection)
+- Exposed 1.0.0 + SQLite JDBC 3.51.1.0 (database ORM)
 - Ktor 3.4.0 (HTTP client/server)
 - Kord 0.17.0 (Discord API)
 - kotlinx-coroutines for async operations
