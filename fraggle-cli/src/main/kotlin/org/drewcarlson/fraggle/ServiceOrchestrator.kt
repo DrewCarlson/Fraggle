@@ -1,166 +1,77 @@
 package org.drewcarlson.fraggle
 
-import io.ktor.client.*
-import io.ktor.server.engine.*
-import io.ktor.server.netty.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collectLatest
 import org.drewcarlson.fraggle.agent.*
-import org.drewcarlson.fraggle.agent.AgentConfig
-import org.drewcarlson.fraggle.backend.createApiServer
-import org.drewcarlson.fraggle.chat.BridgeInitializerRegistry
-import org.drewcarlson.fraggle.chat.ChatBridgeManager
 import org.drewcarlson.fraggle.chat.MessageContent
 import org.drewcarlson.fraggle.chat.OutgoingMessage
-import org.drewcarlson.fraggle.discord.DiscordBridge
-import org.drewcarlson.fraggle.discord.DiscordBridgeInitializer
-import org.drewcarlson.fraggle.discord.DiscordConfig
-import org.drewcarlson.fraggle.memory.FileMemoryStore
-import org.drewcarlson.fraggle.memory.MemoryStore
+import org.drewcarlson.fraggle.di.AppGraph
 import org.drewcarlson.fraggle.models.*
-import org.drewcarlson.fraggle.prompt.PromptConfig
-import org.drewcarlson.fraggle.prompt.PromptManager
-import org.drewcarlson.fraggle.provider.LLMProvider
-import org.drewcarlson.fraggle.provider.LMStudioProvider
-import org.drewcarlson.fraggle.sandbox.PermissiveSandbox
-import org.drewcarlson.fraggle.sandbox.Sandbox
-import org.drewcarlson.fraggle.signal.MessageRouter
-import org.drewcarlson.fraggle.signal.SignalBridge
-import org.drewcarlson.fraggle.signal.SignalBridgeInitializer
-import org.drewcarlson.fraggle.signal.SignalConfig
-import org.drewcarlson.fraggle.skill.SkillRegistry
-import org.drewcarlson.fraggle.skills.DefaultSkills
-import org.drewcarlson.fraggle.skills.scheduling.TaskScheduler
-import org.drewcarlson.fraggle.skills.web.PlaywrightConfig
-import org.drewcarlson.fraggle.skills.web.PlaywrightFetcher
 import org.slf4j.LoggerFactory
-import java.nio.file.Path
-import java.util.concurrent.ConcurrentHashMap
-import kotlin.io.path.createDirectories
 import kotlin.time.Clock
 import kotlin.time.Instant
 
 /**
  * Orchestrates all Fraggle services and manages their lifecycle.
  *
- * @param config Application configuration
- * @param configPath Path to the configuration file
- * @param defaultHttpClient HTTP client for general-purpose web requests
- * @param llmHttpClient HTTP client with extended timeouts for LLM API calls
+ * All services are injected via the [AppGraph]. This class is responsible
+ * for registering bridges, starting/stopping services, and the message loop.
+ *
+ * @param graph The application dependency graph
  */
 class ServiceOrchestrator(
-    private val config: FraggleConfig,
-    private val configPath: Path,
-    private val defaultHttpClient: HttpClient,
-    private val llmHttpClient: HttpClient,
+    private val graph: AppGraph,
 ) {
     private val logger = LoggerFactory.getLogger(ServiceOrchestrator::class.java)
-    private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
-    // Services
-    private lateinit var provider: LLMProvider
-    private lateinit var sandbox: Sandbox
-    private lateinit var memory: MemoryStore
-    private lateinit var promptManager: PromptManager
-    private lateinit var skills: SkillRegistry
-    private lateinit var agent: FraggleAgent
-    private lateinit var taskScheduler: TaskScheduler
+    // Injected services
+    private val scope = graph.appScope
+    private val agent = graph.agent
+    private val bridgeManager = graph.chatBridgeManager
+    private val initializerRegistry = graph.bridgeInitializerRegistry
+    private val messageRouter = graph.messageRouter
+    private val inlineImageProcessor = graph.inlineImageProcessor
+    private val conversations = graph.conversationMap
+    private val fraggleServices = graph.fraggleServices
+    private val taskScheduler = graph.taskScheduler
+    private val playwrightFetcher = graph.playwrightFetcher
+    private val skills = graph.skillRegistry
 
-    // Chat bridge management
-    private lateinit var bridgeManager: ChatBridgeManager
-    private lateinit var initializerRegistry: BridgeInitializerRegistry
-    private var messageRouter: MessageRouter? = null
     private var messageJob: Job? = null
-    private var discordBridge: DiscordBridge? = null
-
-    // Playwright integration (optional)
-    private var playwrightFetcher: PlaywrightFetcher? = null
-
-    // Inline image processor for [[image:url]] syntax (lazy to access injected httpClient)
-    private val inlineImageProcessor by lazy { InlineImageProcessor(defaultHttpClient) }
-
-    // Conversation tracking
-    private val conversations = ConcurrentHashMap<String, Conversation>()
-
-    // API server (optional)
-    private var apiServer: EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration>? = null
-    private var fraggleServices: FraggleServicesImpl? = null
-    private val startTime = Clock.System.now()
+    private var apiServer = graph.apiServer
 
     /**
-     * Initialize all services.
+     * Initialize all services: register bridges and initializers.
      */
     fun initialize() {
         logger.info("Initializing Fraggle services...")
 
-        // Initialize provider
-        provider = createProvider()
-        logger.info("LLM Provider initialized: ${provider.name}")
-
-        // Initialize sandbox
-        sandbox = createSandbox()
-        logger.info("Sandbox initialized: ${config.fraggle.sandbox.type}")
-
-        // Initialize memory
-        memory = createMemoryStore()
-        logger.info("Memory store initialized")
-
-        // Initialize prompt manager
-        promptManager = createPromptManager()
-        promptManager.initialize()
-        logger.info("Prompt manager initialized")
-
-        // Initialize chat bridge manager
-        bridgeManager = ChatBridgeManager(scope)
-
-        // Initialize bridge initializer registry
-        initializerRegistry = BridgeInitializerRegistry()
-
-        // Initialize task scheduler with message sending callback
-        taskScheduler = TaskScheduler(scope) { task ->
-            logger.info("Task triggered: ${task.name} - ${task.action}")
-
-            // Send the task action as a message to the originating chat
-            if (bridgeManager.hasConnectedBridge()) {
-                try {
-                    bridgeManager.send(task.chatId, OutgoingMessage.Text(task.action))
-                    logger.info("Task message sent to ${task.chatId}: ${task.action}")
-                } catch (e: Exception) {
-                    logger.error("Failed to send task message: ${e.message}", e)
-                }
-            } else {
-                logger.warn("Cannot send task message: No chat bridge connected")
-            }
+        // Register bridges
+        graph.signalBridge?.let { bridge ->
+            bridgeManager.register("signal", bridge)
+            logger.info("Signal bridge registered")
+        }
+        graph.signalBridgeInitializer?.let { init ->
+            initializerRegistry.register("signal", init)
         }
 
-        // Initialize Playwright if configured
-        config.fraggle.web.playwright?.let { pwConfig ->
-            playwrightFetcher = PlaywrightFetcher(
-                PlaywrightConfig(
-                    wsEndpoint = pwConfig.wsEndpoint,
-                    navigationTimeout = pwConfig.navigationTimeout,
-                    waitAfterLoad = pwConfig.waitAfterLoad,
-                    viewportWidth = pwConfig.viewportWidth,
-                    viewportHeight = pwConfig.viewportHeight,
-                    userAgent = pwConfig.userAgent,
-                )
-            )
-            logger.info("Playwright fetcher configured: ${pwConfig.wsEndpoint}")
+        graph.discordBridge?.let { bridge ->
+            bridgeManager.register("discord", bridge)
+            logger.info("Discord bridge registered")
+        }
+        graph.discordBridgeInitializer?.let { init ->
+            initializerRegistry.register("discord", init)
         }
 
-        // Initialize skills
-        skills = DefaultSkills.createRegistry(sandbox, defaultHttpClient, taskScheduler, playwrightFetcher)
-        logger.info("Skill registry initialized with ${skills.all().size} skills")
+        if (bridgeManager.registeredBridges().isEmpty()) {
+            logger.info("No chat bridges configured")
+        }
 
-        // Initialize agent
-        agent = createAgent()
-        logger.info("Agent initialized")
-
-        // Initialize chat bridges based on configuration
-        initializeBridges()
-
-        // Initialize API server if enabled
-        initializeApiServer()
+        if (apiServer != null) {
+            logger.info("API server initialized on ${graph.config.fraggle.api.host}:${graph.config.fraggle.api.port}")
+        } else {
+            logger.info("API server disabled")
+        }
 
         logger.info("All services initialized successfully")
     }
@@ -271,193 +182,7 @@ class ServiceOrchestrator(
     /**
      * Get the skill registry.
      */
-    fun getSkills(): SkillRegistry = skills
-
-    private fun createProvider(): LLMProvider {
-        val settings = config.fraggle.provider
-
-        return when (settings.type) {
-            ProviderType.LMSTUDIO -> LMStudioProvider(
-                baseUrl = settings.url,
-                defaultModel = settings.model.takeIf { it.isNotBlank() },
-                httpClient = llmHttpClient,
-            )
-            ProviderType.OPENAI -> {
-                // Could add OpenAI support here
-                throw ConfigurationException("OpenAI provider not yet implemented")
-            }
-            ProviderType.ANTHROPIC -> {
-                // Could add Anthropic support here
-                throw ConfigurationException("Anthropic provider not yet implemented")
-            }
-        }
-    }
-
-    private fun createSandbox(): Sandbox {
-        val settings = config.fraggle.sandbox
-        val workDir = resolvePath(settings.workDir)
-        workDir.createDirectories()
-
-        return when (settings.type) {
-            SandboxType.PERMISSIVE -> PermissiveSandbox(workDir)
-            SandboxType.DOCKER -> {
-                logger.warn("Docker sandbox not yet implemented, falling back to permissive")
-                PermissiveSandbox(workDir)
-            }
-            SandboxType.GVISOR -> {
-                logger.warn("gVisor sandbox not yet implemented, falling back to permissive")
-                PermissiveSandbox(workDir)
-            }
-        }
-    }
-
-    private fun createMemoryStore(): MemoryStore {
-        val baseDir = resolvePath(config.fraggle.memory.baseDir)
-        baseDir.createDirectories()
-        return FileMemoryStore(baseDir)
-    }
-
-    private fun createAgent(): FraggleAgent {
-        val settings = config.fraggle.agent
-
-        val agentConfig = AgentConfig(
-            model = config.fraggle.provider.model,
-            temperature = settings.temperature,
-            maxTokens = settings.maxTokens,
-            maxIterations = settings.maxIterations,
-            maxHistoryMessages = settings.maxHistoryMessages,
-        )
-
-        return FraggleAgent(
-            provider = provider,
-            skills = skills,
-            memory = memory,
-            sandbox = sandbox,
-            config = agentConfig,
-            promptManager = promptManager,
-        )
-    }
-
-    private fun createPromptManager(): PromptManager {
-        val settings = config.fraggle.prompts
-        val promptsDir = resolvePath(settings.promptsDir)
-
-        return PromptManager(
-            PromptConfig(
-                promptsDir = promptsDir,
-                maxFileChars = settings.maxFileChars,
-                autoCreateMissing = settings.autoCreateMissing,
-            )
-        )
-    }
-
-    /**
-     * Initialize all chat bridges based on configuration.
-     */
-    private fun initializeBridges() {
-        // Initialize Signal bridge if configured
-        config.fraggle.bridges.signal?.let { signalConfig ->
-            if (signalConfig.enabled) {
-                initializeSignalBridge(signalConfig)
-            }
-        }
-
-        // Initialize Discord bridge if configured
-        config.fraggle.bridges.discord?.let { discordConfig ->
-            if (discordConfig.enabled) {
-                initializeDiscordBridge(discordConfig)
-            }
-        }
-
-        // Future: Add other bridge initializations here
-        // config.fraggle.bridges.telegram?.let { ... }
-
-        if (bridgeManager.registeredBridges().isEmpty()) {
-            logger.info("No chat bridges configured")
-        }
-    }
-
-    private fun initializeSignalBridge(settings: SignalBridgeConfig) {
-        val signalConfig = SignalConfig(
-            phoneNumber = settings.phone,
-            configDir = resolvePath(settings.configDir).toString(),
-            triggerPrefix = settings.trigger,
-            signalCliPath = settings.signalCliPath,
-            autoInstall = settings.autoInstall,
-            signalCliVersion = settings.signalCliVersion,
-            appsDir = FraggleEnvironment.dataDir.resolve("apps").toString(),
-            respondToDirectMessages = settings.respondToDirectMessages,
-            showTypingIndicator = settings.showTypingIndicator,
-            registeredChats = config.fraggle.chats.registered.map { it.toRegisteredChat() },
-        )
-
-        val bridge = SignalBridge(signalConfig, scope)
-        bridgeManager.register("signal", bridge)
-        messageRouter = MessageRouter(signalConfig)
-
-        // Register the bridge initializer for interactive setup
-        initializerRegistry.register("signal", SignalBridgeInitializer(signalConfig))
-
-        logger.info("Signal bridge initialized for ${settings.phone}")
-    }
-
-    private fun initializeDiscordBridge(settings: DiscordBridgeConfig) {
-        val discordConfig = DiscordConfig(
-            token = settings.token,
-            clientId = settings.clientId,
-            clientSecret = settings.clientSecret,
-            oauthRedirectUri = settings.oauthRedirectUri,
-            triggerPrefix = settings.trigger,
-            respondToDirectMessages = settings.respondToDirectMessages,
-            showTypingIndicator = settings.showTypingIndicator,
-            maxImagesPerMessage = settings.maxImagesPerMessage,
-            maxFileSizeBytes = settings.maxFileSizeMb.toLong() * 1024 * 1024,
-            allowedGuildIds = settings.allowedGuildIds,
-            allowedChannelIds = settings.allowedChannelIds,
-        )
-
-        val bridge = DiscordBridge(discordConfig, scope)
-        bridgeManager.register("discord", bridge)
-        discordBridge = bridge
-
-        // Register the bridge initializer for interactive setup
-        initializerRegistry.register("discord", DiscordBridgeInitializer(discordConfig, defaultHttpClient))
-
-        logger.info("Discord bridge initialized")
-    }
-
-    /**
-     * Initialize the API server if enabled in configuration.
-     */
-    private fun initializeApiServer() {
-        val apiConfig = config.fraggle.api
-        val dashboardConfig = config.fraggle.dashboard
-
-        if (!apiConfig.enabled) {
-            logger.info("API server disabled")
-            return
-        }
-
-        // Create the services implementation
-        fraggleServices = FraggleServicesImpl(
-            memory = memory,
-            skills = skills,
-            bridges = bridgeManager,
-            taskScheduler = taskScheduler,
-            conversationMap = conversations,
-            fraggleConfig = config,
-            configPath = configPath,
-            initializerRegistry = initializerRegistry,
-            scope = scope,
-            httpClient = defaultHttpClient,
-            discordBridge = discordBridge,
-            startTime = startTime,
-        )
-
-        // Create the server
-        apiServer = createApiServer(fraggleServices!!, apiConfig, dashboardConfig)
-        logger.info("API server initialized on ${apiConfig.host}:${apiConfig.port}")
-    }
+    fun getSkills() = skills
 
     /**
      * Start the unified message processing loop for all bridges.
@@ -501,7 +226,7 @@ class ServiceOrchestrator(
                 try {
                     // Emit message received event
                     val messageText = (routedMessage.content as? MessageContent.Text)?.text ?: ""
-                    fraggleServices?.emitEvent(FraggleEvent.MessageReceived(
+                    fraggleServices.emitEvent(FraggleEvent.MessageReceived(
                         timestamp = Instant.fromEpochMilliseconds(System.currentTimeMillis()),
                         chatId = chatId,
                         senderId = routedMessage.sender.id,
@@ -588,7 +313,7 @@ class ServiceOrchestrator(
                     }
 
                     // Emit response sent event
-                    fraggleServices?.emitEvent(FraggleEvent.ResponseSent(
+                    fraggleServices.emitEvent(FraggleEvent.ResponseSent(
                         timestamp = Instant.fromEpochMilliseconds(System.currentTimeMillis()),
                         chatId = chatId,
                         content = finalText,
@@ -625,7 +350,7 @@ class ServiceOrchestrator(
                     typingJob.cancel()
 
                     // Emit error event
-                    fraggleServices?.emitEvent(FraggleEvent.Error(
+                    fraggleServices.emitEvent(FraggleEvent.Error(
                         timestamp = Instant.fromEpochMilliseconds(System.currentTimeMillis()),
                         source = "message_processing",
                         message = e.message ?: "Unknown error",
@@ -643,9 +368,5 @@ class ServiceOrchestrator(
                 }
             }
         }
-    }
-
-    private fun resolvePath(path: String): Path {
-        return FraggleEnvironment.resolvePath(path)
     }
 }

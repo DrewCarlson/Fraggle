@@ -11,6 +11,9 @@ import io.ktor.client.plugins.logging.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.serialization.json.Json
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
@@ -53,6 +56,14 @@ interface NetworkModule {
                 header(HttpHeaders.UserAgent, "Fraggle/1.0")
             }
         }
+
+        /**
+         * Provides an application-scoped CoroutineScope.
+         */
+        @Provides
+        @SingleIn(AppScope::class)
+        fun provideAppScope(): CoroutineScope =
+            CoroutineScope(Dispatchers.Default + SupervisorJob())
 
         /**
          * Provides the HTTP client configured for LLM API calls.

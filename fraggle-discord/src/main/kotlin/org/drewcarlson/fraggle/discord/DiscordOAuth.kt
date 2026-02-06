@@ -1,6 +1,5 @@
 package org.drewcarlson.fraggle.discord
 
-import dev.zacsweers.metro.Inject
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -8,7 +7,6 @@ import io.ktor.client.request.forms.*
 import io.ktor.http.*
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import org.drewcarlson.fraggle.di.DefaultHttpClient
 import org.slf4j.LoggerFactory
 
 /**
@@ -17,11 +15,11 @@ import org.slf4j.LoggerFactory
  * When a user authorizes the app, this creates a DM channel and sends
  * a welcome message, establishing the conversation channel.
  */
-class DiscordOAuth @Inject constructor(
+class DiscordOAuth(
     private val clientId: String,
     private val clientSecret: String,
     private val redirectUri: String,
-    @param:DefaultHttpClient private val httpClient: HttpClient,
+    private val httpClient: HttpClient,
 ) {
     private val logger = LoggerFactory.getLogger(DiscordOAuth::class.java)
 

@@ -1,6 +1,5 @@
 package org.drewcarlson.fraggle.provider
 
-import dev.zacsweers.metro.Inject
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -11,17 +10,16 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import org.drewcarlson.fraggle.di.LlmHttpClient
 import org.drewcarlson.fraggle.skill.OpenAITool
 
 /**
  * LLM Provider implementation for LM Studio.
  * Uses the OpenAI-compatible API that LM Studio provides.
  */
-class LMStudioProvider @Inject constructor(
+class LMStudioProvider(
     private val baseUrl: String = "http://localhost:1234/v1",
     private val defaultModel: String? = null,
-    @param:LlmHttpClient private val httpClient: HttpClient,
+    private val httpClient: HttpClient,
 ) : LLMProvider {
 
     override val name: String = "LM Studio"

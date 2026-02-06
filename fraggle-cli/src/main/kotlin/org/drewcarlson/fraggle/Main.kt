@@ -53,12 +53,7 @@ class RunCommand : CliktCommand(name = "run") {
         val graph = createGraphFactory<AppGraph.Factory>().create(config, resolvedConfigPath)
 
         // Create and initialize orchestrator with injected dependencies
-        val orchestrator = ServiceOrchestrator(
-            config = config,
-            configPath = resolvedConfigPath,
-            defaultHttpClient = graph.defaultHttpClient,
-            llmHttpClient = graph.llmHttpClient,
-        )
+        val orchestrator = ServiceOrchestrator(graph)
         orchestrator.initialize()
 
         // Setup shutdown hook
@@ -137,12 +132,7 @@ class ChatCommand : CliktCommand(name = "chat") {
         val graph = createGraphFactory<AppGraph.Factory>().create(config, resolvedConfigPath)
 
         // Create and initialize orchestrator with injected dependencies
-        val orchestrator = ServiceOrchestrator(
-            config = config,
-            configPath = resolvedConfigPath,
-            defaultHttpClient = graph.defaultHttpClient,
-            llmHttpClient = graph.llmHttpClient,
-        )
+        val orchestrator = ServiceOrchestrator(graph)
         orchestrator.initialize()
 
         println("Available skills: ${orchestrator.getSkills().all().map { it.name }}")

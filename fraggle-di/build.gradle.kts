@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.metro)
 }
 
@@ -9,6 +10,9 @@ kotlin {
 
 dependencies {
     // Note: Metro runtime is automatically added by the metro plugin
+
+    // Shared models
+    api(project(":fraggle-common"))
 
     // Ktor Client (shared across all modules)
     api(libs.ktor.client.core)

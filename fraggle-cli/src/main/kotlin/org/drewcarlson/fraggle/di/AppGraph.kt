@@ -3,15 +3,37 @@ package org.drewcarlson.fraggle.di
 import dev.zacsweers.metro.DependencyGraph
 import dev.zacsweers.metro.Provides
 import io.ktor.client.*
+import io.ktor.server.engine.*
+import io.ktor.server.netty.*
+import kotlinx.coroutines.CoroutineScope
+import org.drewcarlson.fraggle.FraggleServicesImpl
+import org.drewcarlson.fraggle.agent.Conversation
+import org.drewcarlson.fraggle.agent.FraggleAgent
+import org.drewcarlson.fraggle.agent.InlineImageProcessor
+import org.drewcarlson.fraggle.chat.BridgeInitializerRegistry
+import org.drewcarlson.fraggle.chat.ChatBridgeManager
+import org.drewcarlson.fraggle.discord.DiscordBridge
+import org.drewcarlson.fraggle.discord.DiscordBridgeInitializer
+import org.drewcarlson.fraggle.memory.MemoryStore
 import org.drewcarlson.fraggle.models.FraggleConfig
+import org.drewcarlson.fraggle.signal.MessageRouter
+import org.drewcarlson.fraggle.signal.SignalBridge
+import org.drewcarlson.fraggle.signal.SignalBridgeInitializer
+import org.drewcarlson.fraggle.skill.SkillRegistry
+import org.drewcarlson.fraggle.skills.scheduling.TaskScheduler
+import org.drewcarlson.fraggle.skills.web.PlaywrightFetcher
 import java.nio.file.Path
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Main application dependency graph.
  *
  * This graph provides all application-scoped dependencies including:
  * - HTTP clients (default and LLM-optimized)
- * - Configuration
+ * - Configuration and sub-configs
+ * - Agent, skills, memory, sandbox
+ * - Chat bridges (Signal, Discord)
+ * - API server
  *
  * Usage:
  * ```
@@ -33,6 +55,57 @@ interface AppGraph {
 
     /** Path to the configuration file */
     val configPath: Path
+
+    /** Application-scoped CoroutineScope */
+    val appScope: CoroutineScope
+
+    /** Core agent */
+    val agent: FraggleAgent
+
+    /** Memory store */
+    val memoryStore: MemoryStore
+
+    /** Skill registry */
+    val skillRegistry: SkillRegistry
+
+    /** Chat bridge manager */
+    val chatBridgeManager: ChatBridgeManager
+
+    /** Bridge initializer registry */
+    val bridgeInitializerRegistry: BridgeInitializerRegistry
+
+    /** Task scheduler */
+    val taskScheduler: TaskScheduler
+
+    /** Inline image processor (auto-constructed via @Inject) */
+    val inlineImageProcessor: InlineImageProcessor
+
+    /** Conversation map (shared mutable state) */
+    val conversationMap: ConcurrentHashMap<String, Conversation>
+
+    /** API services implementation */
+    val fraggleServices: FraggleServicesImpl
+
+    /** API server (null if API disabled) */
+    val apiServer: EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration>?
+
+    /** Signal bridge (null if unconfigured) */
+    val signalBridge: SignalBridge?
+
+    /** Signal bridge initializer (null if unconfigured) */
+    val signalBridgeInitializer: SignalBridgeInitializer?
+
+    /** Signal message router (null if unconfigured) */
+    val messageRouter: MessageRouter?
+
+    /** Discord bridge (null if unconfigured) */
+    val discordBridge: DiscordBridge?
+
+    /** Discord bridge initializer (null if unconfigured) */
+    val discordBridgeInitializer: DiscordBridgeInitializer?
+
+    /** Playwright fetcher (null if unconfigured) */
+    val playwrightFetcher: PlaywrightFetcher?
 
     @DependencyGraph.Factory
     fun interface Factory {

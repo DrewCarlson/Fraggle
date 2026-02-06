@@ -1,13 +1,11 @@
 package org.drewcarlson.fraggle.discord
 
-import dev.zacsweers.metro.Inject
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import org.drewcarlson.fraggle.chat.BridgeInitializer
 import org.drewcarlson.fraggle.chat.InitStepResult
-import org.drewcarlson.fraggle.di.DefaultHttpClient
 import org.slf4j.LoggerFactory
 
 /**
@@ -17,9 +15,9 @@ import org.slf4j.LoggerFactory
  * This initializer provides the OAuth2 authorization link that allows the bot
  * to send a welcome DM to establish the conversation channel.
  */
-class DiscordBridgeInitializer @Inject constructor(
+class DiscordBridgeInitializer(
     private val config: DiscordConfig,
-    @param:DefaultHttpClient private val httpClient: HttpClient,
+    private val httpClient: HttpClient,
 ) : BridgeInitializer {
     private val logger = LoggerFactory.getLogger(DiscordBridgeInitializer::class.java)
 
