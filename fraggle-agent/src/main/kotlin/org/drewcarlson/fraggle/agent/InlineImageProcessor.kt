@@ -19,7 +19,8 @@ import kotlin.io.path.*
  * The processor extracts the first image reference, downloads it if remote,
  * and returns the cleaned text along with the image data.
  */
-class InlineImageProcessor @Inject constructor(
+@Inject
+class InlineImageProcessor(
     @param:DefaultHttpClient private val httpClient: HttpClient,
 ) {
     private val logger = LoggerFactory.getLogger(InlineImageProcessor::class.java)
