@@ -40,14 +40,42 @@ Fraggle is a Kotlin-based AI assistant that integrates with messaging platforms 
 
 ### Module Structure
 
-- **`fraggle-agent`** - Core framework: agent loop, LLM provider interface, skill system, memory storage, sandbox abstraction, chat bridge interface
-- **`fraggle-signal`** - Signal messenger integration with message routing and text formatting
-- **`fraggle-discord`** - Discord bot integration using Kord 0.17.0, supports multiple image attachments (up to 10)
-- **`fraggle-skills`** - Built-in skills: filesystem, web fetching, shell execution, task scheduling
-- **`fraggle-cli`** - CLI application using Clikt, configuration loading, service orchestration
-- **`fraggle-api`** - Optional Ktor REST API server
-- **`fraggle-dashboard`** - Web dashboard built with Compose for HTML
-- **`fraggle-common`** - Shared models (Kotlin Multiplatform)
+- **`fraggle-di`** - Shared DI infrastructure: Metro scopes/qualifiers, HTTP clients, JSON, `CoroutineScope`, `ConfigModule` (sub-config extraction), `FraggleEnvironment` (path resolution)
+- **`fraggle-common`** - Shared models (Kotlin Multiplatform): config data classes, event models, API contracts
+- **`fraggle-agent`** - Core framework: agent loop, LLM provider, skill system, memory, sandbox, chat bridge abstractions. `AgentModule` provides all core services via DI.
+- **`fraggle-skills`** - Built-in skills: filesystem, web fetching, shell execution, task scheduling. `SkillsModule` provides `SkillRegistry`, `TaskScheduler`, `PlaywrightFetcher`.
+- **`fraggle-signal`** - Signal messenger integration. `SignalModule` provides nullable `SignalBridge?`, `MessageRouter?`, `SignalBridgeInitializer?`.
+- **`fraggle-discord`** - Discord bot integration (Kord 0.17.0). `DiscordModule` provides nullable `DiscordBridge?`, `DiscordBridgeInitializer?`.
+- **`fraggle-cli`** - CLI entry point (Clikt), `AppGraph` (central DI graph), `ApiModule`, `ServiceOrchestrator` (thin lifecycle manager)
+- **`fraggle-api`** - Optional Ktor REST API server with WebSocket event streaming
+- **`fraggle-dashboard`** - Web dashboard built with Compose for HTML (no DI — only 2 singletons)
+
+### Dependency Injection (Metro DI)
+
+The application uses [Metro](https://github.com/AdrianAndroid/Metro) v0.10.2 for compile-time dependency injection. Each feature module owns its bindings via `@ContributesTo(AppScope::class)` modules.
+
+**Graph structure:**
+- `AppGraph` (`fraggle-cli`) — `@DependencyGraph(AppScope::class)`, exposes all top-level bindings
+- `NetworkModule` (`fraggle-di`) — HTTP clients, JSON, `CoroutineScope`
+- `ConfigModule` (`fraggle-di`) — Extracts sub-configs from `FraggleConfig` (e.g., `ProviderConfig`, `MemoryConfig`, `SignalBridgeConfig?`)
+- `AgentModule` (`fraggle-agent`) — `MemoryStore`, `Sandbox`, `PromptManager`, `LLMProvider`, `FraggleAgent`, `ChatBridgeManager`, etc.
+- `SkillsModule` (`fraggle-skills`) — `SkillRegistry`, `TaskScheduler`, `PlaywrightFetcher?`
+- `SignalModule` (`fraggle-signal`) — Nullable chain for Signal services
+- `DiscordModule` (`fraggle-discord`) — Nullable chain for Discord services
+- `ApiModule` (`fraggle-cli`) — `FraggleServicesImpl`, `EmbeddedServer?`
+
+**Key DI conventions:**
+- Classes created by `@Provides` factory methods should NOT have `@Inject` on their constructors
+- Classes auto-constructed by Metro (e.g., `InlineImageProcessor`) keep `@Inject`
+- Nullable bindings model optional features — when a bridge is unconfigured, its entire dependency chain resolves to null
+- Config model types from `fraggle-common` (e.g., `models.AgentConfig`) may clash with runtime types (e.g., `agent.AgentConfig`); use import aliases in DI modules
+- `@SingleIn(AppScope::class)` on all singleton bindings
+- Qualifiers: `@DefaultHttpClient`, `@LlmHttpClient`
+
+**Adding a new DI binding:**
+1. Add a `@Provides` method to the appropriate module's companion object
+2. Add an accessor to `AppGraph` if the binding needs to be used directly in `ServiceOrchestrator` or `Main.kt`
+3. Run `./gradlew build` — Metro generates factories at compile time, so errors surface immediately
 
 ### Key Architectural Patterns
 
@@ -68,15 +96,19 @@ skill("my_skill") {
 
 **Prompt Management**: Template files (SYSTEM.md, IDENTITY.md, USER.md) stored as JAR resources, copied to workspace for customization. HTML comments are stripped before injection.
 
+**Service Orchestrator**: Thin lifecycle manager (~290 lines) that takes `AppGraph`, registers bridges/initializers, and runs the message loop. All service creation is handled by DI modules.
+
 ### Configuration
 
 - Config file: `{FRAGGLE_ROOT}/config/fraggle.yaml`
 - FRAGGLE_ROOT env var defaults to current directory
 - Development runs use `runtime-dev/` (set automatically by Gradle)
+- `FraggleEnvironment` (in `fraggle-di`) handles path resolution across all modules
 
 ### Technology Stack
 
 - Kotlin 2.3.0 on JDK 21
+- Metro 0.10.2 (compile-time dependency injection)
 - Ktor 3.4.0 (HTTP client/server)
 - Kord 0.17.0 (Discord API)
 - kotlinx-coroutines for async operations
@@ -86,4 +118,4 @@ skill("my_skill") {
 
 ## Testing Patterns
 
-Tests use JUnit 5 with `@Nested` for organization, `runTest` for coroutines, and MockK for mocking. `InMemoryStore` and temp directories (`@TempDir`) avoid external dependencies.
+Tests use JUnit 5 with `@Nested` for organization, `runTest` for coroutines, and MockK for mocking. `InMemoryStore` and temp directories (`@TempDir`) avoid external dependencies. DI modules are tested implicitly through full `./gradlew build` (Metro compile-time validation) and `./gradlew :fraggle-cli:run --args="chat"` for end-to-end verification.
