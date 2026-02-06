@@ -17,11 +17,11 @@ dependencies {
     api(project(":fraggle-di"))
 
     // Ktor Client for LLM API calls (from fraggle-di)
-    implementation(libs.ktor.client.core)
-    implementation(libs.ktor.client.cio)
-    implementation(libs.ktor.client.content.negotiation)
-    implementation(libs.ktor.client.logging)
-    implementation(libs.ktor.serialization.kotlinx.json)
+    implementation(ktorLibs.client.core)
+    implementation(ktorLibs.client.cio)
+    implementation(ktorLibs.client.contentNegotiation)
+    implementation(ktorLibs.client.logging)
+    implementation(ktorLibs.serialization.kotlinx.json)
 
     // Kotlinx
     implementation(libs.kotlinx.coroutines.core)

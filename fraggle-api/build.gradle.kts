@@ -17,16 +17,15 @@ dependencies {
     implementation(project(":fraggle-agent"))
 
     // Ktor Server - expose core and netty via api for app module
-    api(libs.ktor.server.core)
-    api(libs.ktor.server.netty)
-    implementation(libs.ktor.server.cors)
-    implementation(libs.ktor.server.content.negotiation)
-    implementation(libs.ktor.server.auto.head.response)
-    implementation(libs.ktor.server.host.common)
-    implementation(libs.ktor.server.call.logging)
-    implementation(libs.ktor.server.call.id)
-    implementation(libs.ktor.server.websockets)
-    implementation(libs.ktor.serialization.kotlinx.json)
+    api(ktorLibs.server.core)
+    api(ktorLibs.server.netty)
+    implementation(ktorLibs.server.cors)
+    implementation(ktorLibs.server.contentNegotiation)
+    implementation(ktorLibs.server.autoHeadResponse)
+    implementation(ktorLibs.server.callLogging)
+    implementation(ktorLibs.server.callId)
+    implementation(ktorLibs.server.websockets)
+    implementation(ktorLibs.serialization.kotlinx.json)
 
     // Kotlinx
     implementation(libs.kotlinx.coroutines.core)
@@ -36,6 +35,6 @@ dependencies {
     implementation(libs.logback.classic)
 
     // Testing
-    testImplementation(libs.ktor.server.test.host)
+    testImplementation(ktorLibs.server.testHost)
     testImplementation(libs.kotlin.test.junit)
 }

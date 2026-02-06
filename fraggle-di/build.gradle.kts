@@ -15,11 +15,11 @@ dependencies {
     api(project(":fraggle-common"))
 
     // Ktor Client (shared across all modules)
-    api(libs.ktor.client.core)
-    api(libs.ktor.client.cio)
-    api(libs.ktor.client.content.negotiation)
-    api(libs.ktor.client.logging)
-    api(libs.ktor.serialization.kotlinx.json)
+    api(ktorLibs.client.core)
+    api(ktorLibs.client.cio)
+    api(ktorLibs.client.contentNegotiation)
+    api(ktorLibs.client.logging)
+    api(ktorLibs.serialization.kotlinx.json)
 
     // Kotlinx
     api(libs.kotlinx.coroutines.core)

@@ -28,11 +28,11 @@ kotlin {
             implementation(libs.compose.runtime)
 
             // Ktor Client for API calls and WebSocket
-            implementation(libs.ktor.client.core)
-            implementation(libs.ktor.client.js)
-            implementation(libs.ktor.client.content.negotiation)
-            implementation(libs.ktor.client.websockets)
-            implementation(libs.ktor.serialization.kotlinx.json)
+            implementation(ktorLibs.client.core)
+            implementation(ktorLibs.client.js)
+            implementation(ktorLibs.client.contentNegotiation)
+            implementation(ktorLibs.client.websockets)
+            implementation(ktorLibs.serialization.kotlinx.json)
 
             // Kotlin JS Wrappers
             implementation(libs.kotlinjs.browser)

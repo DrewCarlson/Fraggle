@@ -16,10 +16,10 @@ dependencies {
     implementation(libs.kord.core)
 
     // Ktor (for OAuth HTTP client)
-    implementation(libs.ktor.client.core)
-    implementation(libs.ktor.client.cio)
-    implementation(libs.ktor.client.content.negotiation)
-    implementation(libs.ktor.serialization.kotlinx.json)
+    implementation(ktorLibs.client.core)
+    implementation(ktorLibs.client.cio)
+    implementation(ktorLibs.client.contentNegotiation)
+    implementation(ktorLibs.serialization.kotlinx.json)
 
     // Kotlinx
     implementation(libs.kotlinx.coroutines.core)
