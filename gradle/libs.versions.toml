@@ -57,6 +57,8 @@ playwright = { module = "com.microsoft.playwright:playwright", version.ref = "pl
 # Database
 exposed-core = { module = "org.jetbrains.exposed:exposed-core", version.ref = "exposed" }
 exposed-jdbc = { module = "org.jetbrains.exposed:exposed-jdbc", version.ref = "exposed" }
+exposed-migration-core = { module = "org.jetbrains.exposed:exposed-migration-core", version.ref = "exposed" }
+exposed-migration-jdbc = { module = "org.jetbrains.exposed:exposed-migration-jdbc", version.ref = "exposed" }
 sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqlite-jdbc" }
 
 # Discord

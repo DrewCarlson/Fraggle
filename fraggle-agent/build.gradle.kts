@@ -30,6 +30,8 @@ dependencies {
     // Database
     api(libs.exposed.core)
     api(libs.exposed.jdbc)
+    implementation(libs.exposed.migration.core)
+    implementation(libs.exposed.migration.jdbc)
     implementation(libs.sqlite.jdbc)
 
     // Logging

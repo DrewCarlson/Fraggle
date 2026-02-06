@@ -1,9 +1,7 @@
 package org.drewcarlson.fraggle.db
 
 import org.jetbrains.exposed.v1.jdbc.Database
-import org.jetbrains.exposed.v1.jdbc.SchemaUtils
 import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
@@ -28,10 +26,7 @@ class FraggleDatabase(private val dbPath: Path) {
             driver = "org.sqlite.JDBC",
         )
 
-        // Create or update schema
-        transaction(database) {
-            SchemaUtils.create(ChatTable, MessageTable)
-        }
+        MigrationRunner(database).run()
 
         logger.info("Database initialized")
     }
