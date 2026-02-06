@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test
 class DiscordConfigTest {
 
     @Nested
-    inner class `Constants` {
+    inner class Constants {
         @Test
         fun `MAX_ATTACHMENTS_PER_MESSAGE is 10`() {
             assertEquals(10, DiscordConfig.MAX_ATTACHMENTS_PER_MESSAGE)
@@ -30,7 +30,7 @@ class DiscordConfigTest {
     }
 
     @Nested
-    inner class `Defaults` {
+    inner class Defaults {
         @Test
         fun `default trigger prefix is !fraggle`() {
             val config = DiscordConfig(token = "test")
@@ -75,7 +75,7 @@ class DiscordConfigTest {
     }
 
     @Nested
-    inner class `RegisteredDiscordChat` {
+    inner class RegisteredDiscordChat {
         @Test
         fun `default enabled is true`() {
             val chat = RegisteredDiscordChat(id = "123")

@@ -23,7 +23,7 @@ class MessageRouterTest {
     )
 
     @Nested
-    inner class `shouldProcess` {
+    inner class shouldProcess {
         @Test
         fun `returns true for DM when respondToDirectMessages is true`() {
             val config = DiscordConfig(
@@ -130,7 +130,7 @@ class MessageRouterTest {
     }
 
     @Nested
-    inner class `process` {
+    inner class process {
         @Test
         fun `strips trigger prefix from message`() {
             val config = DiscordConfig(

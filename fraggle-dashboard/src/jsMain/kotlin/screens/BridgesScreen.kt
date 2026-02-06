@@ -99,6 +99,7 @@ fun BridgesScreen(wsService: WebSocketService) {
             bridgeName = bridgeName,
             wsService = wsService,
             onClose = {
+                @Suppress("AssignedValueIsNeverRead")
                 initializingBridge = null
                 refresh()
             },

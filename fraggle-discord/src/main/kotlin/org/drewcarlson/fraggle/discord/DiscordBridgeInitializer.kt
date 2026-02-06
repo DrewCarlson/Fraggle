@@ -121,14 +121,14 @@ class DiscordBridgeInitializer(
 
             if (response.status.isSuccess()) {
                 val user = response.body<DiscordUser>()
-                logger.debug("Discord bot validated via REST: ${user.username}")
+                logger.debug("Discord bot validated via REST: {}", user.username)
                 user
             } else {
-                logger.debug("Token validation failed with status: ${response.status}")
+                logger.debug("Token validation failed with status: {}", response.status)
                 null
             }
         } catch (e: Exception) {
-            logger.debug("REST token validation failed: ${e.message}")
+            logger.debug("REST token validation failed: {}", e.message)
             null
         }
     }
