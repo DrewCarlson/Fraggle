@@ -76,7 +76,9 @@ IMPORTANT LIMITATIONS:
     override suspend fun connect() {
         logger.info("Connecting to Discord...")
 
-        kord = Kord(config.token)
+        // Pad the token for Ktor 3.4+ compatibility (see https://github.com/kordlib/kord/issues/1032)
+        val paddedToken = padDiscordToken(config.token)
+        kord = Kord(paddedToken)
 
         // Set up message listener
         kord!!.on<MessageCreateEvent> {
@@ -341,7 +343,7 @@ IMPORTANT LIMITATIONS:
         // Get sender info
         val author = message.author ?: return
         val senderName = when (channel) {
-            is GuildMessageChannel -> message.getAuthorAsMember()?.nickname ?: author.username
+            is GuildMessageChannel -> message.getAuthorAsMember().nickname ?: author.username
             else -> author.username
         }
 
@@ -398,6 +400,33 @@ IMPORTANT LIMITATIONS:
             content.removePrefix(trigger).trim()
         } else {
             content
+        }
+    }
+
+    companion object {
+        /**
+         * Pad a Discord bot token for Ktor 3.4+ compatibility.
+         *
+         * Discord bot tokens have the format: {base64(client_id)}.{timestamp}.{hmac}
+         * The first segment is Base64-encoded but lacks proper padding, which causes
+         * issues with Ktor 3.4+'s stricter Base64 decoding.
+         *
+         * See: https://github.com/kordlib/kord/issues/1032
+         */
+        private fun padDiscordToken(token: String): String {
+            val parts = token.split(".")
+            if (parts.size != 3) return token
+
+            val paddedFirst = parts[0].padBase64()
+            return listOf(paddedFirst, parts[1], parts[2]).joinToString(".")
+        }
+
+        /**
+         * Add Base64 padding to make the string length a multiple of 4.
+         */
+        private fun String.padBase64(): String {
+            val remainder = length % 4
+            return if (remainder == 0) this else this + "=".repeat(4 - remainder)
         }
     }
 }
