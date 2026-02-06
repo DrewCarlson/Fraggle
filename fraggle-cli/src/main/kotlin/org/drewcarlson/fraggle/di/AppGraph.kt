@@ -7,6 +7,7 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import kotlinx.coroutines.CoroutineScope
 import org.drewcarlson.fraggle.FraggleServicesImpl
+import org.drewcarlson.fraggle.ServiceOrchestrator
 import org.drewcarlson.fraggle.agent.Conversation
 import org.drewcarlson.fraggle.agent.FraggleAgent
 import org.drewcarlson.fraggle.agent.InlineImageProcessor
@@ -15,6 +16,7 @@ import org.drewcarlson.fraggle.chat.ChatBridgeManager
 import org.drewcarlson.fraggle.discord.DiscordBridge
 import org.drewcarlson.fraggle.discord.DiscordBridgeInitializer
 import org.drewcarlson.fraggle.memory.MemoryStore
+import org.drewcarlson.fraggle.models.ApiConfig
 import org.drewcarlson.fraggle.models.FraggleConfig
 import org.drewcarlson.fraggle.signal.MessageRouter
 import org.drewcarlson.fraggle.signal.SignalBridge
@@ -86,6 +88,9 @@ interface AppGraph {
     /** API services implementation */
     val fraggleServices: FraggleServicesImpl
 
+    /** API configuration */
+    val apiConfig: ApiConfig
+
     /** API server (null if API disabled) */
     val apiServer: EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration>?
 
@@ -106,6 +111,8 @@ interface AppGraph {
 
     /** Playwright fetcher (null if unconfigured) */
     val playwrightFetcher: PlaywrightFetcher?
+
+    val serviceOrchestrator: ServiceOrchestrator
 
     @DependencyGraph.Factory
     fun interface Factory {

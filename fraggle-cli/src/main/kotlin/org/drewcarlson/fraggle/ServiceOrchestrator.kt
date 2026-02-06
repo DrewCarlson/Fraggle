@@ -1,44 +1,60 @@
 package org.drewcarlson.fraggle
 
+import dev.zacsweers.metro.Inject
+import io.ktor.server.engine.*
+import io.ktor.server.netty.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collectLatest
 import org.drewcarlson.fraggle.agent.*
+import org.drewcarlson.fraggle.chat.BridgeInitializerRegistry
+import org.drewcarlson.fraggle.chat.ChatBridgeManager
+import org.drewcarlson.fraggle.chat.IncomingMessage
 import org.drewcarlson.fraggle.chat.MessageContent
 import org.drewcarlson.fraggle.chat.OutgoingMessage
-import org.drewcarlson.fraggle.di.AppGraph
+import org.drewcarlson.fraggle.chat.Sender
+import org.drewcarlson.fraggle.discord.DiscordBridge
+import org.drewcarlson.fraggle.discord.DiscordBridgeInitializer
 import org.drewcarlson.fraggle.models.*
+import org.drewcarlson.fraggle.signal.MessageRouter
+import org.drewcarlson.fraggle.signal.SignalBridge
+import org.drewcarlson.fraggle.signal.SignalBridgeInitializer
+import org.drewcarlson.fraggle.skill.SkillRegistry
+import org.drewcarlson.fraggle.skills.scheduling.TaskScheduler
+import org.drewcarlson.fraggle.skills.web.PlaywrightFetcher
 import org.slf4j.LoggerFactory
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 /**
  * Orchestrates all Fraggle services and manages their lifecycle.
  *
- * All services are injected via the [AppGraph]. This class is responsible
+ * All services are constructor-injected. This class is responsible
  * for registering bridges, starting/stopping services, and the message loop.
- *
- * @param graph The application dependency graph
  */
+@Inject
 class ServiceOrchestrator(
-    private val graph: AppGraph,
+    private val scope: CoroutineScope,
+    private val agent: FraggleAgent,
+    private val skills: SkillRegistry,
+    private val bridgeManager: ChatBridgeManager,
+    private val initializerRegistry: BridgeInitializerRegistry,
+    private val messageRouter: MessageRouter?,
+    private val inlineImageProcessor: InlineImageProcessor,
+    private val conversations: ConcurrentHashMap<String, Conversation>,
+    private val fraggleServices: FraggleServicesImpl,
+    private val taskScheduler: TaskScheduler,
+    private val playwrightFetcher: PlaywrightFetcher?,
+    private val signalBridge: SignalBridge?,
+    private val signalBridgeInitializer: SignalBridgeInitializer?,
+    private val discordBridge: DiscordBridge?,
+    private val discordBridgeInitializer: DiscordBridgeInitializer?,
+    private val apiConfig: ApiConfig,
+    private val apiServer: EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration>?,
 ) {
     private val logger = LoggerFactory.getLogger(ServiceOrchestrator::class.java)
-
-    // Injected services
-    private val scope = graph.appScope
-    private val agent = graph.agent
-    private val bridgeManager = graph.chatBridgeManager
-    private val initializerRegistry = graph.bridgeInitializerRegistry
-    private val messageRouter = graph.messageRouter
-    private val inlineImageProcessor = graph.inlineImageProcessor
-    private val conversations = graph.conversationMap
-    private val fraggleServices = graph.fraggleServices
-    private val taskScheduler = graph.taskScheduler
-    private val playwrightFetcher = graph.playwrightFetcher
-    private val skills = graph.skillRegistry
-
     private var messageJob: Job? = null
-    private var apiServer = graph.apiServer
 
     /**
      * Initialize all services: register bridges and initializers.
@@ -47,19 +63,19 @@ class ServiceOrchestrator(
         logger.info("Initializing Fraggle services...")
 
         // Register bridges
-        graph.signalBridge?.let { bridge ->
+        signalBridge?.let { bridge ->
             bridgeManager.register("signal", bridge)
             logger.info("Signal bridge registered")
         }
-        graph.signalBridgeInitializer?.let { init ->
+        signalBridgeInitializer?.let { init ->
             initializerRegistry.register("signal", init)
         }
 
-        graph.discordBridge?.let { bridge ->
+        discordBridge?.let { bridge ->
             bridgeManager.register("discord", bridge)
             logger.info("Discord bridge registered")
         }
-        graph.discordBridgeInitializer?.let { init ->
+        discordBridgeInitializer?.let { init ->
             initializerRegistry.register("discord", init)
         }
 
@@ -68,7 +84,7 @@ class ServiceOrchestrator(
         }
 
         if (apiServer != null) {
-            logger.info("API server initialized on ${graph.config.fraggle.api.host}:${graph.config.fraggle.api.port}")
+            logger.info("API server initialized on ${apiConfig.host}:${apiConfig.port}")
         } else {
             logger.info("API server disabled")
         }
@@ -113,7 +129,6 @@ class ServiceOrchestrator(
 
         // Stop API server
         apiServer?.stop(1000, 5000)
-        apiServer = null
 
         // Stop message processing
         messageJob?.cancelAndJoin()
@@ -148,15 +163,16 @@ class ServiceOrchestrator(
         }
 
         // Create incoming message
-        val message = org.drewcarlson.fraggle.chat.IncomingMessage(
-            id = "${chatId}-${System.currentTimeMillis()}",
+        val now = Clock.System.now()
+        val message = IncomingMessage(
+            id = "${chatId}-${now.toEpochMilliseconds()}",
             chatId = chatId,
-            sender = org.drewcarlson.fraggle.chat.Sender(
+            sender = Sender(
                 id = senderId,
                 name = senderName,
             ),
             content = MessageContent.Text(text),
-            timestamp = Clock.System.now(),
+            timestamp = now,
         )
 
         // Process with agent
@@ -219,7 +235,7 @@ class ServiceOrchestrator(
                         } catch (e: Exception) {
                             logger.debug("Failed to send typing indicator: ${e.message}")
                         }
-                        delay(3000) // Refresh every 3 seconds
+                        delay(3.seconds)
                     }
                 }
 
@@ -252,6 +268,7 @@ class ServiceOrchestrator(
                     val toolAttachments = response.collectAttachments()
 
                     // Determine if platform supports multiple images (Discord = 10, Signal = 1)
+                    // TODO: Derive this from bridge implementation
                     val maxImages = when (platform.name) {
                         "Discord" -> 10
                         else -> 1
@@ -297,6 +314,7 @@ class ServiceOrchestrator(
                             ))
                         } else {
                             // Multiple images - for Discord, send first with caption, rest without
+                            // TODO: Use discord bridge sendMultiple images method
                             logger.info("Sending response with ${imagesToSend.size} images")
                             imagesToSend.forEachIndexed { index, (imageData, mimeType) ->
                                 bridgeManager.send(chatId, OutgoingMessage.Image(
