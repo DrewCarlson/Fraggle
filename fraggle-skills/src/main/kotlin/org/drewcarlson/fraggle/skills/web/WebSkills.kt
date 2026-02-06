@@ -1,14 +1,9 @@
 package org.drewcarlson.fraggle.skills.web
 
 import io.ktor.client.*
-import io.ktor.client.engine.cio.*
-import io.ktor.client.plugins.*
-import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
-import kotlinx.serialization.json.Json
 import org.drewcarlson.fraggle.sandbox.Sandbox
 import org.drewcarlson.fraggle.sandbox.SandboxResult
 import org.drewcarlson.fraggle.skill.Skill
@@ -24,29 +19,21 @@ object WebSkills {
 
     private val logger = LoggerFactory.getLogger(WebSkills::class.java)
 
-    private val httpClient = HttpClient(CIO) {
-        install(ContentNegotiation) {
-            json(Json { ignoreUnknownKeys = true })
-        }
-        install(HttpTimeout) {
-            requestTimeoutMillis = 30_000
-            connectTimeoutMillis = 10_000
-        }
-        defaultRequest {
-            header(HttpHeaders.UserAgent, "Fraggle/1.0")
-        }
-    }
-
     /**
      * Create all web skills with the given sandbox and optional Playwright fetcher.
      *
      * @param sandbox The sandbox for security checks
+     * @param httpClient The HTTP client for making API requests
      * @param playwrightFetcher Optional Playwright fetcher for JavaScript-heavy pages
      */
-    fun create(sandbox: Sandbox, playwrightFetcher: PlaywrightFetcher? = null): List<Skill> {
+    fun create(
+        sandbox: Sandbox,
+        httpClient: HttpClient,
+        playwrightFetcher: PlaywrightFetcher? = null,
+    ): List<Skill> {
         val skills = mutableListOf(
             fetchWebpage(sandbox, playwrightFetcher),
-            fetchApi(sandbox),
+            fetchApi(sandbox, httpClient),
             //sendImage(),
         )
 
@@ -166,7 +153,7 @@ object WebSkills {
      * Skill to fetch data from APIs. Always uses simple HTTP (no browser rendering).
      * Ideal for JSON APIs, XML feeds, and other structured data endpoints.
      */
-    fun fetchApi(sandbox: Sandbox) = skill("fetch_api") {
+    fun fetchApi(sandbox: Sandbox, httpClient: HttpClient) = skill("fetch_api") {
         description = """Fetch data from an API endpoint. Uses simple HTTP without browser rendering.
 
 USE THIS SKILL FOR:

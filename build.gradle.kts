@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.ktor) apply false
     alias(libs.plugins.shadow) apply false
     alias(libs.plugins.kover)
+    alias(libs.plugins.metro) apply false
 }
 
 dependencies {

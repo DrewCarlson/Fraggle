@@ -19,6 +19,7 @@ pluginManagement {
 include(":libs:documented-annotations")
 include(":libs:documented-processor")
 
+include(":fraggle-di")
 include(":fraggle-common")
 include(":fraggle-agent")
 include(":fraggle-signal")

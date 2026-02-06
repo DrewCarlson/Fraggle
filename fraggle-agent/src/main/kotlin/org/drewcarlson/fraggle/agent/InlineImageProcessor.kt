@@ -1,17 +1,13 @@
 package org.drewcarlson.fraggle.agent
 
+import dev.zacsweers.metro.Inject
 import io.ktor.client.*
-import io.ktor.client.engine.cio.*
-import io.ktor.client.plugins.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import org.drewcarlson.fraggle.di.DefaultHttpClient
 import org.slf4j.LoggerFactory
-import kotlin.io.path.Path
-import kotlin.io.path.exists
-import kotlin.io.path.fileSize
-import kotlin.io.path.isRegularFile
-import kotlin.io.path.readBytes
+import kotlin.io.path.*
 
 /**
  * Processes inline image syntax in LLM responses and extracts/downloads images.
@@ -23,18 +19,10 @@ import kotlin.io.path.readBytes
  * The processor extracts the first image reference, downloads it if remote,
  * and returns the cleaned text along with the image data.
  */
-class InlineImageProcessor {
+class InlineImageProcessor @Inject constructor(
+    @param:DefaultHttpClient private val httpClient: HttpClient,
+) {
     private val logger = LoggerFactory.getLogger(InlineImageProcessor::class.java)
-
-    private val httpClient = HttpClient(CIO) {
-        install(HttpTimeout) {
-            requestTimeoutMillis = 30_000
-            connectTimeoutMillis = 10_000
-        }
-        defaultRequest {
-            header(HttpHeaders.UserAgent, "Fraggle/1.0")
-        }
-    }
 
     companion object {
         // Matches [[image:url]] where url can be http(s):// or a local path

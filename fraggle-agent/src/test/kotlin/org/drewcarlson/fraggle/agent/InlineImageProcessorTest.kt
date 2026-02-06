@@ -1,5 +1,10 @@
 package org.drewcarlson.fraggle.agent
 
+import io.ktor.client.*
+import io.ktor.client.engine.cio.*
+import io.ktor.client.plugins.*
+import io.ktor.client.request.*
+import io.ktor.http.*
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Nested
@@ -10,7 +15,17 @@ import kotlin.io.path.writeBytes
 
 class InlineImageProcessorTest {
 
-    private val processor = InlineImageProcessor()
+    private val testHttpClient = HttpClient(CIO) {
+        install(HttpTimeout) {
+            requestTimeoutMillis = 30_000
+            connectTimeoutMillis = 10_000
+        }
+        defaultRequest {
+            header(HttpHeaders.UserAgent, "Fraggle/1.0")
+        }
+    }
+
+    private val processor = InlineImageProcessor(testHttpClient)
 
     @Nested
     inner class `hasInlineImage detection` {

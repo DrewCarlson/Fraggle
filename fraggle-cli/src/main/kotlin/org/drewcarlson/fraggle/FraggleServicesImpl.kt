@@ -1,5 +1,6 @@
 package org.drewcarlson.fraggle
 
+import io.ktor.client.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -13,11 +14,11 @@ import org.drewcarlson.fraggle.chat.BridgeInitializer
 import org.drewcarlson.fraggle.chat.BridgeInitializerRegistry
 import org.drewcarlson.fraggle.chat.ChatBridgeManager
 import org.drewcarlson.fraggle.chat.InitStepResult
+import org.drewcarlson.fraggle.discord.DiscordBridge
+import org.drewcarlson.fraggle.discord.DiscordOAuth
 import org.drewcarlson.fraggle.memory.MemoryStore
 import org.drewcarlson.fraggle.models.*
 import org.drewcarlson.fraggle.signal.SignalBridge
-import org.drewcarlson.fraggle.discord.DiscordBridge
-import org.drewcarlson.fraggle.discord.DiscordOAuth
 import org.drewcarlson.fraggle.skill.SkillRegistry
 import org.drewcarlson.fraggle.skills.scheduling.ScheduledTask
 import org.drewcarlson.fraggle.skills.scheduling.TaskScheduler
@@ -43,6 +44,7 @@ class FraggleServicesImpl(
     private val configPath: Path,
     private val initializerRegistry: BridgeInitializerRegistry,
     private val scope: CoroutineScope,
+    private val httpClient: HttpClient,
     private val discordBridge: DiscordBridge? = null,
     private val startTime: Instant = Clock.System.now(),
 ) : FraggleServices {
@@ -350,7 +352,7 @@ class FraggleServicesImpl(
             val clientSecret = discordConfig.clientSecret ?: return null
             val redirectUri = discordConfig.oauthRedirectUri ?: return null
 
-            oauth = DiscordOAuth(clientId, clientSecret, redirectUri)
+            oauth = DiscordOAuth(clientId, clientSecret, redirectUri, httpClient)
             return oauth
         }
 

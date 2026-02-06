@@ -1,5 +1,6 @@
 package org.drewcarlson.fraggle.skills
 
+import io.ktor.client.*
 import org.drewcarlson.fraggle.sandbox.Sandbox
 import org.drewcarlson.fraggle.skill.SkillRegistry
 import org.drewcarlson.fraggle.skills.file.FileSkills
@@ -18,11 +19,13 @@ object DefaultSkills {
      * Create a skill registry with all built-in skills.
      *
      * @param sandbox The sandbox for file and shell operations
+     * @param httpClient The HTTP client for web operations
      * @param taskScheduler The task scheduler for scheduling skills
      * @param playwrightFetcher Optional Playwright fetcher for JavaScript-heavy web pages
      */
     fun createRegistry(
         sandbox: Sandbox,
+        httpClient: HttpClient,
         taskScheduler: TaskScheduler = TaskScheduler(),
         playwrightFetcher: PlaywrightFetcher? = null,
     ): SkillRegistry {
@@ -34,7 +37,7 @@ object DefaultSkills {
 
             // Web operations group
             group("web", "Web fetch and search operations") {
-                WebSkills.create(sandbox, playwrightFetcher).forEach { install(it) }
+                WebSkills.create(sandbox, httpClient, playwrightFetcher).forEach { install(it) }
             }
 
             // Shell operations group
@@ -53,15 +56,17 @@ object DefaultSkills {
      * Create a minimal skill registry with only file and web skills.
      *
      * @param sandbox The sandbox for operations
+     * @param httpClient The HTTP client for web operations
      * @param playwrightFetcher Optional Playwright fetcher for JavaScript-heavy web pages
      */
     fun createMinimalRegistry(
         sandbox: Sandbox,
+        httpClient: HttpClient,
         playwrightFetcher: PlaywrightFetcher? = null,
     ): SkillRegistry {
         return SkillRegistry {
             FileSkills.create(sandbox).forEach { install(it) }
-            WebSkills.create(sandbox, playwrightFetcher).forEach { install(it) }
+            WebSkills.create(sandbox, httpClient, playwrightFetcher).forEach { install(it) }
         }
     }
 
@@ -69,6 +74,7 @@ object DefaultSkills {
      * Create a skill registry with custom skill selection.
      *
      * @param sandbox The sandbox for operations
+     * @param httpClient The HTTP client for web operations
      * @param taskScheduler Optional task scheduler for scheduling skills
      * @param playwrightFetcher Optional Playwright fetcher for JavaScript-heavy web pages
      * @param includeFile Include file operation skills
@@ -78,6 +84,7 @@ object DefaultSkills {
      */
     fun createCustomRegistry(
         sandbox: Sandbox,
+        httpClient: HttpClient,
         taskScheduler: TaskScheduler? = null,
         playwrightFetcher: PlaywrightFetcher? = null,
         includeFile: Boolean = true,
@@ -91,7 +98,7 @@ object DefaultSkills {
             }
 
             if (includeWeb) {
-                WebSkills.create(sandbox, playwrightFetcher).forEach { install(it) }
+                WebSkills.create(sandbox, httpClient, playwrightFetcher).forEach { install(it) }
             }
 
             if (includeShell) {

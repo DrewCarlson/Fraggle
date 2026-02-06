@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.kover)
+    alias(libs.plugins.metro)
 }
 
 kotlin {
@@ -12,7 +13,10 @@ dependencies {
     // Shared models
     api(project(":fraggle-common"))
 
-    // Ktor Client for LLM API calls
+    // DI
+    api(project(":fraggle-di"))
+
+    // Ktor Client for LLM API calls (from fraggle-di)
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.cio)
     implementation(libs.ktor.client.content.negotiation)

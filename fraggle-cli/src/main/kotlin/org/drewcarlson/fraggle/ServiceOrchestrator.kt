@@ -1,27 +1,23 @@
 package org.drewcarlson.fraggle
 
+import io.ktor.client.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collectLatest
 import org.drewcarlson.fraggle.agent.*
-import org.drewcarlson.fraggle.agent.InlineImageProcessor
+import org.drewcarlson.fraggle.agent.AgentConfig
 import org.drewcarlson.fraggle.backend.createApiServer
 import org.drewcarlson.fraggle.chat.BridgeInitializerRegistry
 import org.drewcarlson.fraggle.chat.ChatBridgeManager
 import org.drewcarlson.fraggle.chat.MessageContent
 import org.drewcarlson.fraggle.chat.OutgoingMessage
-import org.drewcarlson.fraggle.memory.FileMemoryStore
-import org.drewcarlson.fraggle.memory.MemoryStore
-import org.drewcarlson.fraggle.models.FraggleConfig
-import org.drewcarlson.fraggle.models.FraggleEvent
-import org.drewcarlson.fraggle.models.ProviderType
-import org.drewcarlson.fraggle.models.SandboxType
-import org.drewcarlson.fraggle.models.SignalBridgeConfig
-import org.drewcarlson.fraggle.models.DiscordBridgeConfig
 import org.drewcarlson.fraggle.discord.DiscordBridge
 import org.drewcarlson.fraggle.discord.DiscordBridgeInitializer
 import org.drewcarlson.fraggle.discord.DiscordConfig
+import org.drewcarlson.fraggle.memory.FileMemoryStore
+import org.drewcarlson.fraggle.memory.MemoryStore
+import org.drewcarlson.fraggle.models.*
 import org.drewcarlson.fraggle.prompt.PromptConfig
 import org.drewcarlson.fraggle.prompt.PromptManager
 import org.drewcarlson.fraggle.provider.LLMProvider
@@ -46,10 +42,17 @@ import kotlin.time.Instant
 
 /**
  * Orchestrates all Fraggle services and manages their lifecycle.
+ *
+ * @param config Application configuration
+ * @param configPath Path to the configuration file
+ * @param defaultHttpClient HTTP client for general-purpose web requests
+ * @param llmHttpClient HTTP client with extended timeouts for LLM API calls
  */
 class ServiceOrchestrator(
     private val config: FraggleConfig,
     private val configPath: Path,
+    private val defaultHttpClient: HttpClient,
+    private val llmHttpClient: HttpClient,
 ) {
     private val logger = LoggerFactory.getLogger(ServiceOrchestrator::class.java)
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
@@ -73,8 +76,8 @@ class ServiceOrchestrator(
     // Playwright integration (optional)
     private var playwrightFetcher: PlaywrightFetcher? = null
 
-    // Inline image processor for [[image:url]] syntax
-    private val inlineImageProcessor = InlineImageProcessor()
+    // Inline image processor for [[image:url]] syntax (lazy to access injected httpClient)
+    private val inlineImageProcessor by lazy { InlineImageProcessor(defaultHttpClient) }
 
     // Conversation tracking
     private val conversations = ConcurrentHashMap<String, Conversation>()
@@ -146,7 +149,7 @@ class ServiceOrchestrator(
         }
 
         // Initialize skills
-        skills = DefaultSkills.createRegistry(sandbox, taskScheduler, playwrightFetcher)
+        skills = DefaultSkills.createRegistry(sandbox, defaultHttpClient, taskScheduler, playwrightFetcher)
         logger.info("Skill registry initialized with ${skills.all().size} skills")
 
         // Initialize agent
@@ -277,6 +280,7 @@ class ServiceOrchestrator(
             ProviderType.LMSTUDIO -> LMStudioProvider(
                 baseUrl = settings.url,
                 defaultModel = settings.model.takeIf { it.isNotBlank() },
+                httpClient = llmHttpClient,
             )
             ProviderType.OPENAI -> {
                 // Could add OpenAI support here
@@ -417,7 +421,7 @@ class ServiceOrchestrator(
         discordBridge = bridge
 
         // Register the bridge initializer for interactive setup
-        initializerRegistry.register("discord", DiscordBridgeInitializer(discordConfig))
+        initializerRegistry.register("discord", DiscordBridgeInitializer(discordConfig, defaultHttpClient))
 
         logger.info("Discord bridge initialized")
     }
@@ -445,6 +449,7 @@ class ServiceOrchestrator(
             configPath = configPath,
             initializerRegistry = initializerRegistry,
             scope = scope,
+            httpClient = defaultHttpClient,
             discordBridge = discordBridge,
             startTime = startTime,
         )

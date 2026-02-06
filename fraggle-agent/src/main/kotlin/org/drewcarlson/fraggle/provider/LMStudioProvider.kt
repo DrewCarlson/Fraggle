@@ -1,31 +1,27 @@
 package org.drewcarlson.fraggle.provider
 
+import dev.zacsweers.metro.Inject
 import io.ktor.client.*
 import io.ktor.client.call.*
-import io.ktor.client.engine.cio.*
-import io.ktor.client.plugins.*
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.plugins.logging.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import org.drewcarlson.fraggle.di.LlmHttpClient
 import org.drewcarlson.fraggle.skill.OpenAITool
 
 /**
  * LLM Provider implementation for LM Studio.
  * Uses the OpenAI-compatible API that LM Studio provides.
  */
-class LMStudioProvider(
+class LMStudioProvider @Inject constructor(
     private val baseUrl: String = "http://localhost:1234/v1",
     private val defaultModel: String? = null,
-    private val httpClient: HttpClient = createDefaultClient(),
+    @param:LlmHttpClient private val httpClient: HttpClient,
 ) : LLMProvider {
 
     override val name: String = "LM Studio"
@@ -80,31 +76,6 @@ class LMStudioProvider(
         }
     }
 
-    companion object {
-        private val json = Json {
-            ignoreUnknownKeys = true
-            encodeDefaults = true
-            explicitNulls = false
-        }
-
-        fun createDefaultClient(): HttpClient {
-            return HttpClient(CIO) {
-                install(ContentNegotiation) {
-                    json(json)
-                }
-                install(Logging) {
-                    level = LogLevel.NONE
-                }
-                install(HttpTimeout) {
-                    requestTimeoutMillis = 300_000 // 5 minutes for LLM responses
-                    connectTimeoutMillis = 10_000
-                }
-                defaultRequest {
-                    contentType(ContentType.Application.Json)
-                }
-            }
-        }
-    }
 }
 
 // OpenAI API request/response models

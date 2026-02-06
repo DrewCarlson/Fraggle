@@ -6,10 +6,12 @@ import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.optional
 import com.github.ajalt.clikt.parameters.options.option
+import dev.zacsweers.metro.createGraphFactory
 import kotlinx.coroutines.runBlocking
 import org.drewcarlson.fraggle.chat.BridgeInitializer
 import org.drewcarlson.fraggle.chat.BridgeInitializerRegistry
 import org.drewcarlson.fraggle.chat.InitStepResult
+import org.drewcarlson.fraggle.di.AppGraph
 import org.drewcarlson.fraggle.models.FraggleConfig
 import org.drewcarlson.fraggle.signal.SignalBridgeInitializer
 import org.drewcarlson.fraggle.signal.SignalConfig
@@ -47,8 +49,16 @@ class RunCommand : CliktCommand(name = "run") {
         // Load configuration
         val (config, resolvedConfigPath) = loadConfig()
 
-        // Create and initialize orchestrator
-        val orchestrator = ServiceOrchestrator(config, resolvedConfigPath)
+        // Create the dependency graph
+        val graph = createGraphFactory<AppGraph.Factory>().create(config, resolvedConfigPath)
+
+        // Create and initialize orchestrator with injected dependencies
+        val orchestrator = ServiceOrchestrator(
+            config = config,
+            configPath = resolvedConfigPath,
+            defaultHttpClient = graph.defaultHttpClient,
+            llmHttpClient = graph.llmHttpClient,
+        )
         orchestrator.initialize()
 
         // Setup shutdown hook
@@ -123,8 +133,16 @@ class ChatCommand : CliktCommand(name = "chat") {
         println("Model: ${config.fraggle.provider.model.ifBlank { "(default)" }}")
         println()
 
-        // Create and initialize orchestrator
-        val orchestrator = ServiceOrchestrator(config, resolvedConfigPath)
+        // Create the dependency graph
+        val graph = createGraphFactory<AppGraph.Factory>().create(config, resolvedConfigPath)
+
+        // Create and initialize orchestrator with injected dependencies
+        val orchestrator = ServiceOrchestrator(
+            config = config,
+            configPath = resolvedConfigPath,
+            defaultHttpClient = graph.defaultHttpClient,
+            llmHttpClient = graph.llmHttpClient,
+        )
         orchestrator.initialize()
 
         println("Available skills: ${orchestrator.getSkills().all().map { it.name }}")
