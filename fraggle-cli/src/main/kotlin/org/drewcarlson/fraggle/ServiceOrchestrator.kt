@@ -12,6 +12,11 @@ import org.drewcarlson.fraggle.chat.IncomingMessage
 import org.drewcarlson.fraggle.chat.MessageContent
 import org.drewcarlson.fraggle.chat.OutgoingMessage
 import org.drewcarlson.fraggle.chat.Sender
+import org.drewcarlson.fraggle.db.ChatHistoryStore
+import org.drewcarlson.fraggle.db.FraggleDatabase
+import org.drewcarlson.fraggle.db.MessageContentType
+import org.drewcarlson.fraggle.db.MessageDirection
+import org.drewcarlson.fraggle.db.MessageRecord
 import org.drewcarlson.fraggle.discord.DiscordBridge
 import org.drewcarlson.fraggle.discord.DiscordBridgeInitializer
 import org.drewcarlson.fraggle.models.*
@@ -26,6 +31,7 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
+import kotlin.time.measureTimedValue
 
 /**
  * Orchestrates all Fraggle services and manages their lifecycle.
@@ -46,6 +52,8 @@ class ServiceOrchestrator(
     private val fraggleServices: FraggleServicesImpl,
     private val taskScheduler: TaskScheduler,
     private val playwrightFetcher: PlaywrightFetcher?,
+    private val fraggleDatabase: FraggleDatabase,
+    private val chatHistoryStore: ChatHistoryStore,
     private val signalBridge: SignalBridge?,
     private val signalBridgeInitializer: SignalBridgeInitializer?,
     private val discordBridge: DiscordBridge?,
@@ -141,6 +149,9 @@ class ServiceOrchestrator(
 
         // Stop scheduler
         taskScheduler.shutdown()
+
+        // Close database
+        fraggleDatabase.close()
 
         // Cancel scope
         scope.cancel()
@@ -250,6 +261,23 @@ class ServiceOrchestrator(
                         content = messageText,
                     ))
 
+                    // Record incoming message metadata
+                    val chatRecord = chatHistoryStore.getOrCreateChat(
+                        externalId = chatId,
+                        platform = platform.name.lowercase(),
+                        isGroup = false,
+                    )
+                    chatHistoryStore.recordMessage(MessageRecord(
+                        chatId = chatRecord.id,
+                        externalId = routedMessage.id,
+                        senderId = routedMessage.sender.id,
+                        senderName = routedMessage.sender.name,
+                        senderIsBot = routedMessage.sender.isBot,
+                        contentType = routedMessage.content.toContentType(),
+                        direction = MessageDirection.INCOMING,
+                        timestamp = routedMessage.timestamp,
+                    ))
+
                     // Get or create conversation
                     val conversation = conversations.getOrPut(chatId) {
                         Conversation(id = chatId, chatId = chatId)
@@ -257,7 +285,9 @@ class ServiceOrchestrator(
 
                     // Process message with platform context
                     logger.info("Processing message from ${routedMessage.sender.id} via ${platform.name}")
-                    val response = agent.process(conversation, routedMessage, platform)
+                    val (response, duration) = measureTimedValue {
+                        agent.process(conversation, routedMessage, platform)
+                    }
 
                     // Stop typing indicator job
                     typingJob.cancel()
@@ -354,6 +384,25 @@ class ServiceOrchestrator(
                         }
                     }
 
+                    // Record outgoing message metadata
+                    if (chatRecord != null) {
+                        val outContentType = if (allImages.isNotEmpty() && platform.supportsAttachments) {
+                            MessageContentType.IMAGE
+                        } else {
+                            MessageContentType.TEXT
+                        }
+                        chatHistoryStore.recordMessage(MessageRecord(
+                            chatId = chatRecord.id,
+                            senderId = "fraggle",
+                            senderName = "Fraggle",
+                            senderIsBot = true,
+                            contentType = outContentType,
+                            direction = MessageDirection.OUTGOING,
+                            timestamp = Clock.System.now(),
+                            processingDuration = duration,
+                        ))
+                    }
+
                     // Update conversation
                     conversations[chatId] = conversation.copy(
                         messages = conversation.messages + listOf(
@@ -386,5 +435,14 @@ class ServiceOrchestrator(
                 }
             }
         }
+    }
+
+    private fun MessageContent.toContentType(): MessageContentType = when (this) {
+        is MessageContent.Text -> MessageContentType.TEXT
+        is MessageContent.Image -> MessageContentType.IMAGE
+        is MessageContent.File -> MessageContentType.FILE
+        is MessageContent.Audio -> MessageContentType.AUDIO
+        is MessageContent.Sticker -> MessageContentType.STICKER
+        is MessageContent.Reaction -> MessageContentType.REACTION
     }
 }

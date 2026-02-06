@@ -38,6 +38,8 @@ data class FraggleSettings(
     val api: ApiConfig = ApiConfig(),
     @Documented(name = "Dashboard", description = "Web dashboard configuration")
     val dashboard: DashboardConfig = DashboardConfig(),
+    @Documented(name = "Database", description = "Database configuration for persistent storage")
+    val database: DatabaseConfig = DatabaseConfig(),
 )
 
 @Serializable
@@ -389,4 +391,18 @@ data class DashboardConfig(
     @SerialName("static_path")
     @Documented(name = "Static Path", description = "Path to built dashboard static files (null for embedded)")
     val staticPath: String? = null,
+)
+
+/**
+ * Database configuration for persistent storage.
+ */
+@Serializable
+@Documented(
+    name = "Database",
+    description = "Configuration for the SQLite database used for chat history and metadata",
+    extras = ["icon=bi-database"],
+)
+data class DatabaseConfig(
+    @Documented(name = "Path", description = "Path to the SQLite database file")
+    val path: String = "./config/fraggle.db",
 )

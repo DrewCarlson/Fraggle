@@ -27,6 +27,11 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
 
+    // Database
+    api(libs.exposed.core)
+    api(libs.exposed.jdbc)
+    implementation(libs.sqlite.jdbc)
+
     // Logging
     implementation(libs.logback.classic)
 

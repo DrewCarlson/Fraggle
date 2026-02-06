@@ -66,5 +66,9 @@ interface ConfigModule {
         @Provides
         @SingleIn(AppScope::class)
         fun provideChatsConfig(settings: FraggleSettings): ChatsConfig = settings.chats
+
+        @Provides
+        @SingleIn(AppScope::class)
+        fun provideDatabaseConfig(settings: FraggleSettings): DatabaseConfig = settings.database
     }
 }

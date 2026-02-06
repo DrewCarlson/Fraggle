@@ -19,6 +19,8 @@ compose = "1.11.0-alpha02"
 kotlinjs-wrappers = "2026.2.2"
 routing-compose = "0.5.0"
 kord = "0.17.0"
+exposed = "1.0.0"
+sqlite-jdbc = "3.51.1.0"
 
 [libraries]
 # Ktor Server
@@ -83,6 +85,11 @@ logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "lo
 
 # Browser Automation
 playwright = { module = "com.microsoft.playwright:playwright", version.ref = "playwright" }
+
+# Database
+exposed-core = { module = "org.jetbrains.exposed:exposed-core", version.ref = "exposed" }
+exposed-jdbc = { module = "org.jetbrains.exposed:exposed-jdbc", version.ref = "exposed" }
+sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqlite-jdbc" }
 
 # Discord
 kord-core = { module = "dev.kord:kord-core-jvm", version.ref = "kord" }

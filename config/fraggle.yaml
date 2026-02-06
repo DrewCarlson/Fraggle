@@ -2,6 +2,9 @@
 # See documentation for all available options
 
 fraggle:
+  database:
+    path: "./config/fraggle.db"  # SQLite file path
+
   # LLM Provider settings
   provider:
     type: lmstudio                    # lmstudio, openai, anthropic

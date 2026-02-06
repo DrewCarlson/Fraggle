@@ -11,6 +11,8 @@ import org.drewcarlson.fraggle.ServiceOrchestrator
 import org.drewcarlson.fraggle.agent.Conversation
 import org.drewcarlson.fraggle.agent.FraggleAgent
 import org.drewcarlson.fraggle.agent.InlineImageProcessor
+import org.drewcarlson.fraggle.db.ChatHistoryStore
+import org.drewcarlson.fraggle.db.FraggleDatabase
 import org.drewcarlson.fraggle.chat.BridgeInitializerRegistry
 import org.drewcarlson.fraggle.chat.ChatBridgeManager
 import org.drewcarlson.fraggle.discord.DiscordBridge
@@ -111,6 +113,12 @@ interface AppGraph {
 
     /** Playwright fetcher (null if unconfigured) */
     val playwrightFetcher: PlaywrightFetcher?
+
+    /** Database */
+    val fraggleDatabase: FraggleDatabase
+
+    /** Chat history store*/
+    val chatHistoryStore: ChatHistoryStore
 
     val serviceOrchestrator: ServiceOrchestrator
 

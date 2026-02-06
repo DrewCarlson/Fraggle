@@ -10,8 +10,12 @@ import org.drewcarlson.fraggle.agent.Conversation
 import org.drewcarlson.fraggle.agent.FraggleAgent
 import org.drewcarlson.fraggle.chat.BridgeInitializerRegistry
 import org.drewcarlson.fraggle.chat.ChatBridgeManager
+import org.drewcarlson.fraggle.db.ChatHistoryStore
+import org.drewcarlson.fraggle.db.ExposedChatHistoryStore
+import org.drewcarlson.fraggle.db.FraggleDatabase
 import org.drewcarlson.fraggle.memory.FileMemoryStore
 import org.drewcarlson.fraggle.memory.MemoryStore
+import org.drewcarlson.fraggle.models.DatabaseConfig
 import org.drewcarlson.fraggle.models.MemoryConfig
 import org.drewcarlson.fraggle.models.ProviderConfig
 import org.drewcarlson.fraggle.models.ProviderType
@@ -112,6 +116,21 @@ interface AgentModule {
         @SingleIn(AppScope::class)
         fun provideBridgeInitializerRegistry(): BridgeInitializerRegistry =
             BridgeInitializerRegistry()
+
+        @Provides
+        @SingleIn(AppScope::class)
+        fun provideFraggleDatabase(config: DatabaseConfig): FraggleDatabase {
+            val dbPath = FraggleEnvironment.resolvePath(config.path)
+            val db = FraggleDatabase(dbPath)
+            db.connect()
+            return db
+        }
+
+        @Provides
+        @SingleIn(AppScope::class)
+        fun provideChatHistoryStore(database: FraggleDatabase): ChatHistoryStore {
+            return ExposedChatHistoryStore(database.database)
+        }
 
         @Provides
         @SingleIn(AppScope::class)
