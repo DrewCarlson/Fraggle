@@ -2,46 +2,50 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://drewcarlson.github.io/Fraggle/snapshot/</loc>
-         <lastmod>2026-02-05</lastmod>
+         <lastmod>2026-02-06</lastmod>
     </url>
     <url>
          <loc>https://drewcarlson.github.io/Fraggle/snapshot/architecture/agent/</loc>
-         <lastmod>2026-02-05</lastmod>
+         <lastmod>2026-02-06</lastmod>
     </url>
     <url>
          <loc>https://drewcarlson.github.io/Fraggle/snapshot/architecture/memory/</loc>
-         <lastmod>2026-02-05</lastmod>
+         <lastmod>2026-02-06</lastmod>
     </url>
     <url>
          <loc>https://drewcarlson.github.io/Fraggle/snapshot/architecture/overview/</loc>
-         <lastmod>2026-02-05</lastmod>
+         <lastmod>2026-02-06</lastmod>
     </url>
     <url>
          <loc>https://drewcarlson.github.io/Fraggle/snapshot/architecture/skills/</loc>
-         <lastmod>2026-02-05</lastmod>
+         <lastmod>2026-02-06</lastmod>
     </url>
     <url>
          <loc>https://drewcarlson.github.io/Fraggle/snapshot/development/building/</loc>
-         <lastmod>2026-02-05</lastmod>
+         <lastmod>2026-02-06</lastmod>
     </url>
     <url>
          <loc>https://drewcarlson.github.io/Fraggle/snapshot/development/contributing/</loc>
-         <lastmod>2026-02-05</lastmod>
+         <lastmod>2026-02-06</lastmod>
     </url>
     <url>
          <loc>https://drewcarlson.github.io/Fraggle/snapshot/development/testing/</loc>
-         <lastmod>2026-02-05</lastmod>
+         <lastmod>2026-02-06</lastmod>
     </url>
     <url>
          <loc>https://drewcarlson.github.io/Fraggle/snapshot/installation/configuration/</loc>
-         <lastmod>2026-02-05</lastmod>
+         <lastmod>2026-02-06</lastmod>
+    </url>
+    <url>
+         <loc>https://drewcarlson.github.io/Fraggle/snapshot/installation/discord-setup/</loc>
+         <lastmod>2026-02-06</lastmod>
     </url>
     <url>
          <loc>https://drewcarlson.github.io/Fraggle/snapshot/installation/getting-started/</loc>
-         <lastmod>2026-02-05</lastmod>
+         <lastmod>2026-02-06</lastmod>
     </url>
     <url>
          <loc>https://drewcarlson.github.io/Fraggle/snapshot/installation/signal-setup/</loc>
-         <lastmod>2026-02-05</lastmod>
+         <lastmod>2026-02-06</lastmod>
     </url>
 </urlset>

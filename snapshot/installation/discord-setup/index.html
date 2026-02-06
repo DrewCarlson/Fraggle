@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://drewcarlson.github.io/Fraggle/snapshot/installation/signal-setup/">
+        <link rel="canonical" href="https://drewcarlson.github.io/Fraggle/snapshot/installation/discord-setup/">
       
       
-        <link rel="prev" href="../configuration/">
+        <link rel="prev" href="../signal-setup/">
       
       
-        <link rel="next" href="../discord-setup/">
+        <link rel="next" href="../../architecture/overview/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Signal Setup - Fraggle Docs</title>
+        <title>Discord Setup - Fraggle Docs</title>
       
     
     
@@ -70,7 +70,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#signal-setup" class="md-skip">
+        <a href="#discord-setup" class="md-skip">
           Skip to content
         </a>
       
@@ -110,7 +110,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Signal Setup
+              Discord Setup
             
           </span>
         </div>
@@ -364,6 +364,34 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../signal-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Signal Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -383,7 +411,7 @@
   <span class="md-ellipsis">
     
   
-    Signal Setup
+    Discord Setup
   
 
     
@@ -401,7 +429,7 @@
   <span class="md-ellipsis">
     
   
-    Signal Setup
+    Discord Setup
   
 
     
@@ -427,6 +455,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#prerequisites" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -438,22 +477,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#installing-signal-cli" class="md-nav__link">
+  <a href="#creating-a-discord-bot" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Installing signal-cli
+        Creating a Discord Bot
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Installing signal-cli">
+    <nav class="md-nav" aria-label="Creating a Discord Bot">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#automatic-installation-recommended" class="md-nav__link">
+  <a href="#step-1-create-an-application" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Automatic Installation (Recommended)
+        Step 1: Create an Application
       
     </span>
   </a>
@@ -461,22 +500,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#manual-installation" class="md-nav__link">
+  <a href="#step-2-configure-the-bot" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Manual Installation
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Manual Installation">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#macos-homebrew" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        macOS (Homebrew)
+        Step 2: Configure the Bot
       
     </span>
   </a>
@@ -484,10 +511,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#linux-native-binary" class="md-nav__link">
+  <a href="#step-3-configure-oauth2-required-for-dms" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Linux (Native Binary)
+        Step 3: Configure OAuth2 (Required for DMs)
       
     </span>
   </a>
@@ -495,43 +522,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#linuxmacos-java-version" class="md-nav__link">
+  <a href="#step-4-configure-installation-settings" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Linux/macOS (Java Version)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#registering-a-phone-number" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Registering a Phone Number
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Registering a Phone Number">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#option-1-new-registration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Option 1: New Registration
+        Step 4: Configure Installation Settings
       
     </span>
   </a>
@@ -539,10 +533,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#option-2-link-to-existing-account" class="md-nav__link">
+  <a href="#step-5-install-the-bot-via-oauth2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Option 2: Link to Existing Account
+        Step 5: Install the Bot via OAuth2
       
     </span>
   </a>
@@ -577,21 +571,32 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#file-size-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        File Size Limits
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#trigger-behavior" class="md-nav__link">
+  <a href="#using-your-bot" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Trigger Behavior
+        Using Your Bot
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Trigger Behavior">
+    <nav class="md-nav" aria-label="Using Your Bot">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -606,10 +611,38 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#group-messages" class="md-nav__link">
+  <a href="#using-a-trigger-prefix" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Group Messages
+        Using a Trigger Prefix
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sending-images" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sending Images
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Sending Images">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#inline-image-syntax" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inline Image Syntax
       
     </span>
   </a>
@@ -617,10 +650,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#per-chat-triggers" class="md-nav__link">
+  <a href="#screenshot-tool" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Per-Chat Triggers
+        Screenshot Tool
       
     </span>
   </a>
@@ -656,10 +689,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#failed-to-connect-to-signal" class="md-nav__link">
+  <a href="#invalid-bot-token" class="md-nav__link">
     <span class="md-ellipsis">
       
-        "Failed to connect to Signal"
+        "Invalid bot token"
       
     </span>
   </a>
@@ -667,10 +700,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#messages-not-being-received" class="md-nav__link">
+  <a href="#message-content-intent-not-enabled" class="md-nav__link">
     <span class="md-ellipsis">
       
-        "Messages not being received"
+        "Message Content Intent not enabled"
       
     </span>
   </a>
@@ -678,10 +711,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#permission-denied-errors" class="md-nav__link">
+  <a href="#bot-appears-offline" class="md-nav__link">
     <span class="md-ellipsis">
       
-        "Permission denied" errors
+        Bot appears offline
       
     </span>
   </a>
@@ -689,10 +722,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#auto-installation-issues" class="md-nav__link">
+  <a href="#bot-doesnt-respond-to-messages" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Auto-installation issues
+        Bot doesn't respond to messages
       
     </span>
   </a>
@@ -700,10 +733,32 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#updating-signal-cli-version" class="md-nav__link">
+  <a href="#bot-not-appearing-in-dms" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Updating signal-cli version
+        Bot not appearing in DMs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#oauth2-errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OAuth2 errors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#file-too-large-errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        "File too large" errors
       
     </span>
   </a>
@@ -730,34 +785,6 @@
   
 </nav>
       
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../discord-setup/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Discord Setup
-  
-
-    
-  </span>
-  
-  
-
-      </a>
     </li>
   
 
@@ -1115,6 +1142,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#prerequisites" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1126,22 +1164,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#installing-signal-cli" class="md-nav__link">
+  <a href="#creating-a-discord-bot" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Installing signal-cli
+        Creating a Discord Bot
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Installing signal-cli">
+    <nav class="md-nav" aria-label="Creating a Discord Bot">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#automatic-installation-recommended" class="md-nav__link">
+  <a href="#step-1-create-an-application" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Automatic Installation (Recommended)
+        Step 1: Create an Application
       
     </span>
   </a>
@@ -1149,22 +1187,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#manual-installation" class="md-nav__link">
+  <a href="#step-2-configure-the-bot" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Manual Installation
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Manual Installation">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#macos-homebrew" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        macOS (Homebrew)
+        Step 2: Configure the Bot
       
     </span>
   </a>
@@ -1172,10 +1198,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#linux-native-binary" class="md-nav__link">
+  <a href="#step-3-configure-oauth2-required-for-dms" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Linux (Native Binary)
+        Step 3: Configure OAuth2 (Required for DMs)
       
     </span>
   </a>
@@ -1183,43 +1209,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#linuxmacos-java-version" class="md-nav__link">
+  <a href="#step-4-configure-installation-settings" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Linux/macOS (Java Version)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#registering-a-phone-number" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Registering a Phone Number
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Registering a Phone Number">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#option-1-new-registration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Option 1: New Registration
+        Step 4: Configure Installation Settings
       
     </span>
   </a>
@@ -1227,10 +1220,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#option-2-link-to-existing-account" class="md-nav__link">
+  <a href="#step-5-install-the-bot-via-oauth2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Option 2: Link to Existing Account
+        Step 5: Install the Bot via OAuth2
       
     </span>
   </a>
@@ -1265,21 +1258,32 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#file-size-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        File Size Limits
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#trigger-behavior" class="md-nav__link">
+  <a href="#using-your-bot" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Trigger Behavior
+        Using Your Bot
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Trigger Behavior">
+    <nav class="md-nav" aria-label="Using Your Bot">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1294,10 +1298,38 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#group-messages" class="md-nav__link">
+  <a href="#using-a-trigger-prefix" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Group Messages
+        Using a Trigger Prefix
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sending-images" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sending Images
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Sending Images">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#inline-image-syntax" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inline Image Syntax
       
     </span>
   </a>
@@ -1305,10 +1337,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#per-chat-triggers" class="md-nav__link">
+  <a href="#screenshot-tool" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Per-Chat Triggers
+        Screenshot Tool
       
     </span>
   </a>
@@ -1344,10 +1376,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#failed-to-connect-to-signal" class="md-nav__link">
+  <a href="#invalid-bot-token" class="md-nav__link">
     <span class="md-ellipsis">
       
-        "Failed to connect to Signal"
+        "Invalid bot token"
       
     </span>
   </a>
@@ -1355,10 +1387,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#messages-not-being-received" class="md-nav__link">
+  <a href="#message-content-intent-not-enabled" class="md-nav__link">
     <span class="md-ellipsis">
       
-        "Messages not being received"
+        "Message Content Intent not enabled"
       
     </span>
   </a>
@@ -1366,10 +1398,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#permission-denied-errors" class="md-nav__link">
+  <a href="#bot-appears-offline" class="md-nav__link">
     <span class="md-ellipsis">
       
-        "Permission denied" errors
+        Bot appears offline
       
     </span>
   </a>
@@ -1377,10 +1409,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#auto-installation-issues" class="md-nav__link">
+  <a href="#bot-doesnt-respond-to-messages" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Auto-installation issues
+        Bot doesn't respond to messages
       
     </span>
   </a>
@@ -1388,10 +1420,32 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#updating-signal-cli-version" class="md-nav__link">
+  <a href="#bot-not-appearing-in-dms" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Updating signal-cli version
+        Bot not appearing in DMs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#oauth2-errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OAuth2 errors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#file-too-large-errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        "File too large" errors
       
     </span>
   </a>
@@ -1431,7 +1485,7 @@
 
 
   
-    <a href="https://github.com/drewcarlson/Fraggle/edit/main/docs/installation/signal-setup.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/drewcarlson/Fraggle/edit/main/docs/installation/discord-setup.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -1439,86 +1493,109 @@
   
 
 
-<h1 id="signal-setup">Signal Setup<a class="headerlink" href="#signal-setup" title="Permanent link">&para;</a></h1>
-<p>This guide covers setting up Signal integration for Fraggle.</p>
+<h1 id="discord-setup">Discord Setup<a class="headerlink" href="#discord-setup" title="Permanent link">&para;</a></h1>
+<p>This guide covers setting up Discord integration for Fraggle.</p>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<p>Fraggle's Discord integration is designed for <strong>personal use</strong> - the bot is installed directly to your Discord user account, not to servers. This means:</p>
+<ul>
+<li>You communicate with your bot instance privately via DMs</li>
+<li>Your bot is not shared with other users</li>
+<li>No server administrator permissions are required</li>
+<li>Your conversations remain private</li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Server Installation</p>
+<p>Multi-user/server installation is not currently supported. Each user runs their own Fraggle instance with their own bot.</p>
+</div>
 <h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
 <ul>
-<li>A phone number to register with Signal</li>
-<li><strong>signal-cli</strong> (automatically installed by Fraggle, or manually installed)</li>
+<li>A Discord account</li>
+<li>A Discord application with a bot token (see below for instructions)</li>
 </ul>
-<h2 id="installing-signal-cli">Installing signal-cli<a class="headerlink" href="#installing-signal-cli" title="Permanent link">&para;</a></h2>
-<h3 id="automatic-installation-recommended">Automatic Installation (Recommended)<a class="headerlink" href="#automatic-installation-recommended" title="Permanent link">&para;</a></h3>
-<p>Fraggle can automatically download and install signal-cli when it's not found in your system PATH. This is enabled by default and requires no manual setup.</p>
-<p>When you first run Fraggle with Signal bridge enabled, it will:</p>
+<h2 id="creating-a-discord-bot">Creating a Discord Bot<a class="headerlink" href="#creating-a-discord-bot" title="Permanent link">&para;</a></h2>
+<h3 id="step-1-create-an-application">Step 1: Create an Application<a class="headerlink" href="#step-1-create-an-application" title="Permanent link">&para;</a></h3>
 <ol>
-<li>Check if signal-cli is available in your system PATH</li>
-<li>If not found, download the appropriate version to <code>data/apps/signal-cli-{version}/</code></li>
-<li>On Linux: Downloads the native binary for better performance</li>
-<li>On macOS/Windows: Downloads the Java-based version</li>
+<li>Go to the <a href="https://discord.com/developers/applications">Discord Developer Portal</a></li>
+<li>Click <strong>"New Application"</strong></li>
+<li>Enter a name for your bot (e.g., "My Fraggle Bot")</li>
+<li>Accept the Terms of Service and click <strong>"Create"</strong></li>
 </ol>
-<p>You can control this behavior with the <code>auto_install</code> and <code>signal_cli_version</code> configuration options.</p>
-<h3 id="manual-installation">Manual Installation<a class="headerlink" href="#manual-installation" title="Permanent link">&para;</a></h3>
-<p>If you prefer to install signal-cli manually, or if automatic installation fails:</p>
-<h4 id="macos-homebrew">macOS (Homebrew)<a class="headerlink" href="#macos-homebrew" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>brew<span class="w"> </span>install<span class="w"> </span>signal-cli
-</code></pre></div>
-<h4 id="linux-native-binary">Linux (Native Binary)<a class="headerlink" href="#linux-native-binary" title="Permanent link">&para;</a></h4>
-<p>Download the native binary for better performance:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Example for version 0.13.23</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>wget<span class="w"> </span>https://github.com/AsamK/signal-cli/releases/download/v0.13.23/signal-cli-0.13.23-Linux-native.tar.gz
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>tar<span class="w"> </span>xf<span class="w"> </span>signal-cli-0.13.23-Linux-native.tar.gz
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>sudo<span class="w"> </span>mv<span class="w"> </span>signal-cli<span class="w"> </span>/usr/local/bin/signal-cli
-</code></pre></div>
-<h4 id="linuxmacos-java-version">Linux/macOS (Java Version)<a class="headerlink" href="#linuxmacos-java-version" title="Permanent link">&para;</a></h4>
-<p>If you prefer the Java-based version:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Example for version 0.13.23</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>wget<span class="w"> </span>https://github.com/AsamK/signal-cli/releases/download/v0.13.23/signal-cli-0.13.23.tar.gz
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>tar<span class="w"> </span>xf<span class="w"> </span>signal-cli-0.13.23.tar.gz
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>sudo<span class="w"> </span>mv<span class="w"> </span>signal-cli-0.13.23<span class="w"> </span>/opt/signal-cli
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>sudo<span class="w"> </span>ln<span class="w"> </span>-s<span class="w"> </span>/opt/signal-cli/bin/signal-cli<span class="w"> </span>/usr/local/bin/signal-cli
-</code></pre></div>
-<h2 id="registering-a-phone-number">Registering a Phone Number<a class="headerlink" href="#registering-a-phone-number" title="Permanent link">&para;</a></h2>
-<h3 id="option-1-new-registration">Option 1: New Registration<a class="headerlink" href="#option-1-new-registration" title="Permanent link">&para;</a></h3>
-<p>Register a new phone number with Signal:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Request verification code via SMS</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>signal-cli<span class="w"> </span>-u<span class="w"> </span>+1234567890<span class="w"> </span>register
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># Or request via voice call</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>signal-cli<span class="w"> </span>-u<span class="w"> </span>+1234567890<span class="w"> </span>register<span class="w"> </span>--voice
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="c1"># Verify with the code you received</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>signal-cli<span class="w"> </span>-u<span class="w"> </span>+1234567890<span class="w"> </span>verify<span class="w"> </span>CODE
-</code></pre></div>
-<h3 id="option-2-link-to-existing-account">Option 2: Link to Existing Account<a class="headerlink" href="#option-2-link-to-existing-account" title="Permanent link">&para;</a></h3>
-<p>Link signal-cli as a secondary device to an existing Signal account:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>signal-cli<span class="w"> </span>link<span class="w"> </span>-n<span class="w"> </span><span class="s2">&quot;Fraggle Bot&quot;</span>
-</code></pre></div>
-<p>This displays a QR code or URI. Scan it with the Signal app on your phone:</p>
+<h3 id="step-2-configure-the-bot">Step 2: Configure the Bot<a class="headerlink" href="#step-2-configure-the-bot" title="Permanent link">&para;</a></h3>
 <ol>
-<li>Open Signal on your phone</li>
-<li>Go to Settings &gt; Linked Devices</li>
-<li>Tap "Link New Device"</li>
-<li>Scan the QR code</li>
+<li>In your application, go to the <strong>"Bot"</strong> section in the left sidebar</li>
+<li>Click <strong>"Reset Token"</strong> to generate a new token</li>
+<li><strong>Copy and save the token</strong> - you won't be able to see it again!</li>
+<li>Under <strong>"Privileged Gateway Intents"</strong>, enable:<ul>
+<li><strong>Message Content Intent</strong> (required to read message text)</li>
+</ul>
+</li>
 </ol>
-<h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
-<p>Add Signal configuration to your <code>fraggle.yaml</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">fraggle</span><span class="p">:</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">bridges</span><span class="p">:</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nt">signal</span><span class="p">:</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">      </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">      </span><span class="nt">phone</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;+1234567890&quot;</span><span class="w">            </span><span class="c1"># Your registered number</span>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">      </span><span class="nt">config_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~/.config/fraggle/signal</span>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">      </span><span class="nt">trigger</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;@fraggle&quot;</span><span class="w">             </span><span class="c1"># Trigger for group messages</span>
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">      </span><span class="nt">respond_to_direct_messages</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">      </span><span class="nt">show_typing_indicator</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">      </span><span class="c1"># Auto-installation settings (optional)</span>
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">      </span><span class="nt">auto_install</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">              </span><span class="c1"># Auto-download signal-cli if not found</span>
-<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">      </span><span class="nt">signal_cli_version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;0.13.23&quot;</span><span class="w">   </span><span class="c1"># Version to download</span>
-</code></pre></div>
-<div class="admonition tip">
-<p class="admonition-title">Automatic Installation</p>
-<p>With <code>auto_install: true</code> (the default), you don't need to install signal-cli manually. Fraggle will download it automatically on first run if it's not found in your system PATH.</p>
+<div class="admonition warning">
+<p class="admonition-title">Keep Your Token Secret</p>
+<p>Never share your bot token or commit it to version control. Anyone with your token can control your bot.</p>
 </div>
+<h3 id="step-3-configure-oauth2-required-for-dms">Step 3: Configure OAuth2 (Required for DMs)<a class="headerlink" href="#step-3-configure-oauth2-required-for-dms" title="Permanent link">&para;</a></h3>
+<p>To enable DM conversations, you need to configure OAuth2 so Fraggle can send you an initial welcome message.</p>
+<ol>
+<li>Go to the <strong>"OAuth2"</strong> section in the left sidebar</li>
+<li>Under <strong>"Client Information"</strong>:<ul>
+<li>Copy your <strong>Client ID</strong> (also visible at the top of the General Information page)</li>
+<li>Click <strong>"Reset Secret"</strong> and copy your <strong>Client Secret</strong></li>
+</ul>
+</li>
+<li>Under <strong>"Redirects"</strong>, add your callback URL:<ul>
+<li>For local development: <code>http://localhost:9191/api/v1/discord/oauth/callback</code></li>
+<li>For production: <code>https://your-domain/api/v1/discord/oauth/callback</code></li>
+</ul>
+</li>
+</ol>
+<p>!!! note Only the Fraggle API is required for Discord support,
+    the Dashboard does not need to be enabled.</p>
+<div class="admonition warning">
+<p class="admonition-title">Keep Your Client Secret Safe</p>
+<p>Like the bot token, never share your client secret or commit it to version control.</p>
+</div>
+<h3 id="step-4-configure-installation-settings">Step 4: Configure Installation Settings<a class="headerlink" href="#step-4-configure-installation-settings" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Go to the <strong>"Installation"</strong> section in the left sidebar</li>
+<li>Under <strong>"Installation Contexts"</strong>, configure for user installation:<ul>
+<li>✅ Enable <strong>"User Install"</strong></li>
+<li>❌ Disable <strong>"Guild Install"</strong> (optional, but recommended for personal use)</li>
+</ul>
+</li>
+<li>Under <strong>"Default Install Settings"</strong>:<ul>
+<li>For <strong>"User Install"</strong>, add the scopes:<ul>
+<li><code>applications.commands</code> (Added by default)</li>
+</ul>
+</li>
+</ul>
+</li>
+</ol>
+<h3 id="step-5-install-the-bot-via-oauth2">Step 5: Install the Bot via OAuth2<a class="headerlink" href="#step-5-install-the-bot-via-oauth2" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Start Fraggle with your Discord configuration (see below)</li>
+<li>Navigate to the Dashboard <strong>Chat Bridges</strong> section or open the <code>http://localhost:9191/api/v1/discord/oauth/authorize</code> API endpoint</li>
+<li>Discord will redirect you to authorize the application</li>
+<li>Select <strong>"Install to your account"</strong></li>
+<li>Click <strong>"Authorize"</strong></li>
+<li>You'll be redirected back to Fraggle, and a welcome DM will be sent to you</li>
+</ol>
+<p>You will receive a DM from your bot telling you everything is complete.</p>
+<h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
+<p>Add Discord configuration to your <code>fraggle.yaml</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">fraggle</span><span class="p">:</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">bridges</span><span class="p">:</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">discord</span><span class="p">:</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">      </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">      </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;your-bot-token-here&quot;</span><span class="w">           </span><span class="c1"># From Step 2 above</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">      </span><span class="nt">client_secret</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;your-client-secret&quot;</span><span class="w">    </span><span class="c1"># From Step 3 (OAuth2)</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">      </span><span class="nt">oauth_redirect_uri</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;http://localhost:9191/api/v1/discord/oauth/callback&quot;</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">      </span><span class="nt">trigger</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;!fraggle&quot;</span><span class="w">                    </span><span class="c1"># Trigger prefix (optional for DMs)</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">      </span><span class="nt">respond_to_direct_messages</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">      </span><span class="nt">show_typing_indicator</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">      </span><span class="nt">max_images_per_message</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span><span class="w">             </span><span class="c1"># Discord allows up to 10</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">      </span><span class="nt">max_file_size_mb</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span><span class="w">                   </span><span class="c1"># 10 free, 50 Nitro Basic, 500 Nitro</span>
+</code></pre></div>
 <h3 id="configuration-options">Configuration Options<a class="headerlink" href="#configuration-options" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -1530,39 +1607,34 @@
 </thead>
 <tbody>
 <tr>
-<td><code>phone</code></td>
-<td>Registered Signal phone number (with country code)</td>
-<td>Required</td>
+<td><code>token</code></td>
+<td>Discord bot token (required)</td>
+<td>-</td>
 </tr>
 <tr>
 <td><code>enabled</code></td>
-<td>Whether Signal bridge is active</td>
-<td><code>true</code> if phone is set</td>
+<td>Whether Discord bridge is active</td>
+<td><code>true</code> if token is set</td>
 </tr>
 <tr>
-<td><code>config_dir</code></td>
-<td>Directory for Signal configuration</td>
-<td><code>~/.config/fraggle/signal</code></td>
+<td><code>client_id</code></td>
+<td>OAuth2 client ID (extracted from token if not set)</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>client_secret</code></td>
+<td>OAuth2 client secret (required for DM setup)</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>oauth_redirect_uri</code></td>
+<td>OAuth2 callback URL (must match Developer Portal)</td>
+<td>-</td>
 </tr>
 <tr>
 <td><code>trigger</code></td>
-<td>Prefix to trigger bot in group chats</td>
-<td><code>@fraggle</code></td>
-</tr>
-<tr>
-<td><code>signal_cli_path</code></td>
-<td>Path to signal-cli (null = use PATH or auto-install)</td>
-<td><code>null</code></td>
-</tr>
-<tr>
-<td><code>auto_install</code></td>
-<td>Automatically download signal-cli if not found</td>
-<td><code>true</code></td>
-</tr>
-<tr>
-<td><code>signal_cli_version</code></td>
-<td>Version of signal-cli to auto-install</td>
-<td><code>0.13.23</code></td>
+<td>Prefix to trigger bot (null = respond to all)</td>
+<td><code>!fraggle</code></td>
 </tr>
 <tr>
 <td><code>respond_to_direct_messages</code></td>
@@ -1574,30 +1646,83 @@
 <td>Show typing indicator while processing</td>
 <td><code>true</code></td>
 </tr>
+<tr>
+<td><code>max_images_per_message</code></td>
+<td>Maximum images per message (Discord limit: 10)</td>
+<td><code>10</code></td>
+</tr>
+<tr>
+<td><code>max_file_size_mb</code></td>
+<td>Max file size in MB (see limits below)</td>
+<td><code>10</code></td>
+</tr>
+<tr>
+<td><code>allowed_channel_ids</code></td>
+<td>Only respond in these channels (empty = all)</td>
+<td><code>[]</code></td>
+</tr>
+<tr>
+<td><code>allowed_guild_ids</code></td>
+<td>Only respond in these guilds (empty = all)</td>
+<td><code>[]</code></td>
+</tr>
 </tbody>
 </table>
-<h2 id="trigger-behavior">Trigger Behavior<a class="headerlink" href="#trigger-behavior" title="Permanent link">&para;</a></h2>
+<h3 id="file-size-limits">File Size Limits<a class="headerlink" href="#file-size-limits" title="Permanent link">&para;</a></h3>
+<p>Discord has different file upload limits based on your subscription:</p>
+<table>
+<thead>
+<tr>
+<th>Plan</th>
+<th>Max File Size</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Free</td>
+<td>10 MB</td>
+</tr>
+<tr>
+<td>Nitro Basic</td>
+<td>50 MB</td>
+</tr>
+<tr>
+<td>Nitro</td>
+<td>500 MB</td>
+</tr>
+</tbody>
+</table>
+<p>Set <code>max_file_size_mb</code> according to your Discord subscription level.</p>
+<h2 id="using-your-bot">Using Your Bot<a class="headerlink" href="#using-your-bot" title="Permanent link">&para;</a></h2>
 <h3 id="direct-messages">Direct Messages<a class="headerlink" href="#direct-messages" title="Permanent link">&para;</a></h3>
-<p>When <code>respond_to_direct_messages</code> is <code>true</code>, Fraggle responds to all direct messages automatically.</p>
-<h3 id="group-messages">Group Messages<a class="headerlink" href="#group-messages" title="Permanent link">&para;</a></h3>
-<p>In group chats, Fraggle only responds when the message starts with the trigger prefix:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>@fraggle what&#39;s the weather like?
+<p>Once the OAuth2 flow is complete, your bot appears in your Discord DM list. Simply send a message:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Hello! What can you help me with?
 </code></pre></div>
-<p>Set <code>trigger</code> to <code>null</code> to respond to all group messages (use with caution).</p>
-<h3 id="per-chat-triggers">Per-Chat Triggers<a class="headerlink" href="#per-chat-triggers" title="Permanent link">&para;</a></h3>
-<p>You can override the trigger for specific chats:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">fraggle</span><span class="p">:</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">bridges</span><span class="p">:</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="nt">signal</span><span class="p">:</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">      </span><span class="nt">trigger</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;@fraggle&quot;</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span><span class="nt">chats</span><span class="p">:</span>
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="nt">registered</span><span class="p">:</span>
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;group-abc123&quot;</span>
-<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">        </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Dev</span><span class="nv"> </span><span class="s">Team&quot;</span>
-<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">        </span><span class="nt">trigger_override</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;@bot&quot;</span><span class="w">    </span><span class="c1"># Use @bot in this group</span>
+<p>When <code>respond_to_direct_messages</code> is <code>true</code> (the default), your bot responds to all DMs automatically without needing a trigger prefix.</p>
+<h3 id="using-a-trigger-prefix">Using a Trigger Prefix<a class="headerlink" href="#using-a-trigger-prefix" title="Permanent link">&para;</a></h3>
+<p>If you prefer to use a trigger prefix even in DMs:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">fraggle</span><span class="p">:</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">bridges</span><span class="p">:</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nt">discord</span><span class="p">:</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">      </span><span class="nt">respond_to_direct_messages</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">      </span><span class="nt">trigger</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;!ask&quot;</span>
+</code></pre></div>
+<p>Then message your bot with:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>!ask What&#39;s the weather like today?
+</code></pre></div>
+<h2 id="sending-images">Sending Images<a class="headerlink" href="#sending-images" title="Permanent link">&para;</a></h2>
+<p>Fraggle supports sending images in Discord messages. You can include images in two ways:</p>
+<h3 id="inline-image-syntax">Inline Image Syntax<a class="headerlink" href="#inline-image-syntax" title="Permanent link">&para;</a></h3>
+<p>Use the <code>[[image:URL]]</code> syntax to include images directly in responses:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>Here&#39;s a cute cat picture: [[image:https://example.com/cat.jpg]]
+</code></pre></div>
+<p>Discord supports <strong>up to 10 images per message</strong>, and Fraggle will automatically combine them.</p>
+<h3 id="screenshot-tool">Screenshot Tool<a class="headerlink" href="#screenshot-tool" title="Permanent link">&para;</a></h3>
+<p>Use the <code>screenshot_page</code> tool (requires Playwright) to capture and send website screenshots:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>Can you show me what google.com looks like?
 </code></pre></div>
 <h2 id="text-formatting">Text Formatting<a class="headerlink" href="#text-formatting" title="Permanent link">&para;</a></h2>
-<p>Fraggle supports Signal's text formatting. The LLM can use markdown-like syntax that's automatically converted:</p>
+<p>Discord supports rich markdown formatting. The LLM can use:</p>
 <table>
 <thead>
 <tr>
@@ -1620,67 +1745,104 @@
 </tr>
 <tr>
 <td><code>\|\|spoiler\|\|</code></td>
-<td>Spoiler (hidden until tapped)</td>
+<td>Spoiler (hidden until clicked)</td>
 </tr>
 <tr>
-<td><code>`monospace`</code></td>
-<td><code>Monospace</code></td>
+<td><code>`code`</code></td>
+<td><code>Inline code</code></td>
+</tr>
+<tr>
+<td><code>```code```</code></td>
+<td>Code block</td>
+</tr>
+<tr>
+<td><code>&gt; quote</code></td>
+<td>Block quote</td>
+</tr>
+<tr>
+<td><code># Heading</code></td>
+<td>Large heading</td>
+</tr>
+<tr>
+<td><code>- item</code></td>
+<td>Bullet list</td>
 </tr>
 </tbody>
 </table>
-<div class="admonition warning">
-<p class="admonition-title">Unsupported Formatting</p>
-<p>Markdown links (<code>[text](url)</code>) and images (<code>![alt](url)</code>) are NOT supported in Signal messages. Images must be sent as attachments using the <code>send_image</code> skill.</p>
-</div>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
-<h3 id="failed-to-connect-to-signal">"Failed to connect to Signal"<a class="headerlink" href="#failed-to-connect-to-signal" title="Permanent link">&para;</a></h3>
+<h3 id="invalid-bot-token">"Invalid bot token"<a class="headerlink" href="#invalid-bot-token" title="Permanent link">&para;</a></h3>
 <ol>
-<li>Verify signal-cli is installed: <code>signal-cli --version</code></li>
-<li>Check the phone number is registered: <code>signal-cli -u +1234567890 receive</code></li>
-<li>Ensure <code>config_dir</code> exists and is writable</li>
+<li>Verify the token is correct in your <code>fraggle.yaml</code></li>
+<li>Make sure you copied the full token from the Developer Portal</li>
+<li>Try resetting the token and using the new one</li>
 </ol>
-<h3 id="messages-not-being-received">"Messages not being received"<a class="headerlink" href="#messages-not-being-received" title="Permanent link">&para;</a></h3>
+<h3 id="message-content-intent-not-enabled">"Message Content Intent not enabled"<a class="headerlink" href="#message-content-intent-not-enabled" title="Permanent link">&para;</a></h3>
 <ol>
-<li>Run in interactive mode first to verify the agent works: <code>./bin/fraggle chat</code></li>
-<li>Check logs at <code>$FRAGGLE_ROOT/logs/fraggle.log</code></li>
-<li>Try receiving messages manually: <code>signal-cli -u +1234567890 receive</code></li>
+<li>Go to your bot's settings in the Discord Developer Portal</li>
+<li>Navigate to the <strong>"Bot"</strong> section</li>
+<li>Enable <strong>"Message Content Intent"</strong> under Privileged Gateway Intents</li>
+<li>Save changes and restart Fraggle</li>
 </ol>
-<h3 id="permission-denied-errors">"Permission denied" errors<a class="headerlink" href="#permission-denied-errors" title="Permanent link">&para;</a></h3>
-<p>Ensure the user running Fraggle has:</p>
+<h3 id="bot-appears-offline">Bot appears offline<a class="headerlink" href="#bot-appears-offline" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Check that Fraggle is running with Discord bridge enabled</li>
+<li>Verify the token is valid</li>
+<li>Check the logs for connection errors: <code>$FRAGGLE_ROOT/logs/fraggle.log</code></li>
+</ol>
+<h3 id="bot-doesnt-respond-to-messages">Bot doesn't respond to messages<a class="headerlink" href="#bot-doesnt-respond-to-messages" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Ensure <code>respond_to_direct_messages: true</code> is set (for DMs)</li>
+<li>Check if a trigger prefix is required and you're using it</li>
+<li>Verify the bot is installed to your user account (check DM list)</li>
+<li>Check logs for any errors during message processing</li>
+</ol>
+<h3 id="bot-not-appearing-in-dms">Bot not appearing in DMs<a class="headerlink" href="#bot-not-appearing-in-dms" title="Permanent link">&para;</a></h3>
+<p>User-installed Discord apps don't automatically appear in your DM list. You need to complete the OAuth2 flow:</p>
+<ol>
+<li>Verify <code>client_secret</code> and <code>oauth_redirect_uri</code> are set in your config</li>
+<li>Make sure the redirect URI in your config matches the one in Discord Developer Portal</li>
+<li>Visit <code>http://localhost:9191/api/v1/discord/oauth/authorize</code></li>
+<li>Complete the authorization flow</li>
+<li>Your bot should send you a welcome DM</li>
+</ol>
+<h3 id="oauth2-errors">OAuth2 errors<a class="headerlink" href="#oauth2-errors" title="Permanent link">&para;</a></h3>
+<p><strong>"Discord OAuth not configured"</strong></p>
 <ul>
-<li>Read/write access to <code>config_dir</code></li>
-<li>Execute permission on <code>signal-cli</code></li>
+<li>Ensure <code>client_secret</code> and <code>oauth_redirect_uri</code> are set in your <code>fraggle.yaml</code></li>
+<li>Restart Fraggle after changing configuration</li>
 </ul>
-<h3 id="auto-installation-issues">Auto-installation issues<a class="headerlink" href="#auto-installation-issues" title="Permanent link">&para;</a></h3>
-<p>If automatic installation of signal-cli fails:</p>
-<ol>
-<li>Check internet connectivity - Fraggle needs to download from GitHub releases</li>
-<li>Verify write permissions to <code>data/apps/</code> directory</li>
-<li>Check logs for specific download or extraction errors</li>
-<li>On Linux, ensure <code>tar</code> command is available for extraction</li>
-<li>Try manual installation instead (see above)</li>
-</ol>
-<p>To disable auto-installation and use a manually installed version:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nt">fraggle</span><span class="p">:</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">bridges</span><span class="p">:</span>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="nt">signal</span><span class="p">:</span>
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">      </span><span class="nt">auto_install</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">      </span><span class="nt">signal_cli_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/signal-cli</span><span class="w">  </span><span class="c1"># Optional: specify explicit path</span>
+<p><strong>"Failed to exchange authorization code"</strong></p>
+<ul>
+<li>Verify your <code>client_secret</code> is correct</li>
+<li>Check that the redirect URI matches exactly (including trailing slashes)</li>
+</ul>
+<p><strong>"Discord bot not connected"</strong></p>
+<ul>
+<li>The bot must be running and connected before completing OAuth2</li>
+<li>Check that your bot token is valid</li>
+<li>Look for connection errors in the logs</li>
+</ul>
+<h3 id="file-too-large-errors">"File too large" errors<a class="headerlink" href="#file-too-large-errors" title="Permanent link">&para;</a></h3>
+<p>Discord limits file uploads based on your subscription:</p>
+<ul>
+<li><strong>Free users</strong>: 10 MB max</li>
+<li><strong>Nitro Basic</strong>: 50 MB max</li>
+<li><strong>Nitro</strong>: 500 MB max</li>
+</ul>
+<p>Update your configuration to match:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">fraggle</span><span class="p">:</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">bridges</span><span class="p">:</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nt">discord</span><span class="p">:</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">      </span><span class="nt">max_file_size_mb</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">50</span><span class="w">  </span><span class="c1"># For Nitro Basic</span>
 </code></pre></div>
-<h3 id="updating-signal-cli-version">Updating signal-cli version<a class="headerlink" href="#updating-signal-cli-version" title="Permanent link">&para;</a></h3>
-<p>To use a different version of signal-cli:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nt">fraggle</span><span class="p">:</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">bridges</span><span class="p">:</span>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span><span class="nt">signal</span><span class="p">:</span>
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">      </span><span class="nt">signal_cli_version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;0.13.24&quot;</span><span class="w">  </span><span class="c1"># Specify desired version</span>
-</code></pre></div>
-<p>Fraggle will download the new version on next startup. Old versions in <code>data/apps/</code> can be manually deleted.</p>
 <h2 id="security-considerations">Security Considerations<a class="headerlink" href="#security-considerations" title="Permanent link">&para;</a></h2>
 <ul>
-<li>The Signal configuration directory contains sensitive authentication data</li>
-<li>Restrict access to <code>config_dir</code> (e.g., <code>chmod 700</code>)</li>
-<li>Consider running Fraggle as a dedicated user</li>
-<li>The bot can access messages in any chat it's added to - be mindful of group memberships</li>
+<li><strong>Never share your bot token or client secret</strong> - anyone with these credentials can control your bot</li>
+<li>Store tokens and secrets securely (e.g., environment variables, secrets manager)</li>
+<li>The bot can read all messages in conversations it's part of</li>
+<li>Consider running Fraggle as a dedicated system user</li>
+<li>The OAuth2 redirect URI should use HTTPS in production environments</li>
+<li>Review Discord's <a href="https://discord.com/terms">Terms of Service</a> and <a href="https://discord.com/developers/docs/policies-and-agreements/developer-terms-of-service">Developer Terms</a></li>
 </ul>
 
 
