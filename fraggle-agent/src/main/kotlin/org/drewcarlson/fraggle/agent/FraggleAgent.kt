@@ -1,6 +1,7 @@
 package org.drewcarlson.fraggle.agent
 
 import ai.koog.agents.core.agent.AIAgentService
+import ai.koog.agents.core.agent.config.AIAgentConfig
 import ai.koog.agents.core.agent.singleRunStrategy
 import ai.koog.agents.core.tools.ToolRegistry
 import ai.koog.agents.memory.feature.AgentMemory
@@ -65,7 +66,7 @@ class FraggleAgent(
         llmModel = llmModel,
         strategy = singleRunStrategy(),
         toolRegistry = toolRegistry,
-        systemPrompt = buildBaseSystemPrompt(promptManager),
+        systemPrompt = "",
         temperature = config.temperature,
         maxIterations = config.maxIterations,
     ) {
@@ -88,8 +89,6 @@ class FraggleAgent(
     ): AgentResponse {
         logger.info("Processing message from ${message.sender.id} in chat ${message.chatId}")
 
-        val userInput = buildKoogInput(conversation, message, platform)
-
         // Create per-request execution context for tools
         val executionContext = ToolExecutionContext(
             chatId = message.chatId,
@@ -97,8 +96,32 @@ class FraggleAgent(
         )
 
         return try {
+            val systemPrompt = buildBaseSystemPrompt(promptManager, platform, message.chatId, message.sender.id)
+            val agentPrompt = prompt(message.id) {
+                system(systemPrompt)
+
+                conversation.messages
+                    .takeLast(config.maxHistoryMessages)
+                    .forEach { contextMessage ->
+                        if (contextMessage.role == ConversationRole.USER) {
+                            user(contextMessage.content)
+                        } else {
+                            assistant(contextMessage.content)
+                        }
+                    }
+            }
+
             val result = withContext(ToolExecutionContext.asContextElement(executionContext)) {
-                agentService.createAgentAndRun(userInput)
+                agentService.createAgentAndRun(
+                    agentInput = buildKoogInput(message),
+                    agentConfig = AIAgentConfig(
+                        prompt = agentPrompt,
+                        model = llmModel,
+                        maxAgentIterations = agentService.agentConfig.maxAgentIterations,
+                        missingToolsConversionStrategy = agentService.agentConfig.missingToolsConversionStrategy,
+                        responseProcessor = agentService.agentConfig.responseProcessor,
+                    )
+                )
             }
 
             if (config.autoMemory && result.isNotBlank()) {
@@ -123,7 +146,12 @@ class FraggleAgent(
      * Build the static base system prompt (identity, instructions).
      * Called once during agent construction. Tool descriptions are handled natively by Koog.
      */
-    private fun buildBaseSystemPrompt(promptManager: PromptManager): String = buildString {
+    private suspend fun buildBaseSystemPrompt(
+        promptManager: PromptManager,
+        platform: ChatPlatform?,
+        chatId: String,
+        senderId: String,
+    ): String = buildString {
         appendLine(promptManager.buildFullPrompt())
         appendLine()
 
@@ -133,23 +161,9 @@ class FraggleAgent(
             appendLine()
             appendLine(historySection)
         } else {
-            logger.warn("AGENT.md missing 'Conversation History' section, using inline fallback")
-            appendLine("# IMPORTANT: Conversation History")
-            appendLine()
-            appendLine("The conversation history above shows PREVIOUS exchanges that are ALREADY COMPLETED.")
-            appendLine("Each user message is a separate request - focus only on what the user is asking NOW.")
+            logger.warn("AGENT.md missing 'Conversation History' section")
         }
-    }
 
-    /**
-     * Build per-call input: platform context, memory, conversation history, current message.
-     */
-    private suspend fun buildKoogInput(
-        conversation: Conversation,
-        message: IncomingMessage,
-        platform: ChatPlatform?,
-    ): String = buildString {
-        // Platform context
         if (platform != null) {
             appendLine("# Communication Channel")
             appendLine()
@@ -168,9 +182,7 @@ class FraggleAgent(
             if (platform.supportsAttachments) {
                 appendLine()
                 val imageHandling = agentTemplate?.renderSection("image handling")
-                if (imageHandling != null) {
-                    appendLine(imageHandling)
-                } else {
+                if (imageHandling == null) {
                     appendLine("IMAGE HANDLING:")
                     appendLine("- To include an image in your response, use this syntax: [[image:URL]]")
                     appendLine("- Example: [[image:https://example.com/photo.jpg]]")
@@ -178,6 +190,8 @@ class FraggleAgent(
                     appendLine("- Only ONE image can be sent per message on this platform")
                     appendLine("- For screenshots, use the screenshot_page tool (it requires browser automation)")
                     appendLine("- Do NOT use markdown image syntax like ![alt](url) - it won't display")
+                } else {
+                    appendLine(imageHandling)
                 }
             }
 
@@ -196,8 +210,8 @@ class FraggleAgent(
 
         // Memory context
         val globalStr = memory.load(MemoryScope.Global).toPromptString()
-        val chatStr = memory.load(MemoryScope.Chat(message.chatId)).toPromptString()
-        val userStr = memory.load(MemoryScope.User(message.sender.id)).toPromptString()
+        val chatStr = memory.load(MemoryScope.Chat(chatId)).toPromptString()
+        val userStr = memory.load(MemoryScope.User(senderId)).toPromptString()
 
         if (globalStr.isNotBlank() || chatStr.isNotBlank() || userStr.isNotBlank()) {
             appendLine("# Relevant Memory")
@@ -206,23 +220,11 @@ class FraggleAgent(
             if (chatStr.isNotBlank()) appendLine(chatStr)
             if (userStr.isNotBlank()) appendLine(userStr)
         }
+    }
 
-        // Conversation history
-        val history = conversation.messages.takeLast(config.maxHistoryMessages)
-        if (history.isNotEmpty()) {
-            appendLine("[Previous conversation history]")
-            for (msg in history) {
-                val prefix = when (msg.role) {
-                    ConversationRole.USER -> "User"
-                    ConversationRole.ASSISTANT -> "Assistant"
-                }
-                appendLine("$prefix: ${msg.content}")
-            }
-            appendLine("[End of history - respond to the following message]")
-            appendLine()
-        }
-
-        // Current message
+    private fun buildKoogInput(
+        message: IncomingMessage,
+    ): String = buildString {
         val userContent = when (val content = message.content) {
             is MessageContent.Text -> content.text
             is MessageContent.Image -> "[Image${content.caption?.let { ": $it" } ?: ""}]"
@@ -479,6 +481,7 @@ sealed class ResponseAttachment {
             if (other !is Image) return false
             return data.contentEquals(other.data) && mimeType == other.mimeType && caption == other.caption
         }
+
         override fun hashCode(): Int {
             var result = data.contentHashCode()
             result = 31 * result + mimeType.hashCode()
@@ -497,6 +500,7 @@ sealed class ResponseAttachment {
             if (other !is File) return false
             return data.contentEquals(other.data) && filename == other.filename && mimeType == other.mimeType
         }
+
         override fun hashCode(): Int {
             var result = data.contentHashCode()
             result = 31 * result + filename.hashCode()
