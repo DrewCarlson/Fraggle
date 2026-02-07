@@ -1,7 +1,9 @@
 package org.drewcarlson.fraggle.agent
 
 import kotlinx.coroutines.asContextElement
-import java.util.Collections
+import org.drewcarlson.fraggle.agent.ToolExecutionContext.Companion.asContextElement
+import org.drewcarlson.fraggle.agent.ToolExecutionContext.Companion.current
+import java.util.*
 import kotlin.coroutines.CoroutineContext
 
 /**

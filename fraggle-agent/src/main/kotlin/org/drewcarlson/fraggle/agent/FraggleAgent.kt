@@ -4,9 +4,8 @@ import ai.koog.agents.core.agent.AIAgentService
 import ai.koog.agents.core.agent.singleRunStrategy
 import ai.koog.agents.core.tools.ToolRegistry
 import ai.koog.prompt.executor.model.PromptExecutor
-import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.llm.LLMCapability
-import ai.koog.prompt.llm.LLMProvider as KoogLLMProvider
+import ai.koog.prompt.llm.LLModel
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.drewcarlson.fraggle.chat.ChatPlatform
@@ -22,6 +21,7 @@ import org.slf4j.LoggerFactory
 import java.io.Closeable
 import kotlin.time.Clock
 import kotlin.time.Instant
+import ai.koog.prompt.llm.LLMProvider as KoogLLMProvider
 
 /**
  * Main agent orchestration class.

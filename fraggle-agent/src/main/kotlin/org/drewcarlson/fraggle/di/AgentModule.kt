@@ -1,13 +1,14 @@
 package org.drewcarlson.fraggle.di
 
-import dev.zacsweers.metro.ContributesTo
-import dev.zacsweers.metro.Provides
-import dev.zacsweers.metro.SingleIn
+import ai.koog.agents.core.tools.ToolRegistry
 import ai.koog.prompt.executor.clients.openai.OpenAIClientSettings
 import ai.koog.prompt.executor.clients.openai.OpenAILLMClient
 import ai.koog.prompt.executor.llms.SingleLLMPromptExecutor
 import ai.koog.prompt.executor.model.PromptExecutor
-import io.ktor.client.HttpClient
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.Provides
+import dev.zacsweers.metro.SingleIn
+import io.ktor.client.*
 import kotlinx.coroutines.CoroutineScope
 import org.drewcarlson.fraggle.FraggleEnvironment
 import org.drewcarlson.fraggle.agent.FraggleAgent
@@ -18,20 +19,14 @@ import org.drewcarlson.fraggle.db.ExposedChatHistoryStore
 import org.drewcarlson.fraggle.db.FraggleDatabase
 import org.drewcarlson.fraggle.memory.FileMemoryStore
 import org.drewcarlson.fraggle.memory.MemoryStore
-import org.drewcarlson.fraggle.models.DatabaseConfig
-import org.drewcarlson.fraggle.models.MemoryConfig
-import org.drewcarlson.fraggle.models.ProviderConfig
-import org.drewcarlson.fraggle.models.SandboxType
-import org.drewcarlson.fraggle.models.SandboxConfig
-import org.drewcarlson.fraggle.models.PromptsConfig
+import org.drewcarlson.fraggle.models.*
 import org.drewcarlson.fraggle.prompt.PromptConfig
 import org.drewcarlson.fraggle.prompt.PromptManager
 import org.drewcarlson.fraggle.sandbox.PermissiveSandbox
 import org.drewcarlson.fraggle.sandbox.Sandbox
-import ai.koog.agents.core.tools.ToolRegistry
 import kotlin.io.path.createDirectories
-import org.drewcarlson.fraggle.models.AgentConfig as ModelsAgentConfig
 import org.drewcarlson.fraggle.agent.AgentConfig as RuntimeAgentConfig
+import org.drewcarlson.fraggle.models.AgentConfig as ModelsAgentConfig
 
 /**
  * Provides core agent services.

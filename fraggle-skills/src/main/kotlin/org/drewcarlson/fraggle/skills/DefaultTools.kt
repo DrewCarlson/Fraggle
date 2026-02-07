@@ -6,7 +6,10 @@ import org.drewcarlson.fraggle.sandbox.Sandbox
 import org.drewcarlson.fraggle.skills.file.*
 import org.drewcarlson.fraggle.skills.scheduling.*
 import org.drewcarlson.fraggle.skills.shell.ExecuteCommandTool
-import org.drewcarlson.fraggle.skills.web.*
+import org.drewcarlson.fraggle.skills.web.FetchApiTool
+import org.drewcarlson.fraggle.skills.web.FetchWebpageTool
+import org.drewcarlson.fraggle.skills.web.PlaywrightFetcher
+import org.drewcarlson.fraggle.skills.web.ScreenshotPageTool
 
 /**
  * Factory for creating the default Koog ToolRegistry with all built-in tools.

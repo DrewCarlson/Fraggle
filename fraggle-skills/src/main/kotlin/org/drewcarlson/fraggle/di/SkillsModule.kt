@@ -12,9 +12,9 @@ import org.drewcarlson.fraggle.sandbox.Sandbox
 import org.drewcarlson.fraggle.skills.DefaultTools
 import org.drewcarlson.fraggle.skills.scheduling.TaskScheduler
 import org.drewcarlson.fraggle.skills.web.PlaywrightFetcher
-import org.drewcarlson.fraggle.skills.web.PlaywrightConfig as RuntimePlaywrightConfig
-import org.drewcarlson.fraggle.models.PlaywrightConfig as ModelsPlaywrightConfig
 import org.slf4j.LoggerFactory
+import org.drewcarlson.fraggle.models.PlaywrightConfig as ModelsPlaywrightConfig
+import org.drewcarlson.fraggle.skills.web.PlaywrightConfig as RuntimePlaywrightConfig
 
 /**
  * Provides skill-related services.

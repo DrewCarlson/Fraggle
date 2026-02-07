@@ -1,5 +1,6 @@
 package org.drewcarlson.fraggle
 
+import ai.koog.agents.core.tools.ToolRegistry
 import dev.zacsweers.metro.Inject
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
@@ -7,25 +8,15 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.drewcarlson.fraggle.agent.*
-import org.drewcarlson.fraggle.chat.BridgedMessage
-import org.drewcarlson.fraggle.chat.BridgeInitializerRegistry
-import org.drewcarlson.fraggle.chat.ChatBridgeManager
-import org.drewcarlson.fraggle.chat.IncomingMessage
-import org.drewcarlson.fraggle.chat.MessageContent
-import org.drewcarlson.fraggle.chat.OutgoingMessage
-import org.drewcarlson.fraggle.chat.Sender
-import org.drewcarlson.fraggle.db.ChatHistoryStore
-import org.drewcarlson.fraggle.db.FraggleDatabase
-import org.drewcarlson.fraggle.db.MessageContentType
-import org.drewcarlson.fraggle.db.MessageDirection
-import org.drewcarlson.fraggle.db.MessageRecord
+import org.drewcarlson.fraggle.chat.*
+import org.drewcarlson.fraggle.db.*
 import org.drewcarlson.fraggle.discord.DiscordBridge
 import org.drewcarlson.fraggle.discord.DiscordBridgeInitializer
-import org.drewcarlson.fraggle.models.*
+import org.drewcarlson.fraggle.models.ApiConfig
+import org.drewcarlson.fraggle.models.FraggleEvent
 import org.drewcarlson.fraggle.signal.MessageRouter
 import org.drewcarlson.fraggle.signal.SignalBridge
 import org.drewcarlson.fraggle.signal.SignalBridgeInitializer
-import ai.koog.agents.core.tools.ToolRegistry
 import org.drewcarlson.fraggle.skills.scheduling.TaskScheduler
 import org.drewcarlson.fraggle.skills.web.PlaywrightFetcher
 import org.slf4j.LoggerFactory

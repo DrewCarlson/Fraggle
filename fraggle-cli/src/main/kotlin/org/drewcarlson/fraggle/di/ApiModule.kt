@@ -1,5 +1,6 @@
 package org.drewcarlson.fraggle.di
 
+import ai.koog.agents.core.tools.ToolRegistry
 import dev.zacsweers.metro.ContributesTo
 import dev.zacsweers.metro.Provides
 import dev.zacsweers.metro.SingleIn
@@ -17,7 +18,6 @@ import org.drewcarlson.fraggle.memory.MemoryStore
 import org.drewcarlson.fraggle.models.ApiConfig
 import org.drewcarlson.fraggle.models.DashboardConfig
 import org.drewcarlson.fraggle.models.FraggleConfig
-import ai.koog.agents.core.tools.ToolRegistry
 import org.drewcarlson.fraggle.skills.scheduling.TaskScheduler
 import java.nio.file.Path
 

@@ -1,19 +1,8 @@
 package org.drewcarlson.fraggle.db
 
-import org.jetbrains.exposed.v1.core.ResultRow
-import org.jetbrains.exposed.v1.core.SortOrder
-import org.jetbrains.exposed.v1.core.and
-import org.jetbrains.exposed.v1.core.avg
-import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.core.isNotNull
-import org.jetbrains.exposed.v1.core.max
-import org.jetbrains.exposed.v1.core.min
-import org.jetbrains.exposed.v1.jdbc.Database
-import org.jetbrains.exposed.v1.jdbc.insert
-import org.jetbrains.exposed.v1.jdbc.select
-import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.core.*
+import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.jetbrains.exposed.v1.jdbc.update
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 

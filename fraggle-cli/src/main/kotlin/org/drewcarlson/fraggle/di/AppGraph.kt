@@ -1,5 +1,6 @@
 package org.drewcarlson.fraggle.di
 
+import ai.koog.agents.core.tools.ToolRegistry
 import dev.zacsweers.metro.DependencyGraph
 import dev.zacsweers.metro.Provides
 import io.ktor.client.*
@@ -10,10 +11,10 @@ import org.drewcarlson.fraggle.FraggleServicesImpl
 import org.drewcarlson.fraggle.ServiceOrchestrator
 import org.drewcarlson.fraggle.agent.FraggleAgent
 import org.drewcarlson.fraggle.agent.InlineImageProcessor
-import org.drewcarlson.fraggle.db.ChatHistoryStore
-import org.drewcarlson.fraggle.db.FraggleDatabase
 import org.drewcarlson.fraggle.chat.BridgeInitializerRegistry
 import org.drewcarlson.fraggle.chat.ChatBridgeManager
+import org.drewcarlson.fraggle.db.ChatHistoryStore
+import org.drewcarlson.fraggle.db.FraggleDatabase
 import org.drewcarlson.fraggle.discord.DiscordBridge
 import org.drewcarlson.fraggle.discord.DiscordBridgeInitializer
 import org.drewcarlson.fraggle.memory.MemoryStore
@@ -22,7 +23,6 @@ import org.drewcarlson.fraggle.models.FraggleConfig
 import org.drewcarlson.fraggle.signal.MessageRouter
 import org.drewcarlson.fraggle.signal.SignalBridge
 import org.drewcarlson.fraggle.signal.SignalBridgeInitializer
-import ai.koog.agents.core.tools.ToolRegistry
 import org.drewcarlson.fraggle.skills.scheduling.TaskScheduler
 import org.drewcarlson.fraggle.skills.web.PlaywrightFetcher
 import java.nio.file.Path

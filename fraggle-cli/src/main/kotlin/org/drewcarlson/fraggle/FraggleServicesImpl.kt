@@ -1,5 +1,6 @@
 package org.drewcarlson.fraggle
 
+import ai.koog.agents.core.tools.ToolRegistry
 import io.ktor.client.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -9,17 +10,16 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import org.drewcarlson.fraggle.api.*
-import org.drewcarlson.fraggle.db.ChatHistoryStore
 import org.drewcarlson.fraggle.chat.BridgeInitializer
 import org.drewcarlson.fraggle.chat.BridgeInitializerRegistry
 import org.drewcarlson.fraggle.chat.ChatBridgeManager
 import org.drewcarlson.fraggle.chat.InitStepResult
+import org.drewcarlson.fraggle.db.ChatHistoryStore
 import org.drewcarlson.fraggle.discord.DiscordBridge
 import org.drewcarlson.fraggle.discord.DiscordOAuth
 import org.drewcarlson.fraggle.memory.MemoryStore
 import org.drewcarlson.fraggle.models.*
 import org.drewcarlson.fraggle.signal.SignalBridge
-import ai.koog.agents.core.tools.ToolRegistry
 import org.drewcarlson.fraggle.skills.scheduling.ScheduledTask
 import org.drewcarlson.fraggle.skills.scheduling.TaskScheduler
 import org.drewcarlson.fraggle.skills.scheduling.TaskStatus

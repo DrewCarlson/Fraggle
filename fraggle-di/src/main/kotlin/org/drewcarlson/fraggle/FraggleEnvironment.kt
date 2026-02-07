@@ -1,7 +1,7 @@
 package org.drewcarlson.fraggle
 
 import java.nio.file.Path
-import kotlin.io.path.*
+import kotlin.io.path.Path
 
 /**
  * Environment configuration for Fraggle runtime directories.

@@ -1,5 +1,6 @@
 package org.drewcarlson.fraggle.db
 
+import org.drewcarlson.fraggle.db.ChatTable.externalId
 import org.jetbrains.exposed.v1.core.Table
 
 /**
