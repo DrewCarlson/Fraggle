@@ -17,7 +17,7 @@ import org.drewcarlson.fraggle.memory.MemoryStore
 import org.drewcarlson.fraggle.models.ApiConfig
 import org.drewcarlson.fraggle.models.DashboardConfig
 import org.drewcarlson.fraggle.models.FraggleConfig
-import org.drewcarlson.fraggle.skill.SkillRegistry
+import ai.koog.agents.core.tools.ToolRegistry
 import org.drewcarlson.fraggle.skills.scheduling.TaskScheduler
 import java.nio.file.Path
 
@@ -31,7 +31,7 @@ interface ApiModule {
         @SingleIn(AppScope::class)
         fun provideFraggleServices(
             memory: MemoryStore,
-            skills: SkillRegistry,
+            toolRegistry: ToolRegistry,
             bridges: ChatBridgeManager,
             taskScheduler: TaskScheduler,
             config: FraggleConfig,
@@ -43,7 +43,7 @@ interface ApiModule {
             discordBridge: DiscordBridge?,
         ): FraggleServicesImpl = FraggleServicesImpl(
             memory = memory,
-            skills = skills,
+            toolRegistry = toolRegistry,
             bridges = bridges,
             taskScheduler = taskScheduler,
             fraggleConfig = config,

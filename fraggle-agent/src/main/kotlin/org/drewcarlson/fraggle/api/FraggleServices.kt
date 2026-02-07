@@ -1,5 +1,6 @@
 package org.drewcarlson.fraggle.api
 
+import ai.koog.agents.core.tools.ToolRegistry
 import kotlinx.coroutines.flow.SharedFlow
 import org.drewcarlson.fraggle.chat.ChatBridgeManager
 import org.drewcarlson.fraggle.memory.MemoryStore
@@ -10,7 +11,6 @@ import org.drewcarlson.fraggle.models.ConfigResponse
 import org.drewcarlson.fraggle.models.FraggleEvent
 import org.drewcarlson.fraggle.models.ScheduledTaskInfo
 import org.drewcarlson.fraggle.models.SystemStatus
-import org.drewcarlson.fraggle.skill.SkillRegistry
 
 /**
  * Services exposed by Fraggle to the API backend.
@@ -24,9 +24,9 @@ interface FraggleServices {
     val memory: MemoryStore
 
     /**
-     * Access to the skill registry.
+     * Access to the Koog tool registry.
      */
-    val skills: SkillRegistry
+    val toolRegistry: ToolRegistry
 
     /**
      * Access to chat bridge management.

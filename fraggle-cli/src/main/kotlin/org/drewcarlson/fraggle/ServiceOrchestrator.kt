@@ -25,7 +25,7 @@ import org.drewcarlson.fraggle.models.*
 import org.drewcarlson.fraggle.signal.MessageRouter
 import org.drewcarlson.fraggle.signal.SignalBridge
 import org.drewcarlson.fraggle.signal.SignalBridgeInitializer
-import org.drewcarlson.fraggle.skill.SkillRegistry
+import ai.koog.agents.core.tools.ToolRegistry
 import org.drewcarlson.fraggle.skills.scheduling.TaskScheduler
 import org.drewcarlson.fraggle.skills.web.PlaywrightFetcher
 import org.slf4j.LoggerFactory
@@ -44,7 +44,7 @@ import kotlin.time.measureTimedValue
 class ServiceOrchestrator(
     private val scope: CoroutineScope,
     private val agent: FraggleAgent,
-    private val skills: SkillRegistry,
+    private val toolRegistry: ToolRegistry,
     private val bridgeManager: ChatBridgeManager,
     private val initializerRegistry: BridgeInitializerRegistry,
     private val messageRouter: MessageRouter?,
@@ -211,7 +211,7 @@ class ServiceOrchestrator(
     /**
      * Get the skill registry.
      */
-    fun getSkills() = skills
+    fun getToolRegistry() = toolRegistry
 
     /**
      * Start the unified message processing loop for all bridges.

@@ -8,6 +8,7 @@ import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.llm.LLMCapability
 import ai.koog.prompt.llm.LLMProvider as KoogLLMProvider
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import org.drewcarlson.fraggle.chat.ChatPlatform
 import org.drewcarlson.fraggle.chat.IncomingMessage
 import org.drewcarlson.fraggle.chat.MessageContent
@@ -17,7 +18,6 @@ import org.drewcarlson.fraggle.memory.MemoryStore
 import org.drewcarlson.fraggle.prompt.PromptManager
 import org.drewcarlson.fraggle.provider.Usage
 import org.drewcarlson.fraggle.sandbox.Sandbox
-import org.drewcarlson.fraggle.skill.SkillRegistry
 import org.slf4j.LoggerFactory
 import java.io.Closeable
 import kotlin.time.Clock
@@ -25,11 +25,11 @@ import kotlin.time.Instant
 
 /**
  * Main agent orchestration class.
- * Uses Koog AIAgent framework for LLM interaction.
+ * Uses Koog AIAgent framework for LLM interaction with native tool support.
  */
 class FraggleAgent(
     promptExecutor: PromptExecutor,
-    private val skills: SkillRegistry,
+    private val toolRegistry: ToolRegistry,
     private val memory: MemoryStore,
     private val sandbox: Sandbox,
     private val config: AgentConfig,
@@ -51,7 +51,7 @@ class FraggleAgent(
             contextLength = config.maxTokens,
         ),
         strategy = singleRunStrategy(),
-        toolRegistry = ToolRegistry.EMPTY,
+        toolRegistry = toolRegistry,
         systemPrompt = buildBaseSystemPrompt(promptManager),
         temperature = config.temperature,
         maxIterations = config.maxIterations,
@@ -69,14 +69,25 @@ class FraggleAgent(
 
         val userInput = buildKoogInput(conversation, message, platform)
 
+        // Create per-request execution context for tools
+        val executionContext = ToolExecutionContext(
+            chatId = message.chatId,
+            userId = message.sender.id,
+        )
+
         return try {
-            val result = agentService.createAgentAndRun(userInput)
+            val result = withContext(ToolExecutionContext.asContextElement(executionContext)) {
+                agentService.createAgentAndRun(userInput)
+            }
 
             if (config.autoMemory && result.isNotBlank()) {
                 extractAndSaveMemory(message, result)
             }
 
-            AgentResponse.Success(content = result)
+            AgentResponse.Success(
+                content = result,
+                attachments = executionContext.attachments.toList(),
+            )
         } catch (e: Exception) {
             logger.error("Koog agent error: ${e.message}", e)
             AgentResponse.Error("Failed to get response from LLM: ${e.message}")
@@ -88,25 +99,13 @@ class FraggleAgent(
     }
 
     /**
-     * Build the static base system prompt (identity, skills, instructions).
-     * Called once during agent construction.
+     * Build the static base system prompt (identity, instructions).
+     * Called once during agent construction. Tool descriptions are handled natively by Koog.
      */
     private fun buildBaseSystemPrompt(promptManager: PromptManager): String = buildString {
         appendLine(promptManager.buildFullPrompt())
         appendLine()
 
-        if (skills.all().isNotEmpty()) {
-            appendLine("# Available Tools")
-            appendLine()
-            appendLine("You have access to the following tools:")
-            for (skill in skills.all()) {
-                appendLine("- ${skill.name}: ${skill.description}")
-            }
-            appendLine()
-            appendLine("Use tools when needed to help the user. Always prefer using tools over making things up.")
-        }
-
-        appendLine()
         appendLine("# IMPORTANT: Conversation History")
         appendLine()
         appendLine("The conversation history above shows PREVIOUS exchanges that are ALREADY COMPLETED.")
@@ -192,11 +191,8 @@ class FraggleAgent(
     }
 
     private suspend fun extractAndSaveMemory(message: IncomingMessage, response: String) {
-        // Simple heuristic: if the user shares personal info, save it
-        // This is a placeholder - in production, you'd use more sophisticated extraction
         val userText = (message.content as? MessageContent.Text)?.text ?: return
 
-        // Look for patterns like "my name is", "I work at", etc.
         val patterns = listOf(
             "my name is" to "User's name:",
             "i work at" to "User works at:",

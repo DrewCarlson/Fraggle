@@ -1,7 +1,7 @@
 package org.drewcarlson.fraggle.provider
 
 import kotlinx.serialization.Serializable
-import org.drewcarlson.fraggle.skill.OpenAITool
+import kotlinx.serialization.json.JsonElement
 
 /**
  * Abstract interface for LLM providers.
@@ -36,7 +36,7 @@ interface LLMProvider {
 data class ChatRequest(
     val model: String,
     val messages: List<Message>,
-    val tools: List<OpenAITool>? = null,
+    val tools: List<JsonElement>? = null,
     val toolChoice: ToolChoice? = null,
     val temperature: Double? = null,
     val maxTokens: Int? = null,

@@ -1,5 +1,6 @@
 package org.drewcarlson.fraggle.di
 
+import ai.koog.agents.core.tools.ToolRegistry
 import dev.zacsweers.metro.ContributesTo
 import dev.zacsweers.metro.Provides
 import dev.zacsweers.metro.SingleIn
@@ -8,8 +9,7 @@ import kotlinx.coroutines.CoroutineScope
 import org.drewcarlson.fraggle.chat.ChatBridgeManager
 import org.drewcarlson.fraggle.chat.OutgoingMessage
 import org.drewcarlson.fraggle.sandbox.Sandbox
-import org.drewcarlson.fraggle.skill.SkillRegistry
-import org.drewcarlson.fraggle.skills.DefaultSkills
+import org.drewcarlson.fraggle.skills.DefaultTools
 import org.drewcarlson.fraggle.skills.scheduling.TaskScheduler
 import org.drewcarlson.fraggle.skills.web.PlaywrightFetcher
 import org.drewcarlson.fraggle.skills.web.PlaywrightConfig as RuntimePlaywrightConfig
@@ -42,12 +42,7 @@ interface SkillsModule {
             return fetcher
         }
 
-        @Provides
-        @SingleIn(AppScope::class)
-        fun provideTaskScheduler(
-            scope: CoroutineScope,
-            bridgeManager: ChatBridgeManager,
-        ): TaskScheduler = TaskScheduler(scope) { task ->
+        private fun createTaskCallback(bridgeManager: ChatBridgeManager): suspend (org.drewcarlson.fraggle.skills.scheduling.ScheduledTask) -> Unit = { task ->
             logger.info("Task triggered: ${task.name} - ${task.action}")
             if (bridgeManager.hasConnectedBridge()) {
                 try {
@@ -63,12 +58,19 @@ interface SkillsModule {
 
         @Provides
         @SingleIn(AppScope::class)
-        fun provideSkillRegistry(
+        fun provideTaskScheduler(
+            scope: CoroutineScope,
+            bridgeManager: ChatBridgeManager,
+        ): TaskScheduler = TaskScheduler(scope, createTaskCallback(bridgeManager))
+
+        @Provides
+        @SingleIn(AppScope::class)
+        fun provideToolRegistry(
             sandbox: Sandbox,
             @DefaultHttpClient httpClient: HttpClient,
             taskScheduler: TaskScheduler,
             playwrightFetcher: PlaywrightFetcher?,
-        ): SkillRegistry = DefaultSkills.createRegistry(
+        ): ToolRegistry = DefaultTools.createToolRegistry(
             sandbox = sandbox,
             httpClient = httpClient,
             taskScheduler = taskScheduler,

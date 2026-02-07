@@ -19,7 +19,7 @@ import org.drewcarlson.fraggle.discord.DiscordOAuth
 import org.drewcarlson.fraggle.memory.MemoryStore
 import org.drewcarlson.fraggle.models.*
 import org.drewcarlson.fraggle.signal.SignalBridge
-import org.drewcarlson.fraggle.skill.SkillRegistry
+import ai.koog.agents.core.tools.ToolRegistry
 import org.drewcarlson.fraggle.skills.scheduling.ScheduledTask
 import org.drewcarlson.fraggle.skills.scheduling.TaskScheduler
 import org.drewcarlson.fraggle.skills.scheduling.TaskStatus
@@ -36,7 +36,7 @@ import kotlin.time.Instant
  */
 class FraggleServicesImpl(
     override val memory: MemoryStore,
-    override val skills: SkillRegistry,
+    override val toolRegistry: ToolRegistry,
     override val bridges: ChatBridgeManager,
     private val taskScheduler: TaskScheduler,
     private val fraggleConfig: FraggleConfig,
@@ -81,7 +81,7 @@ class FraggleServicesImpl(
             uptime = Clock.System.now() - startTime,
             totalChats = chatHistoryStore.countChats(),
             connectedBridges = registeredBridges.count { bridges.isConnected(it) },
-            availableSkills = skills.all().size,
+            availableSkills = toolRegistry.tools.size,
             scheduledTasks = taskScheduler.listPendingTasks().size,
             memoryUsage = MemoryUsage(
                 heapUsed = runtime.totalMemory() - runtime.freeMemory(),

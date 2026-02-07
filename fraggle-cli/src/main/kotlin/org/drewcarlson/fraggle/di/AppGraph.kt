@@ -22,7 +22,7 @@ import org.drewcarlson.fraggle.models.FraggleConfig
 import org.drewcarlson.fraggle.signal.MessageRouter
 import org.drewcarlson.fraggle.signal.SignalBridge
 import org.drewcarlson.fraggle.signal.SignalBridgeInitializer
-import org.drewcarlson.fraggle.skill.SkillRegistry
+import ai.koog.agents.core.tools.ToolRegistry
 import org.drewcarlson.fraggle.skills.scheduling.TaskScheduler
 import org.drewcarlson.fraggle.skills.web.PlaywrightFetcher
 import java.nio.file.Path
@@ -67,8 +67,8 @@ interface AppGraph {
     /** Memory store */
     val memoryStore: MemoryStore
 
-    /** Skill registry */
-    val skillRegistry: SkillRegistry
+    /** Tool registry */
+    val toolRegistry: ToolRegistry
 
     /** Chat bridge manager */
     val chatBridgeManager: ChatBridgeManager

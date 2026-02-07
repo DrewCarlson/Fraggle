@@ -136,7 +136,7 @@ class ChatCommand : CliktCommand(name = "chat") {
         val orchestrator = graph.serviceOrchestrator
         orchestrator.initialize()
 
-        println("Available skills: ${orchestrator.getSkills().all().map { it.name }}")
+        println("Available tools: ${orchestrator.getToolRegistry().tools.map { it.name }}")
         println()
 
         // Interactive loop

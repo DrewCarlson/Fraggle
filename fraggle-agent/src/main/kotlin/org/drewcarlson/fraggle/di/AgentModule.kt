@@ -28,7 +28,7 @@ import org.drewcarlson.fraggle.prompt.PromptConfig
 import org.drewcarlson.fraggle.prompt.PromptManager
 import org.drewcarlson.fraggle.sandbox.PermissiveSandbox
 import org.drewcarlson.fraggle.sandbox.Sandbox
-import org.drewcarlson.fraggle.skill.SkillRegistry
+import ai.koog.agents.core.tools.ToolRegistry
 import kotlin.io.path.createDirectories
 import org.drewcarlson.fraggle.models.AgentConfig as ModelsAgentConfig
 import org.drewcarlson.fraggle.agent.AgentConfig as RuntimeAgentConfig
@@ -132,14 +132,14 @@ interface AgentModule {
         @SingleIn(AppScope::class)
         fun provideFraggleAgent(
             promptExecutor: PromptExecutor,
-            skills: SkillRegistry,
+            toolRegistry: ToolRegistry,
             memory: MemoryStore,
             sandbox: Sandbox,
             config: RuntimeAgentConfig,
             promptManager: PromptManager,
         ): FraggleAgent = FraggleAgent(
             promptExecutor = promptExecutor,
-            skills = skills,
+            toolRegistry = toolRegistry,
             memory = memory,
             sandbox = sandbox,
             config = config,
