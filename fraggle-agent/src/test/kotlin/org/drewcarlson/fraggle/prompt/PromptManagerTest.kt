@@ -11,6 +11,8 @@ import kotlin.io.path.exists
 import kotlin.io.path.writeText
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class PromptManagerTest {
@@ -380,6 +382,133 @@ class PromptManagerTest {
             // Should have loaded something from resources
             val prompt = manager.buildFullPrompt()
             assertTrue(prompt.isNotBlank())
+        }
+    }
+
+    @Nested
+    inner class TemplateLoading {
+
+        @Test
+        fun `getTemplate loads and parses template from file`() {
+            promptsDir.createDirectories()
+            promptsDir.resolve("TEST.md").writeText(
+                """
+                ## Section One
+                Content one.
+
+                ## Section Two
+                Content two with {{var}}.
+                """.trimIndent()
+            )
+
+            manager.initialize()
+
+            val template = manager.getTemplate("TEST.md")
+            assertNotNull(template)
+            assertEquals("Content one.", template.renderSection("section one"))
+            assertEquals("Content two with replaced.", template.renderSection("section two", mapOf("var" to "replaced")))
+        }
+
+        @Test
+        fun `getTemplate returns null for nonexistent file`() {
+            manager.initialize()
+
+            val template = manager.getTemplate("NONEXISTENT.md")
+            assertNull(template)
+        }
+
+        @Test
+        fun `getTemplate strips HTML comments before parsing`() {
+            promptsDir.createDirectories()
+            promptsDir.resolve("COMMENTS.md").writeText(
+                """
+                <!-- This comment should be stripped -->
+                ## Section
+                <!-- Another comment -->
+                Visible content.
+                """.trimIndent()
+            )
+
+            manager.initialize()
+
+            val template = manager.getTemplate("COMMENTS.md")
+            assertNotNull(template)
+            val content = template.renderSection("section")
+            assertNotNull(content)
+            assertFalse(content.contains("comment"))
+            assertTrue(content.contains("Visible content"))
+        }
+
+        @Test
+        fun `getTemplate caches result on second call`() {
+            promptsDir.createDirectories()
+            promptsDir.resolve("CACHED.md").writeText("## Test\nOriginal.")
+
+            manager.initialize()
+
+            val first = manager.getTemplate("CACHED.md")
+            assertNotNull(first)
+
+            // Modify file on disk
+            promptsDir.resolve("CACHED.md").writeText("## Test\nModified.")
+
+            // Should return cached value
+            val second = manager.getTemplate("CACHED.md")
+            assertEquals("Original.", second?.renderSection("test"))
+        }
+
+        @Test
+        fun `reload clears template cache`() {
+            promptsDir.createDirectories()
+            promptsDir.resolve("RELOAD.md").writeText("## Test\nOriginal.")
+
+            manager.initialize()
+
+            val first = manager.getTemplate("RELOAD.md")
+            assertEquals("Original.", first?.renderSection("test"))
+
+            // Modify file and reload
+            promptsDir.resolve("RELOAD.md").writeText("## Test\nUpdated.")
+            manager.reload()
+
+            val second = manager.getTemplate("RELOAD.md")
+            assertEquals("Updated.", second?.renderSection("test"))
+        }
+
+        @Test
+        fun `initialize auto-creates AGENT md from template`() {
+            manager.initialize()
+            assertTrue(manager.fileExists("AGENT.md"))
+        }
+
+        @Test
+        fun `initialize auto-creates MEMORY md from template`() {
+            manager.initialize()
+            assertTrue(manager.fileExists("MEMORY.md"))
+        }
+
+        @Test
+        fun `AGENT template has expected sections`() {
+            manager.initialize()
+
+            val template = manager.getTemplate("AGENT.md")
+            assertNotNull(template)
+            assertTrue(template.hasSection("conversation history"))
+            assertTrue(template.hasSection("platform context"))
+            assertTrue(template.hasSection("image handling"))
+            assertTrue(template.hasSection("inline images warning"))
+        }
+
+        @Test
+        fun `MEMORY template has expected sections`() {
+            manager.initialize()
+
+            val template = manager.getTemplate("MEMORY.md")
+            assertNotNull(template)
+            assertTrue(template.hasSection("extraction system"))
+            assertTrue(template.hasSection("extraction input"))
+            assertTrue(template.hasSection("reconciliation system"))
+            assertTrue(template.hasSection("reconciliation input"))
         }
     }
 }

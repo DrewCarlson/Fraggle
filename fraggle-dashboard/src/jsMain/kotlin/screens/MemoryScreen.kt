@@ -22,6 +22,7 @@ import org.jetbrains.compose.web.css.*
 import org.jetbrains.compose.web.dom.*
 import org.w3c.dom.events.Event
 import rememberRefreshableDataLoader
+import kotlin.time.Clock
 import kotlin.time.Instant
 
 // Accent colors per scope type
@@ -887,18 +888,18 @@ private fun FactCard(
             isEditing = false
             isSaving = false
             onFactUpdated()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             isSaving = false
         }
     }
 
-    LaunchedEffect(isDeleting) {
+    LaunchedEffect(isDeleting, fact) {
         if (!isDeleting) return@LaunchedEffect
         try {
             apiClient.delete(factEndpoint)
             isDeleting = false
             onFactUpdated()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             isDeleting = false
         }
     }
@@ -1326,8 +1327,8 @@ private fun ClearConfirmDialog(
 
 private fun formatInstant(instant: Instant): String {
     val epochMillis = instant.toEpochMilliseconds()
-    val now = kotlinx.browser.window.asDynamic().Date.now() as Double
-    val diffMs = (now - epochMillis).toLong()
+    val now = Clock.System.now().toEpochMilliseconds()
+    val diffMs = now - epochMillis
     val diffSec = diffMs / 1000L
     val diffMin = diffSec / 60L
     val diffHour = diffMin / 60L

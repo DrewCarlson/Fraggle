@@ -45,6 +45,10 @@ class PromptManager(
         private const val SYSTEM_FILE = "SYSTEM.md"
         private const val IDENTITY_FILE = "IDENTITY.md"
         private const val USER_FILE = "USER.md"
+        internal const val AGENT_FILE = "AGENT.md"
+        internal const val MEMORY_FILE = "MEMORY.md"
+
+        private val MANAGED_FILES = listOf(SYSTEM_FILE, IDENTITY_FILE, USER_FILE, AGENT_FILE, MEMORY_FILE)
 
         private const val RESOURCE_PATH = "/prompts"
     }
@@ -54,6 +58,7 @@ class PromptManager(
     private var identityContent: String? = null
     private var userContent: String? = null
     private var cachedFullPrompt: String? = null
+    private val templateCache = mutableMapOf<String, PromptTemplate>()
 
     /**
      * Initialize the prompt manager, creating missing files from templates.
@@ -66,9 +71,7 @@ class PromptManager(
 
         // Initialize each prompt file from templates if missing
         if (config.autoCreateMissing) {
-            initializeFile(SYSTEM_FILE)
-            initializeFile(IDENTITY_FILE)
-            initializeFile(USER_FILE)
+            MANAGED_FILES.forEach { initializeFile(it) }
         }
 
         // Load and cache content
@@ -85,6 +88,7 @@ class PromptManager(
         identityContent = loadFile(IDENTITY_FILE)
         userContent = loadFile(USER_FILE)
         cachedFullPrompt = buildFullPromptInternal()
+        templateCache.clear()
         logger.debug("Full prompt cached (${cachedFullPrompt?.length ?: 0} chars)")
     }
 
@@ -236,10 +240,25 @@ class PromptManager(
     }
 
     /**
+     * Load and parse a prompt file as a [PromptTemplate] with sections.
+     * Returns null if the file cannot be loaded.
+     * Results are cached until [reload] is called.
+     */
+    fun getTemplate(filename: String): PromptTemplate? {
+        templateCache[filename]?.let { return it }
+
+        val raw = loadFile(filename) ?: return null
+        val cleaned = stripHtmlComments(raw)
+        val template = PromptTemplate.parse(cleaned)
+        templateCache[filename] = template
+        return template
+    }
+
+    /**
      * Strip HTML comments from content.
      * Comments may span multiple lines.
      */
-    private fun stripHtmlComments(content: String): String {
+    internal fun stripHtmlComments(content: String): String {
         return content
             .replace(Regex("<!--[\\s\\S]*?-->"), "")
             .replace(Regex("\n{3,}"), "\n\n") // Collapse multiple blank lines

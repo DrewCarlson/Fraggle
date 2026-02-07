@@ -41,9 +41,12 @@ class FraggleAgent(
     private val memoryProvider: AgentMemoryProvider,
     private val sandbox: Sandbox,
     private val config: AgentConfig,
-    promptManager: PromptManager,
+    private val promptManager: PromptManager,
 ) : Closeable {
     private val logger = LoggerFactory.getLogger(FraggleAgent::class.java)
+
+    private val agentTemplate by lazy { promptManager.getTemplate(PromptManager.AGENT_FILE) }
+    private val memoryTemplate by lazy { promptManager.getTemplate(PromptManager.MEMORY_FILE) }
 
     private val llmModel = LLModel(
         provider = KoogLLMProvider.OpenAI,
@@ -124,10 +127,18 @@ class FraggleAgent(
         appendLine(promptManager.buildFullPrompt())
         appendLine()
 
-        appendLine("# IMPORTANT: Conversation History")
-        appendLine()
-        appendLine("The conversation history above shows PREVIOUS exchanges that are ALREADY COMPLETED.")
-        appendLine("Each user message is a separate request - focus only on what the user is asking NOW.")
+        val historySection = agentTemplate?.renderSection("conversation history")
+        if (historySection != null) {
+            appendLine("# IMPORTANT: Conversation History")
+            appendLine()
+            appendLine(historySection)
+        } else {
+            logger.warn("AGENT.md missing 'Conversation History' section, using inline fallback")
+            appendLine("# IMPORTANT: Conversation History")
+            appendLine()
+            appendLine("The conversation history above shows PREVIOUS exchanges that are ALREADY COMPLETED.")
+            appendLine("Each user message is a separate request - focus only on what the user is asking NOW.")
+        }
     }
 
     /**
@@ -142,7 +153,12 @@ class FraggleAgent(
         if (platform != null) {
             appendLine("# Communication Channel")
             appendLine()
-            appendLine("You are communicating via ${platform.name}.")
+
+            val platformContext = agentTemplate?.renderSection(
+                "platform context",
+                mapOf("platform_name" to platform.name),
+            )
+            appendLine(platformContext ?: "You are communicating via ${platform.name}.")
 
             platform.notes?.let {
                 appendLine()
@@ -151,19 +167,29 @@ class FraggleAgent(
 
             if (platform.supportsAttachments) {
                 appendLine()
-                appendLine("IMAGE HANDLING:")
-                appendLine("- To include an image in your response, use this syntax: [[image:URL]]")
-                appendLine("- Example: [[image:https://example.com/photo.jpg]]")
-                appendLine("- The image will be downloaded and sent as an attachment WITH your text in one cohesive message")
-                appendLine("- Only ONE image can be sent per message on this platform")
-                appendLine("- For screenshots, use the screenshot_page tool (it requires browser automation)")
-                appendLine("- Do NOT use markdown image syntax like ![alt](url) - it won't display")
+                val imageHandling = agentTemplate?.renderSection("image handling")
+                if (imageHandling != null) {
+                    appendLine(imageHandling)
+                } else {
+                    appendLine("IMAGE HANDLING:")
+                    appendLine("- To include an image in your response, use this syntax: [[image:URL]]")
+                    appendLine("- Example: [[image:https://example.com/photo.jpg]]")
+                    appendLine("- The image will be downloaded and sent as an attachment WITH your text in one cohesive message")
+                    appendLine("- Only ONE image can be sent per message on this platform")
+                    appendLine("- For screenshots, use the screenshot_page tool (it requires browser automation)")
+                    appendLine("- Do NOT use markdown image syntax like ![alt](url) - it won't display")
+                }
             }
 
             if (!platform.supportsInlineImages) {
                 appendLine()
-                appendLine("IMPORTANT: Raw image URLs or markdown image syntax will NOT display as images.")
-                appendLine("Always use [[image:URL]] syntax to share images.")
+                val inlineWarning = agentTemplate?.renderSection("inline images warning")
+                if (inlineWarning != null) {
+                    appendLine(inlineWarning)
+                } else {
+                    appendLine("IMPORTANT: Raw image URLs or markdown image syntax will NOT display as images.")
+                    appendLine("Always use [[image:URL]] syntax to share images.")
+                }
             }
             appendLine()
         }
@@ -224,58 +250,53 @@ class FraggleAgent(
 
             // Phase 2: Reconcile new facts with existing facts via LLM
             if (existingFacts.isNotEmpty()) {
-                val reconciled = reconcileFacts(existingFacts.map { it.content }, newFactStrings)
+                val changes = reconcileFacts(existingFacts.map { it.content }, newFactStrings)
 
-                // Safety: verify the LLM didn't silently drop existing facts.
-                // Each existing fact should be accounted for as "unchanged" or "updated".
-                val accountedFor = reconciled.count { it.status == "unchanged" || it.status == "updated" }
-                if (accountedFor < (existingFacts.size + 1) / 2) {
-                    logger.warn(
-                        "Reconciliation accounted for only {} of {} existing facts — falling back to append",
-                        accountedFor, existingFacts.size,
-                    )
-                    val appended = existingFacts + newFactStrings.map {
-                        Fact(content = it, timestamp = now, source = "conversation")
+                val deletions = changes.filter { it.status == "deleted" }
+
+                // Apply changes to existing facts
+                val factsToSave = existingFacts.toMutableList()
+
+                // Apply deletions — match by exact content first, then fuzzy
+                for (rf in deletions) {
+                    val exactIndex = factsToSave.indexOfFirst { it.content == rf.fact }
+                    if (exactIndex >= 0) {
+                        factsToSave.removeAt(exactIndex)
+                    } else {
+                        val closest = findClosestFact(rf.fact, factsToSave)
+                        if (closest != null) factsToSave.remove(closest)
                     }
-                    memory.save(userScope, Memory(scope = userScope, facts = appended, lastUpdated = now))
-                    return
                 }
 
-                // Build a lookup from content → existing Fact for timestamp preservation
-                val existingByContent = existingFacts.associateBy { it.content }
-
-                val factsToSave = reconciled.map { rf ->
-                    when (rf.status) {
-                        "unchanged" -> {
-                            // Preserve original timestamps — try exact match first, then fuzzy
-                            existingByContent[rf.fact]
-                                ?: findClosestFact(rf.fact, existingFacts)?.let { original ->
-                                    original.copy(content = rf.fact)
-                                }
-                                ?: Fact(content = rf.fact, timestamp = now, source = "conversation")
-                        }
-                        "updated" -> {
-                            // Find the closest existing fact to preserve its creation time
-                            val original = findClosestFact(rf.fact, existingFacts)
-                            Fact(
-                                content = rf.fact,
-                                timestamp = original?.timestamp ?: now,
-                                updatedAt = now,
-                                source = original?.source ?: "conversation",
-                            )
-                        }
-                        else -> {
-                            // "new" — brand new fact
-                            Fact(content = rf.fact, timestamp = now, source = "conversation")
-                        }
+                // Apply updates — find closest existing fact and replace it
+                for (rf in changes.filter { it.status == "updated" }) {
+                    val original = findClosestFact(rf.fact, factsToSave)
+                    if (original != null) {
+                        val index = factsToSave.indexOf(original)
+                        factsToSave[index] = Fact(
+                            content = rf.fact,
+                            timestamp = original.timestamp,
+                            updatedAt = now,
+                            source = original.source,
+                        )
+                    } else {
+                        // No match found — treat as new
+                        factsToSave.add(Fact(content = rf.fact, timestamp = now, source = "conversation"))
                     }
+                }
+
+                // Append new facts
+                for (rf in changes.filter { it.status == "new" }) {
+                    factsToSave.add(Fact(content = rf.fact, timestamp = now, source = "conversation"))
                 }
 
                 memory.save(userScope, Memory(scope = userScope, facts = factsToSave, lastUpdated = now))
 
+                val updates = changes.count { it.status == "updated" }
+                val newCount = changes.count { it.status == "new" }
                 logger.debug(
-                    "Memory reconciled for user {}: {} existing + {} new → {} total",
-                    message.sender.id, existingFacts.size, newFactStrings.size, factsToSave.size,
+                    "Memory reconciled for user {}: {} existing, {} updated, {} new, {} deleted → {} total",
+                    message.sender.id, existingFacts.size, updates, newCount, deletions.size, factsToSave.size,
                 )
             } else {
                 // No existing facts — save new facts directly
@@ -319,31 +340,25 @@ class FraggleAgent(
             ""
         }
 
-        val extractionInput = buildString {
-            appendLine("Extract personal facts the user revealed about themselves in this exchange.")
-            appendLine()
-            appendLine("Rules:")
-            appendLine("- Use concise \"Key: Value\" format for each fact.")
-            appendLine("- BAD: \"The user's name is Alice\" or \"User enjoys playing guitar\"")
-            appendLine("- GOOD: \"Name: Alice\" or \"Hobbies: playing guitar\"")
-            appendLine("- Group related items together (e.g., \"Hobbies: guitar, programming, snowboarding\").")
-            appendLine("- Do NOT extract opinions, questions, or temporary states.")
-            appendLine("- Do NOT extract facts that are already stored (see below).")
-            appendLine("- Do NOT split a single piece of information into multiple near-identical facts.")
-            appendLine("- Return a JSON array of strings, or [] if no NEW facts.")
-            if (existingFactsBlock.isNotBlank()) {
-                appendLine()
-                append(existingFactsBlock)
-            }
-            appendLine()
-            appendLine("Exchange:")
-            appendLine("User: $userText")
-            appendLine("Assistant: $response")
+        val tmpl = memoryTemplate
+        val systemText = tmpl?.renderSection("extraction system")
+        val inputText = tmpl?.renderSection(
+            "extraction input",
+            mapOf(
+                "existing_facts_block" to existingFactsBlock,
+                "user_text" to userText,
+                "response" to response,
+            ),
+        )
+
+        if (systemText == null || inputText == null) {
+            logger.warn("MEMORY.md missing extraction sections, skipping fact extraction")
+            return emptyList()
         }
 
         val extractionPrompt = prompt("memory-extraction", LLMParams(temperature = 0.1)) {
-            system("You are a fact extraction assistant. Respond ONLY with a JSON array of strings. Use concise \"Key: Value\" format (e.g., \"Name: Alice\", \"Lives in: Berlin\").")
-            user(extractionInput)
+            system(systemText)
+            user(inputText)
         }
 
         val responses = promptExecutor.execute(prompt = extractionPrompt, model = llmModel)
@@ -372,58 +387,42 @@ class FraggleAgent(
         val existingBlock = existingFacts.joinToString("\n") { "- $it" }
         val newBlock = newFacts.joinToString("\n") { "- $it" }
 
-        val reconcileInput = buildString {
-            appendLine("You are maintaining a personal fact store about a user. You have an EXISTING set of facts and NEW facts just extracted from a conversation.")
-            appendLine()
-            appendLine("IMPORTANT: Your output MUST account for EVERY existing fact. Do NOT drop any existing facts.")
-            appendLine()
-            appendLine("Produce a single, reconciled list of facts by following these rules:")
-            appendLine("1. KEEP unrelated existing facts UNCHANGED — copy their exact text verbatim, do not reformat them.")
-            appendLine("2. MERGE related facts into one (e.g., two separate hobby lists → one combined list).")
-            appendLine("3. UPDATE facts when new information supersedes old (e.g., new job replaces old job).")
-            appendLine("4. PRESERVE HISTORY: when a fact changes (e.g., user changed jobs), keep the old value as a separate historical fact (e.g., \"Previously worked at: Google\").")
-            appendLine("5. REMOVE only exact duplicates where the meaning is identical.")
-            appendLine()
-            appendLine("For each fact, indicate its status:")
-            appendLine("- \"unchanged\": the fact is identical to an existing fact (no modification at all)")
-            appendLine("- \"updated\": the fact is a modified version of an existing fact (merged, expanded, or reworded)")
-            appendLine("- \"new\": the fact is entirely new information (including new historical facts)")
-            appendLine()
-            appendLine("EXISTING facts:")
-            appendLine(existingBlock)
-            appendLine()
-            appendLine("NEW facts:")
-            appendLine(newBlock)
-            appendLine()
-            appendLine("Return a JSON array of objects, each with \"fact\" (string) and \"status\" (string). Example:")
-            appendLine("""[{"fact": "Works at: Microsoft", "status": "new"}, {"fact": "Previously worked at: Google", "status": "new"}, {"fact": "Name: Alice", "status": "unchanged"}]""")
+        val fallback = { newFacts.map { ReconciledFact(it, "new") } }
+
+        val tmpl = memoryTemplate
+        val systemText = tmpl?.renderSection("reconciliation system")
+        val inputText = tmpl?.renderSection(
+            "reconciliation input",
+            mapOf(
+                "existing_block" to existingBlock,
+                "new_block" to newBlock,
+            ),
+        )
+
+        if (systemText == null || inputText == null) {
+            logger.warn("MEMORY.md missing reconciliation sections, falling back to append")
+            return fallback()
         }
 
         val reconcilePrompt = prompt("memory-reconciliation", LLMParams(temperature = 0.1)) {
-            system("You are a fact reconciliation assistant. You MUST include every existing fact in your output (as unchanged, updated, or merged). Respond ONLY with a JSON array of objects. Each object has \"fact\" (string) and \"status\" (\"unchanged\", \"updated\", or \"new\").")
-            user(reconcileInput)
+            system(systemText)
+            user(inputText)
         }
 
         val responses = promptExecutor.execute(prompt = reconcilePrompt, model = llmModel)
-        val result = responses.firstOrNull()?.content?.trim()
-            ?: return existingFacts.map { ReconciledFact(it, "unchanged") } +
-                newFacts.map { ReconciledFact(it, "new") }
+        val result = responses.firstOrNull()?.content?.trim() ?: return fallback()
 
         val factsJson = result
             .removePrefix("```json").removePrefix("```")
             .removeSuffix("```").trim()
 
-        if (factsJson.isBlank()) {
-            return existingFacts.map { ReconciledFact(it, "unchanged") } +
-                newFacts.map { ReconciledFact(it, "new") }
-        }
+        if (factsJson.isBlank()) return fallback()
 
         return try {
             memoryExtractionJson.decodeFromString<List<ReconciledFact>>(factsJson)
         } catch (e: Exception) {
             logger.warn("Failed to parse reconciled facts, falling back to append: ${e.message}")
-            existingFacts.map { ReconciledFact(it, "unchanged") } +
-                newFacts.map { ReconciledFact(it, "new") }
+            fallback()
         }
     }
 }
