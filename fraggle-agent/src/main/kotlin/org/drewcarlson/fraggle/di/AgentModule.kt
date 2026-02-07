@@ -3,7 +3,11 @@ package org.drewcarlson.fraggle.di
 import dev.zacsweers.metro.ContributesTo
 import dev.zacsweers.metro.Provides
 import dev.zacsweers.metro.SingleIn
-import io.ktor.client.*
+import ai.koog.prompt.executor.clients.openai.OpenAIClientSettings
+import ai.koog.prompt.executor.clients.openai.OpenAILLMClient
+import ai.koog.prompt.executor.llms.SingleLLMPromptExecutor
+import ai.koog.prompt.executor.model.PromptExecutor
+import io.ktor.client.HttpClient
 import kotlinx.coroutines.CoroutineScope
 import org.drewcarlson.fraggle.FraggleEnvironment
 import org.drewcarlson.fraggle.agent.FraggleAgent
@@ -17,14 +21,11 @@ import org.drewcarlson.fraggle.memory.MemoryStore
 import org.drewcarlson.fraggle.models.DatabaseConfig
 import org.drewcarlson.fraggle.models.MemoryConfig
 import org.drewcarlson.fraggle.models.ProviderConfig
-import org.drewcarlson.fraggle.models.ProviderType
 import org.drewcarlson.fraggle.models.SandboxType
 import org.drewcarlson.fraggle.models.SandboxConfig
 import org.drewcarlson.fraggle.models.PromptsConfig
 import org.drewcarlson.fraggle.prompt.PromptConfig
 import org.drewcarlson.fraggle.prompt.PromptManager
-import org.drewcarlson.fraggle.provider.LLMProvider
-import org.drewcarlson.fraggle.provider.LMStudioProvider
 import org.drewcarlson.fraggle.sandbox.PermissiveSandbox
 import org.drewcarlson.fraggle.sandbox.Sandbox
 import org.drewcarlson.fraggle.skill.SkillRegistry
@@ -75,19 +76,16 @@ interface AgentModule {
 
         @Provides
         @SingleIn(AppScope::class)
-        fun provideLLMProvider(
+        fun providePromptExecutor(
             config: ProviderConfig,
-            @LlmHttpClient httpClient: HttpClient,
-        ): LLMProvider {
-            return when (config.type) {
-                ProviderType.LMSTUDIO -> LMStudioProvider(
-                    baseUrl = config.url,
-                    defaultModel = config.model.takeIf { it.isNotBlank() },
-                    httpClient = httpClient,
-                )
-                ProviderType.OPENAI -> error("OpenAI provider not yet implemented")
-                ProviderType.ANTHROPIC -> error("Anthropic provider not yet implemented")
-            }
+            @LlmHttpClient httpClient: HttpClient
+        ): PromptExecutor {
+            val client = OpenAILLMClient(
+                apiKey = config.apiKey ?: "stub",
+                settings = OpenAIClientSettings(baseUrl = config.url),
+                baseClient = httpClient,
+            )
+            return SingleLLMPromptExecutor(client)
         }
 
         @Provides
@@ -133,14 +131,14 @@ interface AgentModule {
         @Provides
         @SingleIn(AppScope::class)
         fun provideFraggleAgent(
-            provider: LLMProvider,
+            promptExecutor: PromptExecutor,
             skills: SkillRegistry,
             memory: MemoryStore,
             sandbox: Sandbox,
             config: RuntimeAgentConfig,
             promptManager: PromptManager,
         ): FraggleAgent = FraggleAgent(
-            provider = provider,
+            promptExecutor = promptExecutor,
             skills = skills,
             memory = memory,
             sandbox = sandbox,

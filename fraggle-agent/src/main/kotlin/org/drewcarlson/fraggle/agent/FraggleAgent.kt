@@ -1,5 +1,12 @@
 package org.drewcarlson.fraggle.agent
 
+import ai.koog.agents.core.agent.AIAgent
+import ai.koog.agents.core.agent.singleRunStrategy
+import ai.koog.agents.core.tools.ToolRegistry
+import ai.koog.prompt.executor.model.PromptExecutor
+import ai.koog.prompt.llm.LLModel
+import ai.koog.prompt.llm.LLMCapability
+import ai.koog.prompt.llm.LLMProvider as KoogLLMProvider
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -22,10 +29,10 @@ import org.slf4j.LoggerFactory
 
 /**
  * Main agent orchestration class.
- * Implements a ReAct-style agent loop with tool calling.
+ * Uses Koog AIAgent framework for LLM interaction.
  */
 class FraggleAgent(
-    private val provider: LLMProvider,
+    private val promptExecutor: PromptExecutor,
     private val skills: SkillRegistry,
     private val memory: MemoryStore,
     private val sandbox: Sandbox,
@@ -57,88 +64,83 @@ class FraggleAgent(
         // 2. Build system prompt with context
         val systemPrompt = buildSystemPrompt(globalMemory, chatMemory, userMemory, platform)
 
-        // 3. Build message history
-        val messages = buildMessages(systemPrompt, conversation, message)
+        // 3. Build Koog input (conversation history + current message)
+        val userInput = buildKoogInput(conversation, message)
 
-        // 4. Get available tools
-        val tools = skills.toOpenAITools()
+        // 4. Create LLModel for this call
+        // TODO: Create LLModel in dependency graph, create capabilities list based on configured provider
+        val llmModel = LLModel(
+            provider = KoogLLMProvider.OpenAI,
+            id = config.model,
+            capabilities = listOf(
+                LLMCapability.Temperature,
+                LLMCapability.Tools,
+                LLMCapability.Completion,
+                LLMCapability.OpenAIEndpoint.Completions,
+            ),
+            contextLength = config.maxTokens,
+        )
 
-        // 5. Execute agent loop
-        val currentMessages = messages.toMutableList()
-        var iterations = 0
-        val collectedAttachments = mutableListOf<ResponseAttachment>()
+        // 5. Execute via Koog AIAgent
+        val agent = AIAgent(
+            promptExecutor = promptExecutor,
+            llmModel = llmModel,
+            strategy = singleRunStrategy(),
+            toolRegistry = ToolRegistry.EMPTY,
+            systemPrompt = systemPrompt,
+            temperature = config.temperature,
+            maxIterations = config.maxIterations,
+        )
 
-        while (iterations < config.maxIterations) {
-            iterations++
-            logger.debug("Agent iteration $iterations")
+        return try {
+            val result = agent.run(userInput)
 
-            // Make LLM request
-            val request = ChatRequest(
-                model = config.model,
-                messages = currentMessages,
-                tools = tools.takeIf { it.isNotEmpty() },
-                temperature = config.temperature,
-                maxTokens = config.maxTokens,
-            )
-
-            val response = try {
-                provider.chat(request)
-            } catch (e: LLMProviderException) {
-                logger.error("LLM provider error: ${e.message}")
-                return AgentResponse.Error("Failed to get response from LLM: ${e.message}")
+            // Update memory if needed
+            if (config.autoMemory && result.isNotBlank()) {
+                extractAndSaveMemory(message, result)
             }
 
-            val choice = response.choices.firstOrNull()
-                ?: return AgentResponse.Error("No response from LLM")
+            AgentResponse.Success(content = result)
+        } catch (e: Exception) {
+            logger.error("Koog agent error: ${e.message}", e)
+            AgentResponse.Error("Failed to get response from LLM: ${e.message}")
+        } finally {
+            agent.close()
+        }
+    }
 
-            val assistantMessage = choice.message
-
-            // Check if we have tool calls
-            if (!assistantMessage.toolCalls.isNullOrEmpty()) {
-                logger.debug("Handling ${assistantMessage.toolCalls.size} tool calls")
-
-                // Add assistant message with tool calls
-                currentMessages.add(assistantMessage)
-
-                // Create skill context for this execution
-                val skillContext = SkillContext(
-                    chatId = message.chatId,
-                    userId = message.sender.id,
-                )
-
-                // Execute each tool call
-                for (toolCall in assistantMessage.toolCalls) {
-                    val (result, attachment) = executeToolCallWithAttachment(toolCall, skillContext)
-                    currentMessages.add(Message.tool(toolCall.id, result))
-
-                    // Collect any attachments from tool results
-                    if (attachment != null) {
-                        collectedAttachments.add(attachment)
-                    }
+    /**
+     * Format conversation history and current message into a single string for Koog input.
+     */
+    private fun buildKoogInput(
+        conversation: Conversation,
+        message: IncomingMessage,
+    ): String = buildString {
+        // Add conversation history
+        val history = conversation.messages.takeLast(config.maxHistoryMessages)
+        if (history.isNotEmpty()) {
+            appendLine("[Previous conversation history]")
+            for (msg in history) {
+                val prefix = when (msg.role) {
+                    ConversationRole.USER -> "User"
+                    ConversationRole.ASSISTANT -> "Assistant"
                 }
-
-                // Continue loop to get next response
-                continue
+                appendLine("$prefix: ${msg.content}")
             }
-
-            // No tool calls, we have a final response
-            val responseText = assistantMessage.content ?: ""
-
-            // Update memory if needed (extract facts from the conversation)
-            if (config.autoMemory && responseText.isNotBlank()) {
-                extractAndSaveMemory(message, responseText)
-            }
-
-            return AgentResponse.Success(
-                content = responseText,
-                usage = response.usage,
-                iterations = iterations,
-                attachments = collectedAttachments,
-            )
+            appendLine("[End of history - respond to the following message]")
+            appendLine()
         }
 
-        logger.warn("Agent reached max iterations ($config.maxIterations)")
-        return AgentResponse.Error("Agent reached maximum iterations without completing")
+        // Current message
+        val userContent = when (val content = message.content) {
+            is MessageContent.Text -> content.text
+            is MessageContent.Image -> "[Image${content.caption?.let { ": $it" } ?: ""}]"
+            is MessageContent.File -> "[File: ${content.filename}]"
+            is MessageContent.Audio -> "[Audio message]"
+            is MessageContent.Sticker -> "[Sticker: ${content.emoji ?: content.id}]"
+            is MessageContent.Reaction -> "[Reaction: ${content.emoji}]"
+        }
+        append(userContent)
     }
 
     private fun buildSystemPrompt(
@@ -373,7 +375,7 @@ class FraggleAgent(
 data class AgentConfig(
     val model: String = "",
     val temperature: Double = 0.7,
-    val maxTokens: Int = 4096,
+    val maxTokens: Long = 4096,
     val maxIterations: Int = 10,
     val maxHistoryMessages: Int = 20,
     val autoMemory: Boolean = true,

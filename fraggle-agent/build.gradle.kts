@@ -16,6 +16,9 @@ dependencies {
     // DI
     api(project(":fraggle-di"))
 
+    // Koog AI Agent Framework
+    api(libs.koog.agents)
+
     // Ktor Client for LLM API calls (from fraggle-di)
     implementation(ktorLibs.client.core)
     implementation(ktorLibs.client.cio)
