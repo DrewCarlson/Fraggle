@@ -51,6 +51,7 @@ class MemoryTest {
             assertEquals("Some fact", fact.content)
             assertTrue(fact.tags.isEmpty())
             assertEquals(null, fact.source)
+            assertEquals(null, fact.updatedAt)
         }
 
         @Test

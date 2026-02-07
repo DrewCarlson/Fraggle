@@ -32,6 +32,16 @@ interface MemoryStore {
     suspend fun append(scope: MemoryScope, fact: Fact)
 
     /**
+     * Update the content of a fact at the given index.
+     */
+    suspend fun updateFact(scope: MemoryScope, index: Int, content: String)
+
+    /**
+     * Delete the fact at the given index.
+     */
+    suspend fun deleteFact(scope: MemoryScope, index: Int)
+
+    /**
      * Clear memory for a given scope.
      */
     suspend fun clear(scope: MemoryScope)
@@ -104,6 +114,7 @@ data class Memory(
 data class Fact(
     val content: String,
     val timestamp: Instant = Clock.System.now(),
+    val updatedAt: Instant? = null,
     val source: String? = null,
     val tags: List<String> = emptyList(),
 )
@@ -171,6 +182,31 @@ class FileMemoryStore(
         }
     }
 
+    override suspend fun updateFact(scope: MemoryScope, index: Int, content: String) = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            val path = getPath(scope)
+            val facts = if (path.exists()) parseMemoryFile(path.readText()).toMutableList() else mutableListOf()
+            require(index in facts.indices) { "Fact index $index out of bounds (size=${facts.size})" }
+            facts[index] = facts[index].copy(content = content, updatedAt = Clock.System.now())
+            path.parent?.createDirectories()
+            path.writeText(formatMemoryFile(facts))
+        }
+    }
+
+    override suspend fun deleteFact(scope: MemoryScope, index: Int) = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            val path = getPath(scope)
+            val facts = if (path.exists()) parseMemoryFile(path.readText()).toMutableList() else mutableListOf()
+            require(index in facts.indices) { "Fact index $index out of bounds (size=${facts.size})" }
+            facts.removeAt(index)
+            if (facts.isEmpty()) {
+                if (path.exists()) path.deleteExisting()
+            } else {
+                path.writeText(formatMemoryFile(facts))
+            }
+        }
+    }
+
     override suspend fun clear(scope: MemoryScope) = withContext(Dispatchers.IO) {
         mutex.withLock {
             val path = getPath(scope)
@@ -228,6 +264,8 @@ class FileMemoryStore(
         return id.replace(Regex("[^a-zA-Z0-9_-]"), "_")
     }
 
+    private val metadataRegex = Regex("""\s*\[created:\s*([^\],]+)(?:,\s*updated:\s*([^\]]+))?\]\s*$""")
+
     private fun parseMemoryFile(content: String): List<Fact> {
         val facts = mutableListOf<Fact>()
 
@@ -236,9 +274,22 @@ class FileMemoryStore(
 
             // Parse lines starting with "- " as facts
             if (trimmed.startsWith("- ")) {
-                val factContent = trimmed.removePrefix("- ").trim()
-                if (factContent.isNotEmpty()) {
-                    facts.add(Fact(content = factContent))
+                val rawContent = trimmed.removePrefix("- ").trim()
+                if (rawContent.isEmpty()) continue
+
+                val match = metadataRegex.find(rawContent)
+                if (match != null) {
+                    val factText = rawContent.substring(0, match.range.first).trim()
+                    val createdStr = match.groupValues[1].trim()
+                    val updatedStr = match.groupValues[2].trim().ifEmpty { null }
+
+                    val created = runCatching { Instant.parse(createdStr) }.getOrElse { Clock.System.now() }
+                    val updated = updatedStr?.let { runCatching { Instant.parse(it) }.getOrNull() }
+
+                    facts.add(Fact(content = factText, timestamp = created, updatedAt = updated))
+                } else {
+                    // Legacy format (no timestamps)
+                    facts.add(Fact(content = rawContent))
                 }
             }
         }
@@ -257,7 +308,14 @@ class FileMemoryStore(
     }
 
     private fun formatFact(fact: Fact): String {
-        return "- ${fact.content}"
+        val meta = buildString {
+            append("[created: ${fact.timestamp}")
+            if (fact.updatedAt != null) {
+                append(", updated: ${fact.updatedAt}")
+            }
+            append("]")
+        }
+        return "- ${fact.content} $meta"
     }
 }
 
@@ -285,6 +343,30 @@ class InMemoryStore : MemoryStore {
                 facts = existing.facts + fact,
                 lastUpdated = Clock.System.now(),
             )
+        }
+    }
+
+    override suspend fun updateFact(scope: MemoryScope, index: Int, content: String) {
+        mutex.withLock {
+            val existing = storage[scope.toString()] ?: Memory(scope, emptyList())
+            require(index in existing.facts.indices) { "Fact index $index out of bounds (size=${existing.facts.size})" }
+            val updatedFacts = existing.facts.toMutableList()
+            updatedFacts[index] = updatedFacts[index].copy(content = content, updatedAt = Clock.System.now())
+            storage[scope.toString()] = existing.copy(facts = updatedFacts, lastUpdated = Clock.System.now())
+        }
+    }
+
+    override suspend fun deleteFact(scope: MemoryScope, index: Int) {
+        mutex.withLock {
+            val existing = storage[scope.toString()] ?: Memory(scope, emptyList())
+            require(index in existing.facts.indices) { "Fact index $index out of bounds (size=${existing.facts.size})" }
+            val updatedFacts = existing.facts.toMutableList()
+            updatedFacts.removeAt(index)
+            if (updatedFacts.isEmpty()) {
+                storage.remove(scope.toString())
+            } else {
+                storage[scope.toString()] = existing.copy(facts = updatedFacts, lastUpdated = Clock.System.now())
+            }
         }
     }
 

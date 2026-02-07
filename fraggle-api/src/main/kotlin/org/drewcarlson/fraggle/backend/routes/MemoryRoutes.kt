@@ -1,6 +1,7 @@
 package org.drewcarlson.fraggle.backend.routes
 
 import io.ktor.http.*
+import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.drewcarlson.fraggle.api.FraggleServices
@@ -8,12 +9,47 @@ import org.drewcarlson.fraggle.memory.MemoryScope
 import org.drewcarlson.fraggle.models.ErrorResponse
 import org.drewcarlson.fraggle.models.FactInfo
 import org.drewcarlson.fraggle.models.MemoryResponse
+import org.drewcarlson.fraggle.models.MemoryScopeInfo
+import org.drewcarlson.fraggle.models.MemoryScopesResponse
+import org.drewcarlson.fraggle.models.UpdateFactRequest
 
 /**
  * Memory store routes.
  */
 fun Route.memoryRoutes(services: FraggleServices) {
     route("/memory") {
+        /**
+         * GET /api/v1/memory/scopes
+         * List all available memory scopes with fact counts.
+         */
+        get("/scopes") {
+            val scopes = services.memory.listScopes()
+            val scopeInfos = scopes.map { scope ->
+                val memory = services.memory.load(scope)
+                when (scope) {
+                    is MemoryScope.Global -> MemoryScopeInfo(
+                        type = "global",
+                        id = "global",
+                        label = "Global",
+                        factCount = memory.facts.size,
+                    )
+                    is MemoryScope.Chat -> MemoryScopeInfo(
+                        type = "chat",
+                        id = scope.chatId,
+                        label = scope.chatId,
+                        factCount = memory.facts.size,
+                    )
+                    is MemoryScope.User -> MemoryScopeInfo(
+                        type = "user",
+                        id = scope.userId,
+                        label = scope.userId,
+                        factCount = memory.facts.size,
+                    )
+                }
+            }
+            call.respond(MemoryScopesResponse(scopeInfos))
+        }
+
         /**
          * GET /api/v1/memory/global
          * Get global memory facts.
@@ -27,6 +63,7 @@ fun Route.memoryRoutes(services: FraggleServices) {
                         content = fact.content,
                         source = fact.source,
                         createdAt = fact.timestamp,
+                        updatedAt = fact.updatedAt,
                     )
                 },
             )
@@ -49,6 +86,7 @@ fun Route.memoryRoutes(services: FraggleServices) {
                         content = fact.content,
                         source = fact.source,
                         createdAt = fact.timestamp,
+                        updatedAt = fact.updatedAt,
                     )
                 },
             )
@@ -71,6 +109,7 @@ fun Route.memoryRoutes(services: FraggleServices) {
                         content = fact.content,
                         source = fact.source,
                         createdAt = fact.timestamp,
+                        updatedAt = fact.updatedAt,
                     )
                 },
             )
@@ -109,5 +148,64 @@ fun Route.memoryRoutes(services: FraggleServices) {
             services.memory.clear(MemoryScope.User(userId))
             call.respond(HttpStatusCode.OK, mapOf("cleared" to true))
         }
+
+        /**
+         * PUT /api/v1/memory/{type}/{id}/facts/{index}
+         * Update a specific fact's content.
+         */
+        put("/{type}/{id}/facts/{index}") {
+            val scope = resolveScope(call.parameters["type"], call.parameters["id"])
+                ?: return@put call.respond(HttpStatusCode.BadRequest, ErrorResponse("Invalid scope type"))
+            val index = call.parameters["index"]?.toIntOrNull()
+                ?: return@put call.respond(HttpStatusCode.BadRequest, ErrorResponse("Invalid fact index"))
+
+            val request = call.receive<UpdateFactRequest>()
+            try {
+                services.memory.updateFact(scope, index, request.content)
+            } catch (e: IllegalArgumentException) {
+                return@put call.respond(HttpStatusCode.NotFound, ErrorResponse(e.message ?: "Fact not found"))
+            }
+
+            val memory = services.memory.load(scope)
+            call.respond(MemoryResponse(
+                scope = scope.toString(),
+                facts = memory.facts.map { fact ->
+                    FactInfo(
+                        content = fact.content,
+                        source = fact.source,
+                        createdAt = fact.timestamp,
+                        updatedAt = fact.updatedAt,
+                    )
+                },
+            ))
+        }
+
+        /**
+         * DELETE /api/v1/memory/{type}/{id}/facts/{index}
+         * Delete a specific fact.
+         */
+        delete("/{type}/{id}/facts/{index}") {
+            val scope = resolveScope(call.parameters["type"], call.parameters["id"])
+                ?: return@delete call.respond(HttpStatusCode.BadRequest, ErrorResponse("Invalid scope type"))
+            val index = call.parameters["index"]?.toIntOrNull()
+                ?: return@delete call.respond(HttpStatusCode.BadRequest, ErrorResponse("Invalid fact index"))
+
+            try {
+                services.memory.deleteFact(scope, index)
+            } catch (e: IllegalArgumentException) {
+                return@delete call.respond(HttpStatusCode.NotFound, ErrorResponse(e.message ?: "Fact not found"))
+            }
+
+            call.respond(HttpStatusCode.OK, mapOf("deleted" to true))
+        }
+    }
+}
+
+private fun resolveScope(type: String?, id: String?): MemoryScope? {
+    return when (type) {
+        "global" -> MemoryScope.Global
+        "chat" -> id?.let { MemoryScope.Chat(it) }
+        "user" -> id?.let { MemoryScope.User(it) }
+        else -> null
     }
 }

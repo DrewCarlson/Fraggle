@@ -10,9 +10,13 @@ import kotlin.io.path.exists
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 class FileMemoryStoreTest {
 
@@ -322,6 +326,216 @@ class FileMemoryStoreTest {
             assertEquals("First fact with special chars: & < > \"", loaded.facts[0].content)
             assertEquals("Second fact", loaded.facts[1].content)
             assertEquals("Third fact with unicode: 🚀", loaded.facts[2].content)
+        }
+    }
+
+    @Nested
+    inner class TimestampTests {
+
+        @Test
+        fun `save writes timestamps to markdown`() = runTest {
+            val timestamp = Instant.parse("2025-01-15T10:30:00Z")
+            val memory = Memory(
+                scope = MemoryScope.Global,
+                facts = listOf(Fact("Test fact", timestamp = timestamp)),
+            )
+
+            store.save(MemoryScope.Global, memory)
+
+            val content = tempDir.resolve("global.md").readText()
+            assertTrue(content.contains("[created: 2025-01-15T10:30:00Z]"))
+        }
+
+        @Test
+        fun `save writes updatedAt when present`() = runTest {
+            val created = Instant.parse("2025-01-15T10:30:00Z")
+            val updated = Instant.parse("2025-02-07T14:00:00Z")
+            val memory = Memory(
+                scope = MemoryScope.Global,
+                facts = listOf(Fact("Updated fact", timestamp = created, updatedAt = updated)),
+            )
+
+            store.save(MemoryScope.Global, memory)
+
+            val content = tempDir.resolve("global.md").readText()
+            assertTrue(content.contains("[created: 2025-01-15T10:30:00Z, updated: 2025-02-07T14:00:00Z]"))
+        }
+
+        @Test
+        fun `round trip preserves created timestamp`() = runTest {
+            val timestamp = Instant.parse("2025-01-15T10:30:00Z")
+            val original = Memory(
+                scope = MemoryScope.Global,
+                facts = listOf(Fact("Fact with time", timestamp = timestamp)),
+            )
+
+            store.save(MemoryScope.Global, original)
+            val loaded = store.load(MemoryScope.Global)
+
+            assertEquals(1, loaded.facts.size)
+            assertEquals("Fact with time", loaded.facts[0].content)
+            assertEquals(timestamp, loaded.facts[0].timestamp)
+            assertNull(loaded.facts[0].updatedAt)
+        }
+
+        @Test
+        fun `round trip preserves updatedAt timestamp`() = runTest {
+            val created = Instant.parse("2025-01-15T10:30:00Z")
+            val updated = Instant.parse("2025-02-07T14:00:00Z")
+            val original = Memory(
+                scope = MemoryScope.Global,
+                facts = listOf(Fact("Updated fact", timestamp = created, updatedAt = updated)),
+            )
+
+            store.save(MemoryScope.Global, original)
+            val loaded = store.load(MemoryScope.Global)
+
+            assertEquals(1, loaded.facts.size)
+            assertEquals("Updated fact", loaded.facts[0].content)
+            assertEquals(created, loaded.facts[0].timestamp)
+            assertEquals(updated, loaded.facts[0].updatedAt)
+        }
+
+        @Test
+        fun `legacy format without timestamps still parses`() = runTest {
+            val globalFile = tempDir.resolve("global.md")
+            globalFile.writeText("# Memory\n\n- Old fact without timestamps\n- Another old fact")
+
+            val loaded = store.load(MemoryScope.Global)
+
+            assertEquals(2, loaded.facts.size)
+            assertEquals("Old fact without timestamps", loaded.facts[0].content)
+            assertEquals("Another old fact", loaded.facts[1].content)
+            assertNull(loaded.facts[0].updatedAt)
+        }
+
+        @Test
+        fun `mixed format with and without timestamps parses`() = runTest {
+            val globalFile = tempDir.resolve("global.md")
+            globalFile.writeText(
+                "# Memory\n\n" +
+                    "- Legacy fact\n" +
+                    "- New fact [created: 2025-01-15T10:30:00Z]\n" +
+                    "- Updated fact [created: 2025-01-10T08:00:00Z, updated: 2025-02-07T14:00:00Z]",
+            )
+
+            val loaded = store.load(MemoryScope.Global)
+
+            assertEquals(3, loaded.facts.size)
+            assertEquals("Legacy fact", loaded.facts[0].content)
+            assertNull(loaded.facts[0].updatedAt)
+
+            assertEquals("New fact", loaded.facts[1].content)
+            assertEquals(Instant.parse("2025-01-15T10:30:00Z"), loaded.facts[1].timestamp)
+            assertNull(loaded.facts[1].updatedAt)
+
+            assertEquals("Updated fact", loaded.facts[2].content)
+            assertEquals(Instant.parse("2025-01-10T08:00:00Z"), loaded.facts[2].timestamp)
+            assertEquals(Instant.parse("2025-02-07T14:00:00Z"), loaded.facts[2].updatedAt)
+        }
+    }
+
+    @Nested
+    inner class UpdateFactTests {
+
+        @Test
+        fun `updateFact changes content at index`() = runTest {
+            store.save(
+                MemoryScope.Global,
+                Memory(MemoryScope.Global, listOf(Fact("First"), Fact("Second"), Fact("Third"))),
+            )
+
+            store.updateFact(MemoryScope.Global, 1, "Updated second")
+
+            val loaded = store.load(MemoryScope.Global)
+            assertEquals(3, loaded.facts.size)
+            assertEquals("First", loaded.facts[0].content)
+            assertEquals("Updated second", loaded.facts[1].content)
+            assertEquals("Third", loaded.facts[2].content)
+        }
+
+        @Test
+        fun `updateFact sets updatedAt timestamp`() = runTest {
+            val created = Instant.parse("2025-01-15T10:30:00Z")
+            store.save(
+                MemoryScope.Global,
+                Memory(MemoryScope.Global, listOf(Fact("Original", timestamp = created))),
+            )
+
+            store.updateFact(MemoryScope.Global, 0, "Modified")
+
+            val loaded = store.load(MemoryScope.Global)
+            assertNotNull(loaded.facts[0].updatedAt)
+        }
+
+        @Test
+        fun `updateFact preserves original timestamp`() = runTest {
+            val created = Instant.parse("2025-01-15T10:30:00Z")
+            store.save(
+                MemoryScope.Global,
+                Memory(MemoryScope.Global, listOf(Fact("Original", timestamp = created))),
+            )
+
+            store.updateFact(MemoryScope.Global, 0, "Modified")
+
+            val loaded = store.load(MemoryScope.Global)
+            assertEquals(created, loaded.facts[0].timestamp)
+        }
+
+        @Test
+        fun `updateFact throws for out-of-bounds index`() = runTest {
+            store.save(
+                MemoryScope.Global,
+                Memory(MemoryScope.Global, listOf(Fact("Only fact"))),
+            )
+
+            assertFailsWith<IllegalArgumentException> {
+                store.updateFact(MemoryScope.Global, 5, "Bad index")
+            }
+        }
+    }
+
+    @Nested
+    inner class DeleteFactTests {
+
+        @Test
+        fun `deleteFact removes fact at index`() = runTest {
+            store.save(
+                MemoryScope.Global,
+                Memory(MemoryScope.Global, listOf(Fact("First"), Fact("Second"), Fact("Third"))),
+            )
+
+            store.deleteFact(MemoryScope.Global, 1)
+
+            val loaded = store.load(MemoryScope.Global)
+            assertEquals(2, loaded.facts.size)
+            assertEquals("First", loaded.facts[0].content)
+            assertEquals("Third", loaded.facts[1].content)
+        }
+
+        @Test
+        fun `deleteFact deletes file when last fact removed`() = runTest {
+            store.save(
+                MemoryScope.Global,
+                Memory(MemoryScope.Global, listOf(Fact("Only fact"))),
+            )
+            assertTrue(tempDir.resolve("global.md").exists())
+
+            store.deleteFact(MemoryScope.Global, 0)
+
+            assertFalse(tempDir.resolve("global.md").exists())
+        }
+
+        @Test
+        fun `deleteFact throws for invalid index`() = runTest {
+            store.save(
+                MemoryScope.Global,
+                Memory(MemoryScope.Global, listOf(Fact("Only fact"))),
+            )
+
+            assertFailsWith<IllegalArgumentException> {
+                store.deleteFact(MemoryScope.Global, 3)
+            }
         }
     }
 }

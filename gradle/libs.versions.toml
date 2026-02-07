@@ -64,6 +64,7 @@ sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqlite-jdbc" }
 
 # Koog AI Agent Framework
 koog-agents = { module = "ai.koog:koog-agents", version.ref = "koog" }
+koog-agents-memory = { module = "ai.koog:agents-features-memory", version.ref = "koog" }
 
 # Discord
 kord-core = { module = "dev.kord:kord-core-jvm", version.ref = "kord" }

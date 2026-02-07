@@ -155,7 +155,7 @@ class PlaywrightFetcher(
             val response = page.navigate(
                 url,
                 Page.NavigateOptions()
-                    .setWaitUntil(WaitUntilState.valueOf(waitForLoadState))
+                    .setWaitUntil(WaitUntilState.valueOf(waitForLoadState.uppercase()))
             )
 
             val statusCode = response?.status()

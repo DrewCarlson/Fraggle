@@ -1,6 +1,7 @@
 package org.drewcarlson.fraggle.di
 
 import ai.koog.agents.core.tools.ToolRegistry
+import ai.koog.agents.memory.providers.AgentMemoryProvider
 import ai.koog.prompt.executor.clients.openai.OpenAIClientSettings
 import ai.koog.prompt.executor.clients.openai.OpenAILLMClient
 import ai.koog.prompt.executor.llms.SingleLLMPromptExecutor
@@ -18,6 +19,7 @@ import org.drewcarlson.fraggle.db.ChatHistoryStore
 import org.drewcarlson.fraggle.db.ExposedChatHistoryStore
 import org.drewcarlson.fraggle.db.FraggleDatabase
 import org.drewcarlson.fraggle.memory.FileMemoryStore
+import org.drewcarlson.fraggle.memory.FraggleMemoryProvider
 import org.drewcarlson.fraggle.memory.MemoryStore
 import org.drewcarlson.fraggle.models.*
 import org.drewcarlson.fraggle.prompt.PromptConfig
@@ -125,10 +127,16 @@ interface AgentModule {
 
         @Provides
         @SingleIn(AppScope::class)
+        fun provideMemoryProvider(memory: MemoryStore): AgentMemoryProvider =
+            FraggleMemoryProvider(memory)
+
+        @Provides
+        @SingleIn(AppScope::class)
         fun provideFraggleAgent(
             promptExecutor: PromptExecutor,
             toolRegistry: ToolRegistry,
             memory: MemoryStore,
+            memoryProvider: AgentMemoryProvider,
             sandbox: Sandbox,
             config: RuntimeAgentConfig,
             promptManager: PromptManager,
@@ -136,6 +144,7 @@ interface AgentModule {
             promptExecutor = promptExecutor,
             toolRegistry = toolRegistry,
             memory = memory,
+            memoryProvider = memoryProvider,
             sandbox = sandbox,
             config = config,
             promptManager = promptManager,
