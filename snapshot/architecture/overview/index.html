@@ -578,21 +578,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#llm-providers" class="md-nav__link">
+  <a href="#tool-system" class="md-nav__link">
     <span class="md-ellipsis">
       
-        LLM Providers
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#skill-system" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Skill System
+        Tool System
       
     </span>
   </a>
@@ -703,14 +692,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../skills/" class="md-nav__link">
+      <a href="../tools/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Skills
+    Tools
   
 
     
@@ -965,21 +954,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#llm-providers" class="md-nav__link">
+  <a href="#tool-system" class="md-nav__link">
     <span class="md-ellipsis">
       
-        LLM Providers
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#skill-system" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Skill System
+        Tool System
       
     </span>
   </a>
@@ -1072,59 +1050,50 @@
 
 
 <h1 id="architecture-overview">Architecture Overview<a class="headerlink" href="#architecture-overview" title="Permanent link">&para;</a></h1>
-<p>Fraggle is built as a modular Kotlin application with clear separation of concerns.</p>
+<p>Fraggle is built as a modular Kotlin application with clear separation of concerns. The agent loop and tool system are powered by <a href="https://github.com/JetBrains/koog">Koog</a>, an AI agent framework.</p>
 <h2 id="module-structure">Module Structure<a class="headerlink" href="#module-structure" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Fraggle/
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── fraggle-cli/            # CLI application and entry point
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├── fraggle-agent/          # Core framework
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│   ├── agent/              # ReAct agent implementation
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>│   ├── provider/           # LLM provider abstractions
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>│   ├── skill/              # Skill system and DSL
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>│   └── sandbox/            # Execution sandbox
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>├── fraggle-signal/         # Signal messenger bridge
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>├── fraggle-discord/        # Discord bot bridge
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>├── fraggle-skills/         # Built-in skill implementations
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>├── fraggle-common/         # Shared models (Kotlin Multiplatform)
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>├── fraggle-api/            # REST API server
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>├── fraggle-dashboard/      # Web dashboard (Compose for Web)
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>└── libs/
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>    └── documented-*        # Annotation processor for config docs
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│   ├── agent/              # Koog agent integration
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>│   ├── memory/             # Hierarchical memory storage
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>│   └── sandbox/            # Execution sandbox
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>├── fraggle-signal/         # Signal messenger bridge
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>├── fraggle-discord/        # Discord bot bridge
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>├── fraggle-tools/          # Built-in tool implementations
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>├── fraggle-common/         # Shared models (Kotlin Multiplatform)
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>├── fraggle-api/            # REST API server
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>├── fraggle-dashboard/      # Web dashboard (Compose for Web)
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>└── libs/
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    └── documented-*        # Annotation processor for config docs
 </code></pre></div>
 <h2 id="core-components">Core Components<a class="headerlink" href="#core-components" title="Permanent link">&para;</a></h2>
 <h3 id="fraggleagent">FraggleAgent<a class="headerlink" href="#fraggleagent" title="Permanent link">&para;</a></h3>
-<p>The central component that orchestrates message processing. It implements a ReAct (Reasoning + Acting) loop:</p>
+<p>The central component that orchestrates message processing. It wraps Koog's <code>AIAgentService</code> which implements a ReAct (Reasoning + Acting) loop:</p>
 <ol>
 <li>Receives a message</li>
-<li>Sends message + history + tools to LLM</li>
-<li>If LLM requests a tool call, executes it and loops back to step 2</li>
-<li>If LLM produces a final response, returns it</li>
+<li>Builds per-request input (platform context, memory, conversation history)</li>
+<li>Delegates to Koog's agent service, which sends the context + tools to the LLM</li>
+<li>Koog handles tool calls iteratively until a final response is produced</li>
+<li>If auto-memory is enabled, new facts are extracted and reconciled</li>
 </ol>
 <p>See <a href="../agent/">Agent System</a> for details.</p>
-<h3 id="llm-providers">LLM Providers<a class="headerlink" href="#llm-providers" title="Permanent link">&para;</a></h3>
-<p>Abstraction layer for different LLM backends:</p>
-<ul>
-<li><strong>LM Studio</strong> - Local inference via OpenAI-compatible API</li>
-<li><strong>OpenAI</strong> - GPT models via OpenAI API</li>
-<li><strong>Anthropic</strong> - Claude models via Anthropic API</li>
-</ul>
-<p>All providers implement the same interface, making it easy to switch between them.</p>
-<h3 id="skill-system">Skill System<a class="headerlink" href="#skill-system" title="Permanent link">&para;</a></h3>
-<p>Skills are the tools available to the agent. They're defined using a Kotlin DSL:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">skill</span><span class="p">(</span><span class="s">&quot;my_skill&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;Does something useful&quot;</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="n">parameter</span><span class="o">&lt;</span><span class="kt">String</span><span class="o">&gt;</span><span class="p">(</span><span class="s">&quot;input&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">        </span><span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;The input value&quot;</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">        </span><span class="n">required</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="n">execute</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">params</span><span class="w"> </span><span class="o">-&gt;</span>
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">        </span><span class="kd">val</span><span class="w"> </span><span class="nv">input</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">params</span><span class="p">.</span><span class="na">get</span><span class="o">&lt;</span><span class="kt">String</span><span class="o">&gt;</span><span class="p">(</span><span class="s">&quot;input&quot;</span><span class="p">)</span>
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">        </span><span class="n">SkillResult</span><span class="p">.</span><span class="na">Success</span><span class="p">(</span><span class="s">&quot;Result: </span><span class="si">$</span><span class="n">input</span><span class="s">&quot;</span><span class="p">)</span>
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="p">}</span>
+<h3 id="tool-system">Tool System<a class="headerlink" href="#tool-system" title="Permanent link">&para;</a></h3>
+<p>Tools are the capabilities available to the agent. Each tool extends Koog's <code>SimpleTool</code> with type-safe serializable parameters:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kd">class</span><span class="w"> </span><span class="nc">MyTool</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="n">SimpleTool</span><span class="o">&lt;</span><span class="n">MyTool</span><span class="p">.</span><span class="na">Args</span><span class="o">&gt;</span><span class="p">(</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="n">argsSerializer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Args</span><span class="p">.</span><span class="na">serializer</span><span class="p">(),</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;my_tool&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;Does something useful&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="nd">@Serializable</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="kd">data</span><span class="w"> </span><span class="kd">class</span><span class="w"> </span><span class="nc">Args</span><span class="p">(</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">        </span><span class="nd">@LLMDescription</span><span class="p">(</span><span class="s">&quot;The input value&quot;</span><span class="p">)</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">        </span><span class="kd">val</span><span class="w"> </span><span class="nv">input</span><span class="p">:</span><span class="w"> </span><span class="kt">String</span><span class="p">,</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">    </span><span class="p">)</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">    </span><span class="kd">override</span><span class="w"> </span><span class="kd">suspend</span><span class="w"> </span><span class="kd">fun</span><span class="w"> </span><span class="nf">execute</span><span class="p">(</span><span class="n">args</span><span class="p">:</span><span class="w"> </span><span class="n">Args</span><span class="p">):</span><span class="w"> </span><span class="kt">String</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;Result: </span><span class="si">${</span><span class="n">args</span><span class="p">.</span><span class="na">input</span><span class="si">}</span><span class="s">&quot;</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="p">}</span>
 </code></pre></div>
-<p>See <a href="../skills/">Skills</a> for the full skill reference.</p>
+<p>See <a href="../tools/">Tools</a> for the full reference.</p>
 <h3 id="memory-system">Memory System<a class="headerlink" href="#memory-system" title="Permanent link">&para;</a></h3>
 <p>Hierarchical memory storage with three scopes:</p>
 <ul>
@@ -1132,7 +1101,7 @@
 <li><strong>Chat</strong> - Per-conversation memory</li>
 <li><strong>User</strong> - Per-user memory across chats</li>
 </ul>
-<p>Memory is persisted as human-readable markdown files.</p>
+<p>Memory is persisted as human-readable markdown files. A <code>FraggleMemoryProvider</code> adapter bridges Fraggle's storage to Koog's memory system.</p>
 <p>See <a href="../memory/">Memory</a> for details.</p>
 <h3 id="sandbox">Sandbox<a class="headerlink" href="#sandbox" title="Permanent link">&para;</a></h3>
 <p>Execution environment for potentially dangerous operations:</p>
@@ -1144,8 +1113,8 @@
 <p>The sandbox can be configured for different security levels.</p>
 <h2 id="data-flow">Data Flow<a class="headerlink" href="#data-flow" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>│    Chat     │────&gt;│   Agent     │────&gt;│   Skills    │
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>│   Bridge    │&lt;────│   (ReAct)   │&lt;────│             │
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>│    Chat     │────&gt;│   Agent     │────&gt;│   Tools     │
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>│   Bridge    │&lt;────│   (Koog)    │&lt;────│             │
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>└─────────────┘     └─────────────┘     └─────────────┘
 <a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>                          │
 <a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>                          v
@@ -1155,8 +1124,8 @@
 </code></pre></div>
 <ol>
 <li><strong>Chat Bridge</strong> receives messages and passes them to the agent</li>
-<li><strong>Agent</strong> processes messages using the ReAct loop, calling skills as needed</li>
-<li><strong>Skills</strong> execute operations and return results</li>
+<li><strong>Agent</strong> builds context and delegates to Koog's agent service, which calls tools as needed</li>
+<li><strong>Tools</strong> execute operations and return results</li>
 <li><strong>Memory</strong> stores and retrieves conversation context</li>
 <li><strong>Agent</strong> generates final response</li>
 <li><strong>Chat Bridge</strong> sends the response back to the user</li>
@@ -1172,7 +1141,7 @@
 <h2 id="platform-support">Platform Support<a class="headerlink" href="#platform-support" title="Permanent link">&para;</a></h2>
 <p>Fraggle uses Kotlin Multiplatform for shared code:</p>
 <ul>
-<li><strong>JVM</strong> - Main application, chat bridges, skills</li>
+<li><strong>JVM</strong> - Main application, chat bridges, tools</li>
 <li><strong>JS</strong> - Web dashboard (Compose for Web)</li>
 </ul>
 <p>Shared modules (like configuration models) compile to both targets.</p>

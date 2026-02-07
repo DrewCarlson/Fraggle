@@ -16,7 +16,7 @@
         <link rel="prev" href="../overview/">
       
       
-        <link rel="next" href="../skills/">
+        <link rel="next" href="../tools/">
       
       
         
@@ -572,10 +572,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#react-loop" class="md-nav__link">
+  <a href="#agent-loop" class="md-nav__link">
     <span class="md-ellipsis">
       
-        ReAct Loop
+        Agent Loop
       
     </span>
   </a>
@@ -598,6 +598,17 @@
     <span class="md-ellipsis">
       
         System Prompt Construction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#per-request-input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-Request Input
       
     </span>
   </a>
@@ -638,43 +649,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#context-structure" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Context Structure
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#tool-result-format" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tool Result Format
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#attachments" class="md-nav__link">
     <span class="md-ellipsis">
       
         Attachments
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#provider-compatibility" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Provider Compatibility
       
     </span>
   </a>
@@ -697,14 +675,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../skills/" class="md-nav__link">
+      <a href="../tools/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Skills
+    Tools
   
 
     
@@ -925,10 +903,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#react-loop" class="md-nav__link">
+  <a href="#agent-loop" class="md-nav__link">
     <span class="md-ellipsis">
       
-        ReAct Loop
+        Agent Loop
       
     </span>
   </a>
@@ -951,6 +929,17 @@
     <span class="md-ellipsis">
       
         System Prompt Construction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#per-request-input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-Request Input
       
     </span>
   </a>
@@ -991,43 +980,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#context-structure" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Context Structure
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#tool-result-format" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tool Result Format
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#attachments" class="md-nav__link">
     <span class="md-ellipsis">
       
         Attachments
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#provider-compatibility" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Provider Compatibility
       
     </span>
   </a>
@@ -1060,45 +1016,38 @@
 
 
 <h1 id="agent-system">Agent System<a class="headerlink" href="#agent-system" title="Permanent link">&para;</a></h1>
-<p>The FraggleAgent implements a ReAct-style (Reasoning + Acting) loop for reliable tool use with LLMs.</p>
-<h2 id="react-loop">ReAct Loop<a class="headerlink" href="#react-loop" title="Permanent link">&para;</a></h2>
-<p>The agent processes messages through an iterative loop:</p>
+<p>The FraggleAgent uses <a href="https://github.com/JetBrains/koog">Koog's</a> <code>AIAgentService</code> to implement a ReAct-style (Reasoning + Acting) loop for reliable tool use with LLMs.</p>
+<h2 id="agent-loop">Agent Loop<a class="headerlink" href="#agent-loop" title="Permanent link">&para;</a></h2>
+<p>Koog's agent service handles the core loop: sending context to the LLM, dispatching tool calls, and iterating until a final response is produced. FraggleAgent is responsible for building the per-request input and managing memory.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>┌──────────────────────────────────────────────┐
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>│                  User Message                │
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>└──────────────────────────────────────────────┘
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>                       │
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>                       v
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>┌──────────────────────────────────────────────┐
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>│            Build Context                     │
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>│  - System prompt (from prompt files)         │
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>│  - Available tools (from skill registry)     │
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>│            Build Input                       │
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>│  - Platform context (bridge info)            │
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>│  - Memory context (global, chat, user)       │
 <a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>│  - Conversation history                      │
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>│  - Memory context                            │
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>│  - Current message                           │
 <a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>└──────────────────────────────────────────────┘
 <a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>                       │
 <a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>                       v
 <a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>┌──────────────────────────────────────────────┐
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>│              LLM Request                     │
-<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>│  Send context + message to LLM provider      │
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>│       Koog AIAgentService                    │
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>│  Runs ReAct loop with tools until done       │
 <a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>└──────────────────────────────────────────────┘
 <a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>                       │
 <a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>                       v
-<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>              ┌───────────────────┐
-<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>              │  Tool Call?       │
-<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>              └───────────────────┘
-<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>                 │           │
-<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>                Yes          No
-<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>                 │           │
-<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>                 v           v
-<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>┌────────────────────┐  ┌────────────────────┐
-<a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>│  Execute Skill     │  │  Return Response   │
-<a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>│  Add result to     │  │                    │
-<a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>│  context           │  │                    │
-<a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>└────────────────────┘  └────────────────────┘
-<a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>         │
-<a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a>         │ (loop back)
-<a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a>         v
-<a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a>    [LLM Request]
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>┌──────────────────────────────────────────────┐
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>│       Auto-Memory Extraction                 │
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>│  (if enabled) Extract &amp; reconcile facts      │
+<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>└──────────────────────────────────────────────┘
+<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>                       │
+<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>                       v
+<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>┌──────────────────────────────────────────────┐
+<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>│            Return Response                   │
+<a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>└──────────────────────────────────────────────┘
 </code></pre></div>
 <h2 id="iteration-limits">Iteration Limits<a class="headerlink" href="#iteration-limits" title="Permanent link">&para;</a></h2>
 <p>The agent has a configurable maximum iteration count (<code>max_iterations</code>) to prevent infinite loops. Each tool call counts as one iteration.</p>
@@ -1108,24 +1057,30 @@
 </code></pre></div>
 <p>When the limit is reached, the agent forces a final response from the LLM.</p>
 <h2 id="system-prompt-construction">System Prompt Construction<a class="headerlink" href="#system-prompt-construction" title="Permanent link">&para;</a></h2>
-<p>The system prompt is built from multiple sources:</p>
+<p>The system prompt is built from template files and set once at agent construction time:</p>
 <ol>
 <li><strong>SYSTEM.md</strong> - Core instructions and capabilities</li>
 <li><strong>IDENTITY.md</strong> - Agent personality and behavior</li>
 <li><strong>USER.md</strong> - User-specific instructions</li>
-<li><strong>Tool Definitions</strong> - Auto-generated from skill registry</li>
-<li><strong>Memory Context</strong> - Relevant memories from storage</li>
 </ol>
+<p>Tool definitions are registered in the Koog <code>ToolRegistry</code> and injected into LLM requests automatically by Koog.</p>
 <p>Files are loaded from <code>prompts_dir</code> and concatenated with separators.</p>
+<h2 id="per-request-input">Per-Request Input<a class="headerlink" href="#per-request-input" title="Permanent link">&para;</a></h2>
+<p>Each message is processed with a per-request input string that includes:</p>
+<ol>
+<li><strong>Platform context</strong> - Which bridge (Signal, Discord, etc.) and its capabilities</li>
+<li><strong>Memory context</strong> - Relevant facts from Global, Chat, and User scopes</li>
+<li><strong>Conversation history</strong> - Recent messages (configurable via <code>max_history_messages</code>)</li>
+<li><strong>Current message</strong> - The user's message text</li>
+</ol>
 <h2 id="conversation-history">Conversation History<a class="headerlink" href="#conversation-history" title="Permanent link">&para;</a></h2>
-<p>The agent maintains conversation history for context:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">fraggle</span><span class="p">:</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">agent</span><span class="p">:</span>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nt">max_history_messages</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">20</span><span class="w">  </span><span class="c1"># Messages to include</span>
 </code></pre></div>
 <p>History is pruned to fit within the context window while preserving recent exchanges.</p>
 <h2 id="error-handling">Error Handling<a class="headerlink" href="#error-handling" title="Permanent link">&para;</a></h2>
-<p>When a skill execution fails:</p>
+<p>When a tool execution fails:</p>
 <ol>
 <li>The error is formatted as a tool result</li>
 <li>The LLM receives the error and can retry or adapt</li>
@@ -1138,47 +1093,8 @@
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nt">temperature</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.7</span><span class="w">    </span><span class="c1"># 0.0 = deterministic, 2.0 = very random</span>
 <a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="nt">max_tokens</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4096</span><span class="w">    </span><span class="c1"># Maximum response length</span>
 </code></pre></div>
-<h2 id="context-structure">Context Structure<a class="headerlink" href="#context-structure" title="Permanent link">&para;</a></h2>
-<p>Each LLM request includes:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">{</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">&quot;messages&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="p">{</span><span class="nt">&quot;role&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;system&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;content&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...system prompt...&quot;</span><span class="p">},</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="p">{</span><span class="nt">&quot;role&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;content&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Previous user message&quot;</span><span class="p">},</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="p">{</span><span class="nt">&quot;role&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;assistant&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;content&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Previous response&quot;</span><span class="p">},</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="p">{</span><span class="nt">&quot;role&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;content&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Current message&quot;</span><span class="p">}</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">  </span><span class="p">],</span>
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">  </span><span class="nt">&quot;tools&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">    </span><span class="p">{</span>
-<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;read_file&quot;</span><span class="p">,</span>
-<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Read the contents of a file...&quot;</span><span class="p">,</span>
-<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">      </span><span class="nt">&quot;parameters&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="err">...</span><span class="p">}</span>
-<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="w">  </span><span class="p">]</span>
-<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="p">}</span>
-</code></pre></div>
-<h2 id="tool-result-format">Tool Result Format<a class="headerlink" href="#tool-result-format" title="Permanent link">&para;</a></h2>
-<p>When a tool is executed, the result is added to the conversation:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">{</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">&quot;role&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tool&quot;</span><span class="p">,</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="nt">&quot;tool_call_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;call_abc123&quot;</span><span class="p">,</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="nt">&quot;content&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;File contents here...&quot;</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="p">}</span>
-</code></pre></div>
-<p>The LLM then continues reasoning with the tool result in context.</p>
 <h2 id="attachments">Attachments<a class="headerlink" href="#attachments" title="Permanent link">&para;</a></h2>
-<p>Some skills (like <code>send_image</code> and <code>screenshot_page</code>) produce attachments rather than text responses. These are handled specially:</p>
-<ol>
-<li>Skill returns <code>SkillResult.ImageAttachment</code></li>
-<li>Agent extracts the attachment data</li>
-<li>Bridge sends the attachment alongside the text response</li>
-</ol>
-<h2 id="provider-compatibility">Provider Compatibility<a class="headerlink" href="#provider-compatibility" title="Permanent link">&para;</a></h2>
-<p>The agent adapts its behavior based on the LLM provider:</p>
-<ul>
-<li><strong>OpenAI/LM Studio</strong> - Uses OpenAI function calling format</li>
-<li><strong>Anthropic</strong> - Uses Claude tool use format</li>
-</ul>
-<p>The core loop remains the same; only the API format changes.</p>
+<p>Some tools (like <code>screenshot_page</code>) produce attachments rather than text responses. Tools collect attachments via <code>ToolExecutionContext</code>, and the agent includes them alongside the text response when sending back through the bridge.</p>
 
 
 

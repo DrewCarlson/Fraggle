@@ -538,14 +538,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../architecture/skills/" class="md-nav__link">
+      <a href="../../architecture/tools/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Skills
+    Tools
   
 
     
@@ -899,10 +899,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#skills" class="md-nav__link">
+  <a href="#tools" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Skills
+        Tools
       
     </span>
   </a>
@@ -960,21 +960,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#adding-a-new-skill" class="md-nav__link">
+  <a href="#adding-a-new-tool" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Adding a New Skill
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#adding-a-new-provider" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Adding a New Provider
+        Adding a New Tool
       
     </span>
   </a>
@@ -1190,10 +1179,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#skills" class="md-nav__link">
+  <a href="#tools" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Skills
+        Tools
       
     </span>
   </a>
@@ -1251,21 +1240,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#adding-a-new-skill" class="md-nav__link">
+  <a href="#adding-a-new-tool" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Adding a New Skill
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#adding-a-new-provider" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Adding a New Provider
+        Adding a New Tool
       
     </span>
   </a>
@@ -1395,11 +1373,11 @@
 </code></pre></div>
 <h3 id="4-commit">4. Commit<a class="headerlink" href="#4-commit" title="Permanent link">&para;</a></h3>
 <p>Write clear commit messages:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>Add weather skill for fetching forecasts
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>Add weather tool for fetching forecasts
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>- Implement WeatherSkill with location parameter
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>- Implement WeatherTool with location parameter
 <a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>- Add tests for various weather conditions
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>- Document skill in skills.md
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>- Document tool in tools.md
 </code></pre></div>
 <h3 id="5-push-and-create-pr">5. Push and Create PR<a class="headerlink" href="#5-push-and-create-pr" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>feature/my-feature
@@ -1416,8 +1394,8 @@
 <h2 id="areas-to-contribute">Areas to Contribute<a class="headerlink" href="#areas-to-contribute" title="Permanent link">&para;</a></h2>
 <h3 id="good-first-issues">Good First Issues<a class="headerlink" href="#good-first-issues" title="Permanent link">&para;</a></h3>
 <p>Look for issues labeled <code>good first issue</code> on GitHub.</p>
-<h3 id="skills">Skills<a class="headerlink" href="#skills" title="Permanent link">&para;</a></h3>
-<p>Add new skills for:</p>
+<h3 id="tools">Tools<a class="headerlink" href="#tools" title="Permanent link">&para;</a></h3>
+<p>Add new tools for:</p>
 <ul>
 <li>External APIs (weather, news, etc.)</li>
 <li>System operations</li>
@@ -1442,21 +1420,13 @@
 <li>Improve startup time</li>
 </ul>
 <h2 id="architecture-notes">Architecture Notes<a class="headerlink" href="#architecture-notes" title="Permanent link">&para;</a></h2>
-<h3 id="adding-a-new-skill">Adding a New Skill<a class="headerlink" href="#adding-a-new-skill" title="Permanent link">&para;</a></h3>
+<h3 id="adding-a-new-tool">Adding a New Tool<a class="headerlink" href="#adding-a-new-tool" title="Permanent link">&para;</a></h3>
 <ol>
-<li>Create skill in <code>fraggle-skills/src/main/kotlin/</code></li>
-<li>Add to appropriate skill group (or create new group)</li>
-<li>Register in <code>DefaultSkills.kt</code></li>
+<li>Create a class extending <code>SimpleTool&lt;Args&gt;</code> in <code>fraggle-tools/src/main/kotlin/</code></li>
+<li>Define a <code>@Serializable</code> <code>Args</code> data class with <code>@LLMDescription</code> annotations</li>
+<li>Register in <code>DefaultTools.createToolRegistry()</code></li>
 <li>Add tests</li>
-<li>Document in <code>docs/architecture/skills.md</code></li>
-</ol>
-<h3 id="adding-a-new-provider">Adding a New Provider<a class="headerlink" href="#adding-a-new-provider" title="Permanent link">&para;</a></h3>
-<ol>
-<li>Implement <code>LLMProvider</code> interface</li>
-<li>Add to provider factory</li>
-<li>Add configuration options</li>
-<li>Add tests</li>
-<li>Document setup</li>
+<li>Document in <code>docs/architecture/tools.md</code></li>
 </ol>
 <h3 id="adding-a-new-bridge">Adding a New Bridge<a class="headerlink" href="#adding-a-new-bridge" title="Permanent link">&para;</a></h3>
 <ol>
