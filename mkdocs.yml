@@ -11,15 +11,42 @@ theme:
   name: material
   icon:
     repo: fontawesome/brands/github
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: cyan
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: cyan
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: Inter
+    code: JetBrains Mono
   features:
     - content.action.edit
+    - content.code.copy
+    - navigation.instant
+    - navigation.instant.progress
     - navigation.sections
     - navigation.expand
+    - navigation.top
+    - search.highlight
+    - search.suggest
+    - toc.follow
 
 extra_css:
   - stylesheets/extra.css
 
 markdown_extensions:
+  - attr_list
+  - md_in_html
   - admonition
   - pymdownx.details
   - pymdownx.highlight:
