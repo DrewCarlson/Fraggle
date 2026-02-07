@@ -4,8 +4,10 @@ import dev.zacsweers.metro.Inject
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.drewcarlson.fraggle.agent.*
+import org.drewcarlson.fraggle.chat.BridgedMessage
 import org.drewcarlson.fraggle.chat.BridgeInitializerRegistry
 import org.drewcarlson.fraggle.chat.ChatBridgeManager
 import org.drewcarlson.fraggle.chat.IncomingMessage
@@ -62,6 +64,7 @@ class ServiceOrchestrator(
 ) {
     private val logger = LoggerFactory.getLogger(ServiceOrchestrator::class.java)
     private val conversations = ConcurrentHashMap<String, Conversation>()
+    private val chatMutexes = ConcurrentHashMap<String, Mutex>()
     private var messageJob: Job? = null
 
     /**
@@ -216,221 +219,231 @@ class ServiceOrchestrator(
      */
     private fun startMessageLoop() {
         messageJob = scope.launch {
-            bridgeManager.messages.collectLatest { bridgedMessage ->
-                val chatId = bridgedMessage.qualifiedChatId
-                val message = bridgedMessage.message
-                val platform = bridgedMessage.bridge.platform
-
-                // Apply message routing (trigger filtering, etc.)
-                val routedMessage = messageRouter?.let { router ->
-                    // Convert back to original format for router
-                    val (_, originalChatId) = bridgeManager.parseQualifiedChatId(chatId)
-                    val originalMessage = message.copy(chatId = originalChatId)
-
-                    // Check if message should be processed
-                    val shouldProcess = router.shouldProcess(originalMessage)
-                    if (!shouldProcess) {
-                        logger.debug("Message filtered by router: $chatId")
-                        return@collectLatest
-                    }
-
-                    // Get the processed message (with trigger stripped)
-                    router.process(originalMessage)?.copy(chatId = chatId)
-                } ?: message
-
-                // Start a job that keeps the typing indicator active
-                val typingJob = launch {
-                    while (true) {
-                        try {
-                            bridgeManager.setTyping(chatId, true)
-                        } catch (e: Exception) {
-                            logger.debug("Failed to send typing indicator: ${e.message}")
-                        }
-                        delay(3.seconds)
+            bridgeManager.messages.collect { bridgedMessage ->
+                launch {
+                    val chatId = bridgedMessage.qualifiedChatId
+                    val mutex = chatMutexes.getOrPut(chatId) { Mutex() }
+                    mutex.withLock {
+                        handleMessage(bridgedMessage)
                     }
                 }
+            }
+        }
+    }
 
+    private suspend fun CoroutineScope.handleMessage(bridgedMessage: BridgedMessage) {
+        val chatId = bridgedMessage.qualifiedChatId
+        val message = bridgedMessage.message
+        val platform = bridgedMessage.bridge.platform
+
+        // Apply message routing (trigger filtering, etc.)
+        val routedMessage = messageRouter?.let { router ->
+            // Convert back to original format for router
+            val (_, originalChatId) = bridgeManager.parseQualifiedChatId(chatId)
+            val originalMessage = message.copy(chatId = originalChatId)
+
+            // Check if message should be processed
+            val shouldProcess = router.shouldProcess(originalMessage)
+            if (!shouldProcess) {
+                logger.debug("Message filtered by router: $chatId")
+                return
+            }
+
+            // Get the processed message (with trigger stripped)
+            router.process(originalMessage)?.copy(chatId = chatId)
+        } ?: message
+
+        // Start a job that keeps the typing indicator active
+        val typingJob = launch {
+            while (true) {
                 try {
-                    // Emit message received event
-                    val messageText = (routedMessage.content as? MessageContent.Text)?.text ?: ""
-                    fraggleServices.emitEvent(FraggleEvent.MessageReceived(
-                        timestamp = Instant.fromEpochMilliseconds(System.currentTimeMillis()),
-                        chatId = chatId,
-                        senderId = routedMessage.sender.id,
-                        senderName = routedMessage.sender.name,
-                        content = messageText,
-                    ))
-
-                    // Record incoming message metadata
-                    val chatRecord = chatHistoryStore.getOrCreateChat(
-                        externalId = chatId,
-                        platform = platform.name.lowercase(),
-                        isGroup = false,
-                    )
-                    chatHistoryStore.recordMessage(MessageRecord(
-                        chatId = chatRecord.id,
-                        externalId = routedMessage.id,
-                        senderId = routedMessage.sender.id,
-                        senderName = routedMessage.sender.name,
-                        senderIsBot = routedMessage.sender.isBot,
-                        contentType = routedMessage.content.toContentType(),
-                        direction = MessageDirection.INCOMING,
-                        timestamp = routedMessage.timestamp,
-                    ))
-
-                    // Get or create conversation
-                    val conversation = conversations.getOrPut(chatId) {
-                        Conversation(id = chatId, chatId = chatId)
-                    }
-
-                    // Process message with platform context
-                    logger.info("Processing message from ${routedMessage.sender.id} via ${platform.name}")
-                    val (response, duration) = measureTimedValue {
-                        agent.process(conversation, routedMessage, platform)
-                    }
-
-                    // Stop typing indicator job
-                    typingJob.cancel()
-                    bridgeManager.setTyping(chatId, false)
-
-                    // Get response text and attachments
-                    val responseText = response.contentOrError()
-                    val toolAttachments = response.collectAttachments()
-
-                    // Determine if platform supports multiple images (Discord = 10, Signal = 1)
-                    // TODO: Derive this from bridge implementation
-                    val maxImages = when (platform.name) {
-                        "Discord" -> 10
-                        else -> 1
-                    }
-
-                    // Process inline images (e.g., [[image:url]])
-                    val (finalText, inlineImages) = if (platform.supportsAttachments) {
-                        if (maxImages > 1) {
-                            // Multi-image processing for Discord
-                            val result = inlineImageProcessor.processAll(responseText, maxImages)
-                            result.cleanedText to result.images
-                        } else {
-                            // Single-image processing for Signal
-                            val result = inlineImageProcessor.process(responseText)
-                            result.cleanedText to listOfNotNull(result.image)
-                        }
-                    } else {
-                        // Strip inline image syntax if platform doesn't support attachments
-                        inlineImageProcessor.stripInlineImages(responseText) to emptyList()
-                    }
-
-                    // Collect all images: inline images first, then tool-generated images
-                    val toolImages = toolAttachments.filterIsInstance<ResponseAttachment.Image>()
-                    val allImages = inlineImages.map { it.data to it.mimeType } +
-                        toolImages.map { it.data to it.mimeType }
-
-                    // Discord: Send multiple images in one message with text
-                    // Signal: Send single image with text
-                    if (allImages.isNotEmpty() && platform.supportsAttachments) {
-                        val imagesToSend = allImages.take(maxImages)
-                        if (allImages.size > maxImages) {
-                            logger.warn("Truncating images from ${allImages.size} to $maxImages")
-                        }
-
-                        if (imagesToSend.size == 1) {
-                            // Single image - use standard OutgoingMessage.Image
-                            val (imageData, mimeType) = imagesToSend.first()
-                            logger.info("Sending response with image (${imageData.size / 1024}KB)")
-                            bridgeManager.send(chatId, OutgoingMessage.Image(
-                                data = imageData,
-                                mimeType = mimeType,
-                                caption = finalText.takeIf { it.isNotBlank() },
-                            ))
-                        } else {
-                            // Multiple images - for Discord, send first with caption, rest without
-                            // TODO: Use discord bridge sendMultiple images method
-                            logger.info("Sending response with ${imagesToSend.size} images")
-                            imagesToSend.forEachIndexed { index, (imageData, mimeType) ->
-                                bridgeManager.send(chatId, OutgoingMessage.Image(
-                                    data = imageData,
-                                    mimeType = mimeType,
-                                    // Only first image gets the caption
-                                    caption = if (index == 0) finalText.takeIf { it.isNotBlank() } else null,
-                                ))
-                            }
-                        }
-                    } else {
-                        // Send text only
-                        bridgeManager.send(chatId, OutgoingMessage.Text(finalText))
-                    }
-
-                    // Emit response sent event
-                    fraggleServices.emitEvent(FraggleEvent.ResponseSent(
-                        timestamp = Instant.fromEpochMilliseconds(System.currentTimeMillis()),
-                        chatId = chatId,
-                        content = finalText,
-                    ))
-
-                    // Send any remaining file attachments
-                    for (attachment in toolAttachments) {
-                        when (attachment) {
-                            is ResponseAttachment.Image -> {
-                                // Already handled above
-                            }
-                            is ResponseAttachment.File -> {
-                                logger.info("Sending file attachment: ${attachment.filename}")
-                                bridgeManager.send(chatId, OutgoingMessage.File(
-                                    data = attachment.data,
-                                    filename = attachment.filename,
-                                    mimeType = attachment.mimeType,
-                                ))
-                            }
-                        }
-                    }
-
-                    // Record outgoing message metadata
-                    val outContentType = if (allImages.isNotEmpty() && platform.supportsAttachments) {
-                        MessageContentType.IMAGE
-                    } else {
-                        MessageContentType.TEXT
-                    }
-                    chatHistoryStore.recordMessage(MessageRecord(
-                        chatId = chatRecord.id,
-                        senderId = "fraggle",
-                        senderName = "Fraggle",
-                        senderIsBot = true,
-                        contentType = outContentType,
-                        direction = MessageDirection.OUTGOING,
-                        timestamp = Clock.System.now(),
-                        processingDuration = duration,
-                    ))
-
-                    // Update conversation
-                    conversations[chatId] = conversation.copy(
-                        messages = conversation.messages + listOf(
-                            ConversationMessage(ConversationRole.USER, messageText),
-                            ConversationMessage(ConversationRole.ASSISTANT, finalText),
-                        )
-                    )
-
-                    logger.info("Response sent to $chatId")
+                    bridgeManager.setTyping(chatId, true)
                 } catch (e: Exception) {
-                    logger.error("Error processing message: ${e.message}", e)
-                    typingJob.cancel()
+                    logger.debug("Failed to send typing indicator: ${e.message}")
+                }
+                delay(3.seconds)
+            }
+        }
 
-                    // Emit error event
-                    fraggleServices.emitEvent(FraggleEvent.Error(
-                        timestamp = Instant.fromEpochMilliseconds(System.currentTimeMillis()),
-                        source = "message_processing",
-                        message = e.message ?: "Unknown error",
+        try {
+            // Emit message received event
+            val messageText = (routedMessage.content as? MessageContent.Text)?.text ?: ""
+            fraggleServices.emitEvent(FraggleEvent.MessageReceived(
+                timestamp = Instant.fromEpochMilliseconds(System.currentTimeMillis()),
+                chatId = chatId,
+                senderId = routedMessage.sender.id,
+                senderName = routedMessage.sender.name,
+                content = messageText,
+            ))
+
+            // Record incoming message metadata
+            val chatRecord = chatHistoryStore.getOrCreateChat(
+                externalId = chatId,
+                platform = platform.name.lowercase(),
+                isGroup = false,
+            )
+            chatHistoryStore.recordMessage(MessageRecord(
+                chatId = chatRecord.id,
+                externalId = routedMessage.id,
+                senderId = routedMessage.sender.id,
+                senderName = routedMessage.sender.name,
+                senderIsBot = routedMessage.sender.isBot,
+                contentType = routedMessage.content.toContentType(),
+                direction = MessageDirection.INCOMING,
+                timestamp = routedMessage.timestamp,
+            ))
+
+            // Get or create conversation
+            val conversation = conversations.getOrPut(chatId) {
+                Conversation(id = chatId, chatId = chatId)
+            }
+
+            // Process message with platform context
+            logger.info("Processing message from ${routedMessage.sender.id} via ${platform.name}")
+            val (response, duration) = measureTimedValue {
+                agent.process(conversation, routedMessage, platform)
+            }
+
+            // Stop typing indicator job
+            typingJob.cancel()
+            bridgeManager.setTyping(chatId, false)
+
+            // Get response text and attachments
+            val responseText = response.contentOrError()
+            val toolAttachments = response.collectAttachments()
+
+            // Determine if platform supports multiple images (Discord = 10, Signal = 1)
+            // TODO: Derive this from bridge implementation
+            val maxImages = when (platform.name) {
+                "Discord" -> 10
+                else -> 1
+            }
+
+            // Process inline images (e.g., [[image:url]])
+            val (finalText, inlineImages) = if (platform.supportsAttachments) {
+                if (maxImages > 1) {
+                    // Multi-image processing for Discord
+                    val result = inlineImageProcessor.processAll(responseText, maxImages)
+                    result.cleanedText to result.images
+                } else {
+                    // Single-image processing for Signal
+                    val result = inlineImageProcessor.process(responseText)
+                    result.cleanedText to listOfNotNull(result.image)
+                }
+            } else {
+                // Strip inline image syntax if platform doesn't support attachments
+                inlineImageProcessor.stripInlineImages(responseText) to emptyList()
+            }
+
+            // Collect all images: inline images first, then tool-generated images
+            val toolImages = toolAttachments.filterIsInstance<ResponseAttachment.Image>()
+            val allImages = inlineImages.map { it.data to it.mimeType } +
+                toolImages.map { it.data to it.mimeType }
+
+            // Discord: Send multiple images in one message with text
+            // Signal: Send single image with text
+            if (allImages.isNotEmpty() && platform.supportsAttachments) {
+                val imagesToSend = allImages.take(maxImages)
+                if (allImages.size > maxImages) {
+                    logger.warn("Truncating images from ${allImages.size} to $maxImages")
+                }
+
+                if (imagesToSend.size == 1) {
+                    // Single image - use standard OutgoingMessage.Image
+                    val (imageData, mimeType) = imagesToSend.first()
+                    logger.info("Sending response with image (${imageData.size / 1024}KB)")
+                    bridgeManager.send(chatId, OutgoingMessage.Image(
+                        data = imageData,
+                        mimeType = mimeType,
+                        caption = finalText.takeIf { it.isNotBlank() },
                     ))
-
-                    try {
-                        bridgeManager.setTyping(chatId, false)
-                        bridgeManager.send(
-                            chatId,
-                            OutgoingMessage.Text("Sorry, I encountered an error: ${e.message}")
-                        )
-                    } catch (sendError: Exception) {
-                        logger.error("Failed to send error message: ${sendError.message}")
+                } else {
+                    // Multiple images - for Discord, send first with caption, rest without
+                    // TODO: Use discord bridge sendMultiple images method
+                    logger.info("Sending response with ${imagesToSend.size} images")
+                    imagesToSend.forEachIndexed { index, (imageData, mimeType) ->
+                        bridgeManager.send(chatId, OutgoingMessage.Image(
+                            data = imageData,
+                            mimeType = mimeType,
+                            // Only first image gets the caption
+                            caption = if (index == 0) finalText.takeIf { it.isNotBlank() } else null,
+                        ))
                     }
                 }
+            } else {
+                // Send text only
+                bridgeManager.send(chatId, OutgoingMessage.Text(finalText))
+            }
+
+            // Emit response sent event
+            fraggleServices.emitEvent(FraggleEvent.ResponseSent(
+                timestamp = Instant.fromEpochMilliseconds(System.currentTimeMillis()),
+                chatId = chatId,
+                content = finalText,
+            ))
+
+            // Send any remaining file attachments
+            for (attachment in toolAttachments) {
+                when (attachment) {
+                    is ResponseAttachment.Image -> {
+                        // Already handled above
+                    }
+                    is ResponseAttachment.File -> {
+                        logger.info("Sending file attachment: ${attachment.filename}")
+                        bridgeManager.send(chatId, OutgoingMessage.File(
+                            data = attachment.data,
+                            filename = attachment.filename,
+                            mimeType = attachment.mimeType,
+                        ))
+                    }
+                }
+            }
+
+            // Record outgoing message metadata
+            val outContentType = if (allImages.isNotEmpty() && platform.supportsAttachments) {
+                MessageContentType.IMAGE
+            } else {
+                MessageContentType.TEXT
+            }
+            chatHistoryStore.recordMessage(MessageRecord(
+                chatId = chatRecord.id,
+                senderId = "fraggle",
+                senderName = "Fraggle",
+                senderIsBot = true,
+                contentType = outContentType,
+                direction = MessageDirection.OUTGOING,
+                timestamp = Clock.System.now(),
+                processingDuration = duration,
+            ))
+
+            // Update conversation
+            conversations[chatId] = conversation.copy(
+                messages = conversation.messages + listOf(
+                    ConversationMessage(ConversationRole.USER, messageText),
+                    ConversationMessage(ConversationRole.ASSISTANT, finalText),
+                )
+            )
+
+            logger.info("Response sent to $chatId")
+        } catch (e: Exception) {
+            logger.error("Error processing message: ${e.message}", e)
+            typingJob.cancel()
+
+            // Emit error event
+            fraggleServices.emitEvent(FraggleEvent.Error(
+                timestamp = Instant.fromEpochMilliseconds(System.currentTimeMillis()),
+                source = "message_processing",
+                message = e.message ?: "Unknown error",
+            ))
+
+            try {
+                bridgeManager.setTyping(chatId, false)
+                bridgeManager.send(
+                    chatId,
+                    OutgoingMessage.Text("Sorry, I encountered an error: ${e.message}")
+                )
+            } catch (sendError: Exception) {
+                logger.error("Failed to send error message: ${sendError.message}")
             }
         }
     }
