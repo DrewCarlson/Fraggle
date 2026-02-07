@@ -9,6 +9,8 @@ import io.ktor.client.request.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.browser.document
 import kotlinx.browser.window
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.serialization.json.Json
 import org.drewcarlson.fraggle.models.SystemStatus
 import org.jetbrains.compose.web.css.Style
@@ -38,9 +40,16 @@ fun getApiBaseUrl(): String {
 }
 
 fun main() {
+    val scope = CoroutineScope(SupervisorJob())
+    val webSocketService = WebSocketService(scope)
+    webSocketService.connect()
     renderComposableInBody {
         Style(DashboardStyles)
-        App()
+        CompositionLocalProvider(
+            LocalWebSocketService provides webSocketService
+        ) {
+            App()
+        }
     }
 
     // Hide loading spinner
@@ -52,7 +61,7 @@ fun App() {
     var sidebarCollapsed by remember { mutableStateOf(false) }
 
     // Initialize WebSocket service
-    val wsService = rememberWebSocketService()
+    val wsService = LocalWebSocketService.current
     val connectionState by rememberConnectionState(wsService)
 
     // Load status data with WebSocket refresh

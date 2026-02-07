@@ -126,7 +126,7 @@ class WebSocketService(
                         }
                     } catch (e: CancellationException) {
                         throw e
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                         console.log("WebSocket receive error")
                     }
                 }
@@ -254,22 +254,7 @@ enum class RefreshTrigger {
     Scheduler,
 }
 
-/**
- * Global WebSocket service instance.
- */
-private var webSocketServiceInstance: WebSocketService? = null
-
-@Composable
-fun rememberWebSocketService(): WebSocketService {
-    val scope = rememberCoroutineScope()
-
-    return remember {
-        webSocketServiceInstance ?: WebSocketService(scope).also {
-            webSocketServiceInstance = it
-            it.connect()
-        }
-    }
-}
+val LocalWebSocketService = compositionLocalOf<WebSocketService> { error("WebSocketService is not initialized!") }
 
 /**
  * Composable to observe connection state.
