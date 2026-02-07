@@ -252,7 +252,7 @@ class ConfigureCommand : CliktCommand(name = "configure") {
         print("Max tokens [${agentConfig.maxTokens}]: ")
         val maxTokens = readlnOrNull()?.trim()
         if (!maxTokens.isNullOrEmpty()) {
-            maxTokens.toIntOrNull()?.let { agentConfig = agentConfig.copy(maxTokens = it) }
+            maxTokens.toLongOrNull()?.let { agentConfig = agentConfig.copy(maxTokens = it) }
         }
         print("Max iterations [${agentConfig.maxIterations}]: ")
         val maxIter = readlnOrNull()?.trim()

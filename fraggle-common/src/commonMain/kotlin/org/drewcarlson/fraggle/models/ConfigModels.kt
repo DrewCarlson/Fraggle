@@ -233,7 +233,7 @@ data class AgentConfig(
     val temperature: Double = 0.7,
     @SerialName("max_tokens")
     @Documented(name = "Max Tokens", description = "Maximum number of tokens in LLM responses")
-    val maxTokens: Int = 4096,
+    val maxTokens: Long = 4096,
     @SerialName("max_iterations")
     @Documented(name = "Max Iterations", description = "Maximum number of tool-use iterations per request")
     val maxIterations: Int = 10,
