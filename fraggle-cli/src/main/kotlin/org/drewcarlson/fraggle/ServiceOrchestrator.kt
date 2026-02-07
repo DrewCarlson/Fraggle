@@ -32,7 +32,6 @@ import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
-import kotlin.time.Instant
 import kotlin.time.measureTimedValue
 
 /**
@@ -269,7 +268,7 @@ class ServiceOrchestrator(
             // Emit message received event
             val messageText = (routedMessage.content as? MessageContent.Text)?.text ?: ""
             fraggleServices.emitEvent(FraggleEvent.MessageReceived(
-                timestamp = Instant.fromEpochMilliseconds(System.currentTimeMillis()),
+                timestamp = Clock.System.now(),
                 chatId = chatId,
                 senderId = routedMessage.sender.id,
                 senderName = routedMessage.sender.name,
@@ -377,7 +376,7 @@ class ServiceOrchestrator(
 
             // Emit response sent event
             fraggleServices.emitEvent(FraggleEvent.ResponseSent(
-                timestamp = Instant.fromEpochMilliseconds(System.currentTimeMillis()),
+                timestamp = Clock.System.now(),
                 chatId = chatId,
                 content = finalText,
             ))
@@ -431,7 +430,7 @@ class ServiceOrchestrator(
 
             // Emit error event
             fraggleServices.emitEvent(FraggleEvent.Error(
-                timestamp = Instant.fromEpochMilliseconds(System.currentTimeMillis()),
+                timestamp = Clock.System.now(),
                 source = "message_processing",
                 message = e.message ?: "Unknown error",
             ))

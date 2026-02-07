@@ -20,6 +20,8 @@ import org.drewcarlson.fraggle.sandbox.Sandbox
 import org.drewcarlson.fraggle.skill.SkillRegistry
 import org.slf4j.LoggerFactory
 import java.io.Closeable
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 /**
  * Main agent orchestration class.
@@ -241,7 +243,7 @@ data class Conversation(
 data class ConversationMessage(
     val role: ConversationRole,
     val content: String,
-    val timestamp: Long = System.currentTimeMillis(),
+    val timestamp: Instant = Clock.System.now(),
 )
 
 enum class ConversationRole {

@@ -19,6 +19,7 @@ import org.slf4j.LoggerFactory
 import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.io.path.exists
+import kotlin.time.Clock
 
 /**
  * Main entry point for Fraggle.
@@ -139,7 +140,7 @@ class ChatCommand : CliktCommand(name = "chat") {
         println()
 
         // Interactive loop
-        val chatId = "interactive-${System.currentTimeMillis()}"
+        val chatId = "interactive-${Clock.System.now().toEpochMilliseconds()}"
         val senderId = "local-user"
 
         while (true) {

@@ -26,7 +26,7 @@ class MessageRouterTest {
         chatId: String = "+1111111111",
         text: String = "Hello",
     ): IncomingMessage = IncomingMessage(
-        id = "msg-${System.currentTimeMillis()}",
+        id = "msg-${Clock.System.now().toEpochMilliseconds()}",
         chatId = chatId,
         sender = Sender(id = "+1111111111", name = "Test User"),
         content = MessageContent.Text(text),
@@ -34,7 +34,7 @@ class MessageRouterTest {
     )
 
     private fun createImageMessage(chatId: String = "+1111111111"): IncomingMessage = IncomingMessage(
-        id = "msg-${System.currentTimeMillis()}",
+        id = "msg-${Clock.System.now().toEpochMilliseconds()}",
         chatId = chatId,
         sender = Sender(id = "+1111111111", name = "Test User"),
         content = MessageContent.Image(data = byteArrayOf(), mimeType = "image/png"),

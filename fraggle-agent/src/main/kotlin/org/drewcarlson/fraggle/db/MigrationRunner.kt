@@ -12,6 +12,7 @@ import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.migration.jdbc.MigrationUtils
 import org.slf4j.LoggerFactory
+import kotlin.time.Clock
 
 /**
  * Two-phase migration runner:
@@ -50,7 +51,7 @@ class MigrationRunner(
                 SchemaVersionTable.insert {
                     it[version] = migration.version
                     it[name] = migration.name
-                    it[appliedAt] = System.currentTimeMillis()
+                    it[appliedAt] = Clock.System.now().toEpochMilliseconds()
                 }
             }
 
