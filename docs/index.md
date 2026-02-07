@@ -49,14 +49,14 @@ See the [Getting Started](installation/getting-started.md) guide for full setup 
 Fraggle/
 ├── fraggle-cli/            # CLI application entry point
 ├── fraggle-agent/          # Core agent framework (Koog integration)
-├── fraggle-signal/         # Signal messaging integration
-├── fraggle-discord/        # Discord bot integration
+├── fraggle-signal/         # Signal messaging bridge
+├── fraggle-discord/        # Discord bot bridge
 ├── fraggle-tools/          # Built-in tool implementations
 ├── fraggle-api/            # REST API server
 ├── fraggle-dashboard/      # Web dashboard (Compose for Web)
 ├── fraggle-common/         # Shared models (Kotlin Multiplatform)
-├── libs/                   # Internal libraries
-└── config/                 # Example configuration files
+└── libs/                   # Internal libraries
+    └── documented-*        # Annotation processor for config docs
 ```
 
 ## How It Works

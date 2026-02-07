@@ -55,12 +55,14 @@ Full documentation available at **[drewcarlson.github.io/Fraggle](https://drewca
 Fraggle/
 ├── fraggle-cli/            # CLI application
 ├── fraggle-agent/          # Core agent framework (Koog integration)
-├── fraggle-signal/         # Signal messenger integration
+├── fraggle-signal/         # Signal messenger bridge
+├── fraggle-discord/        # Discord bot bridge
 ├── fraggle-tools/          # Built-in tool implementations
 ├── fraggle-api/            # REST API server
 ├── fraggle-dashboard/      # Web dashboard (Compose for Web)
 ├── fraggle-common/         # Shared models (Kotlin Multiplatform)
 └── libs/                   # Internal libraries
+    └── documented-*        # Annotation processor for config docs
 ```
 
 ## License

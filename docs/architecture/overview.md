@@ -8,16 +8,13 @@ Fraggle is built as a modular Kotlin application with clear separation of concer
 Fraggle/
 ├── fraggle-cli/            # CLI application and entry point
 ├── fraggle-agent/          # Core framework
-│   ├── agent/              # Koog agent integration
-│   ├── memory/             # Hierarchical memory storage
-│   └── sandbox/            # Execution sandbox
 ├── fraggle-signal/         # Signal messenger bridge
 ├── fraggle-discord/        # Discord bot bridge
 ├── fraggle-tools/          # Built-in tool implementations
 ├── fraggle-common/         # Shared models (Kotlin Multiplatform)
 ├── fraggle-api/            # REST API server
 ├── fraggle-dashboard/      # Web dashboard (Compose for Web)
-└── libs/
+└── libs/                   # Internal libraries
     └── documented-*        # Annotation processor for config docs
 ```
 
