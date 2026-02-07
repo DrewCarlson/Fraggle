@@ -5,7 +5,6 @@ import DataState
 import androidx.compose.runtime.*
 import apiClient
 import external.highlightElement
-import getApiBaseUrl
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import kotlinx.browser.document
@@ -30,7 +29,7 @@ fun SettingsScreen() {
     var viewMode by remember { mutableStateOf(ConfigViewMode.UI) }
 
     val (state, refresh) = rememberRefreshableDataLoader {
-        apiClient.get("${getApiBaseUrl()}/settings/config").body<ConfigResponse>()
+        apiClient.get("settings/config").body<ConfigResponse>()
     }
 
     Section({

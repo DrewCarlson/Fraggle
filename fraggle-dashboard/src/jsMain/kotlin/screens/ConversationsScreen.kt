@@ -6,7 +6,6 @@ import RefreshTrigger
 import WebSocketService
 import androidx.compose.runtime.*
 import apiClient
-import getApiBaseUrl
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import org.drewcarlson.fraggle.models.ChatDetail
@@ -43,7 +42,7 @@ private fun ChatListView(
         wsService = wsService,
         refreshOn = setOf(RefreshTrigger.Chats),
     ) {
-        apiClient.get("${getApiBaseUrl()}/chats").body<List<ChatSummary>>()
+        apiClient.get("chats").body<List<ChatSummary>>()
     }
 
     Section({
@@ -183,11 +182,11 @@ private fun ChatDetailView(
     onBack: () -> Unit,
 ) {
     val (detailState, refreshDetail) = rememberRefreshableDataLoader(chatId) {
-        apiClient.get("${getApiBaseUrl()}/chats/$chatId").body<ChatDetail>()
+        apiClient.get("chats/$chatId").body<ChatDetail>()
     }
 
     val (messagesState, refreshMessages) = rememberRefreshableDataLoader(chatId) {
-        apiClient.get("${getApiBaseUrl()}/chats/$chatId/messages?limit=100").body<List<ChatMessageRecord>>()
+        apiClient.get("chats/$chatId/messages?limit=100").body<List<ChatMessageRecord>>()
     }
 
     Section({

@@ -6,7 +6,6 @@ import RefreshTrigger
 import WebSocketService
 import androidx.compose.runtime.*
 import apiClient
-import getApiBaseUrl
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import org.drewcarlson.fraggle.models.ToolInfo
@@ -22,7 +21,7 @@ fun ToolsScreen(wsService: WebSocketService) {
         wsService = wsService,
         refreshOn = setOf(RefreshTrigger.Tools),
     ) {
-        apiClient.get("${getApiBaseUrl()}/tools").body<List<ToolInfo>>()
+        apiClient.get("tools").body<List<ToolInfo>>()
     }
 
     Section({

@@ -6,7 +6,6 @@ import RefreshTrigger
 import WebSocketService
 import androidx.compose.runtime.Composable
 import apiClient
-import getApiBaseUrl
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import org.drewcarlson.fraggle.models.ScheduledTaskInfo
@@ -21,7 +20,7 @@ fun SchedulerScreen(wsService: WebSocketService) {
         wsService = wsService,
         refreshOn = setOf(RefreshTrigger.Scheduler),
     ) {
-        apiClient.get("${getApiBaseUrl()}/scheduler/tasks").body<List<ScheduledTaskInfo>>()
+        apiClient.get("scheduler/tasks").body<List<ScheduledTaskInfo>>()
     }
 
     Section({

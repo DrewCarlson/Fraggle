@@ -5,7 +5,10 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.js.*
 import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.*
+import io.ktor.http.URLProtocol
+import io.ktor.http.takeFrom
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.browser.document
 import kotlinx.browser.window
@@ -22,6 +25,15 @@ import screens.*
  * Shared HTTP client for API calls to the backend.
  */
 val apiClient = HttpClient(Js) {
+    install(AdaptiveProtocolPlugin)
+    defaultRequest {
+        val location = window.location
+        val serverUrl = "${location.protocol}//${location.host}/api/v1/"
+        attributes.put(ServerUrlAttribute, serverUrl)
+        url {
+            takeFrom(serverUrl)
+        }
+    }
     install(ContentNegotiation) {
         json(Json {
             prettyPrint = true
@@ -29,14 +41,6 @@ val apiClient = HttpClient(Js) {
             ignoreUnknownKeys = true
         })
     }
-}
-
-/**
- * Get the API base URL from the current window location.
- */
-fun getApiBaseUrl(): String {
-    val location = window.location
-    return "${location.protocol}//${location.host}/api/v1"
 }
 
 fun main() {
@@ -69,7 +73,7 @@ fun App() {
         wsService = wsService,
         refreshOn = setOf(RefreshTrigger.Status, RefreshTrigger.Bridges, RefreshTrigger.Chats),
     ) {
-        apiClient.get("${getApiBaseUrl()}/status").body<SystemStatus>()
+        apiClient.get("status").body<SystemStatus>()
     }
 
     Div({

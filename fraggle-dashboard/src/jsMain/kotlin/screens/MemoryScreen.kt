@@ -6,7 +6,6 @@ import RefreshTrigger
 import WebSocketService
 import androidx.compose.runtime.*
 import apiClient
-import getApiBaseUrl
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
@@ -67,15 +66,15 @@ fun MemoryScreen(wsService: WebSocketService) {
         wsService = wsService,
         refreshOn = setOf(RefreshTrigger.Memory),
     ) {
-        apiClient.get("${getApiBaseUrl()}/memory/scopes").body<MemoryScopesResponse>()
+        apiClient.get("memory/scopes").body<MemoryScopesResponse>()
     }
 
     // Load facts for the selected scope
     val factsEndpoint = selectedScope?.let { scope ->
         when (scope.type) {
-            "global" -> "/memory/global"
-            "chat" -> "/memory/chat/${scope.id}"
-            "user" -> "/memory/user/${scope.id}"
+            "global" -> "memory/global"
+            "chat" -> "memory/chat/${scope.id}"
+            "user" -> "memory/user/${scope.id}"
             else -> null
         }
     }
@@ -86,7 +85,7 @@ fun MemoryScreen(wsService: WebSocketService) {
         refreshOn = setOf(RefreshTrigger.Memory),
     ) {
         if (factsEndpoint != null) {
-            apiClient.get("${getApiBaseUrl()}$factsEndpoint").body<MemoryResponse>()
+            apiClient.get(factsEndpoint).body<MemoryResponse>()
         } else {
             MemoryResponse(scope = "", facts = emptyList())
         }
@@ -876,7 +875,7 @@ private fun FactCard(
     var isSaving by remember { mutableStateOf(false) }
     var isDeleting by remember { mutableStateOf(false) }
 
-    val factEndpoint = "${getApiBaseUrl()}/memory/${scope.type}/${scope.id}/facts/$index"
+    val factEndpoint = "memory/${scope.type}/${scope.id}/facts/$index"
 
     LaunchedEffect(isSaving) {
         if (!isSaving) return@LaunchedEffect
@@ -1183,12 +1182,12 @@ private fun ClearConfirmDialog(
         if (!isClearing) return@LaunchedEffect
         try {
             val endpoint = when (scope.type) {
-                "global" -> "/memory/global"
-                "chat" -> "/memory/chat/${scope.id}"
-                "user" -> "/memory/user/${scope.id}"
+                "global" -> "memory/global"
+                "chat" -> "memory/chat/${scope.id}"
+                "user" -> "memory/user/${scope.id}"
                 else -> return@LaunchedEffect
             }
-            apiClient.delete("${getApiBaseUrl()}$endpoint")
+            apiClient.delete(endpoint)
             onCleared()
             onConfirm()
         } catch (e: Exception) {

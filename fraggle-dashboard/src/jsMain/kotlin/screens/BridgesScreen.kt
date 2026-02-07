@@ -7,7 +7,6 @@ import WebSocketService
 import androidx.compose.runtime.*
 import apiClient
 import components.BridgeInitDialog
-import getApiBaseUrl
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import org.drewcarlson.fraggle.models.BridgeInfo
@@ -23,7 +22,7 @@ fun BridgesScreen(wsService: WebSocketService) {
         wsService = wsService,
         refreshOn = setOf(RefreshTrigger.Bridges),
     ) {
-        apiClient.get("${getApiBaseUrl()}/bridges").body<List<BridgeInfo>>()
+        apiClient.get("bridges").body<List<BridgeInfo>>()
     }
 
     Section({
