@@ -1,6 +1,6 @@
 # Memory System
 
-Fraggle includes a hierarchical memory system that persists information across conversations.
+Fraggle includes a hierarchical memory system that persists facts across conversations. Memory is stored as human-readable markdown and integrated with Koog's agent memory system.
 
 ## Memory Scopes
 
@@ -14,7 +14,7 @@ Shared across all conversations and users. Useful for:
 - Configuration or preferences that apply universally
 - Facts learned that benefit all users
 
-**Storage path:** `$FRAGGLE_ROOT/data/memory/global/`
+**Storage path:** `$FRAGGLE_ROOT/data/memory/global.md`
 
 ### Chat Memory
 
@@ -24,7 +24,7 @@ Per-conversation memory. Useful for:
 - Ongoing project information
 - Chat-specific preferences
 
-**Storage path:** `$FRAGGLE_ROOT/data/memory/chats/{chat_id}/`
+**Storage path:** `$FRAGGLE_ROOT/data/memory/chats/{chat_id}/memory.md`
 
 ### User Memory
 
@@ -34,67 +34,39 @@ Per-user memory that persists across chats. Useful for:
 - Personal information the user has shared
 - History of user-specific interactions
 
-**Storage path:** `$FRAGGLE_ROOT/data/memory/users/{user_id}/`
+**Storage path:** `$FRAGGLE_ROOT/data/memory/users/{user_id}/memory.md`
 
 ## Storage Format
 
-Memories are stored as human-readable markdown files:
-
-```
-data/memory/
-├── global/
-│   └── general.md
-├── chats/
-│   └── group-abc123/
-│       └── project.md
-└── users/
-    └── +1234567890/
-        └── preferences.md
-```
-
-### File Structure
-
-Each memory file uses markdown format:
+Each memory file is a markdown list of facts with timestamps:
 
 ```markdown
-# Project Notes
+# Memory
 
-## Current Sprint
-- Working on feature X
-- Blocked on dependency Y
-
-## Team Members
-- Alice: Frontend
-- Bob: Backend
-
----
-Last updated: 2024-01-15
+- Name: Alice [created: 2025-01-15T10:30:00Z]
+- Hobbies: guitar, programming [created: 2025-01-15T10:30:00Z, updated: 2025-02-07T14:00:00Z]
+- Lives in: Berlin [created: 2025-02-01T08:00:00Z]
 ```
 
-## Memory Operations
+Facts use a concise `Key: Value` format. Each fact tracks when it was created and, if modified, when it was last updated.
 
-The agent can interact with memory through dedicated skills (when enabled):
+## Automatic Memory
 
-### Reading Memory
+When `auto_memory` is enabled (the default), the agent automatically extracts and manages facts after each conversation exchange:
 
-The agent automatically retrieves relevant memory when building context for responses.
+1. **Extraction** - The LLM identifies new personal facts from the exchange, using concise `Key: Value` format and avoiding duplicates of already-stored facts
+2. **Reconciliation** - If existing facts are present, the LLM reconciles new facts with old ones: merging related facts, updating superseded information, preserving history (e.g., "Previously worked at: Google"), and removing duplicates
+3. **Persistence** - Facts are saved to the appropriate scope file with timestamps
 
-### Writing Memory
+This means the agent builds up knowledge about users over time without explicit "remember this" commands.
 
-The agent can store new information when asked to remember something:
+## Memory in Context
 
-```
-User: Remember that my favorite color is blue.
-Agent: I'll remember that your favorite color is blue.
-```
+All three memory scopes are loaded and included in the agent's input for each request, giving the agent awareness of:
 
-### Memory in Context
-
-Relevant memories are included in the system prompt, giving the agent context about:
-
-- Previous conversations
-- User preferences
-- Ongoing projects or tasks
+- Global knowledge
+- Chat-specific context
+- User preferences and history
 
 ## Configuration
 
@@ -102,46 +74,28 @@ Relevant memories are included in the system prompt, giving the agent context ab
 fraggle:
   memory:
     base_dir: ./data/memory
+  agent:
+    auto_memory: true  # Enable automatic fact extraction
 ```
 
-| Option     | Description                           | Default          |
-|------------|---------------------------------------|------------------|
-| `base_dir` | Directory where memory files stored   | `./data/memory`  |
+| Option | Description | Default |
+|--------|-------------|---------|
+| `base_dir` | Directory where memory files are stored | `./data/memory` |
+| `auto_memory` | Automatically extract facts from conversations | `true` |
 
-## Memory Limits
+## Dashboard
 
-To prevent context overflow, memory is summarized or truncated:
+The web dashboard provides a memory management interface where you can:
 
-- Recent memories are prioritized
-- Large memory files are summarized
-- Per-scope limits prevent any single scope from dominating
-
-## Use Cases
-
-### Personal Assistant
-
-Store user preferences:
-- Preferred name/pronouns
-- Time zone
-- Communication style preferences
-
-### Team Collaboration
-
-Store project context:
-- Current goals and tasks
-- Team member roles
-- Decision history
-
-### Knowledge Base
-
-Store reference information:
-- Documentation links
-- Common procedures
-- FAQ answers
+- Browse all memory scopes and their fact counts
+- Search and filter facts
+- Edit individual facts inline
+- Delete individual facts
+- Clear all facts in a scope
 
 ## Best Practices
 
-1. **Be Specific** - Store specific facts, not vague summaries
-2. **Update Regularly** - Replace outdated information
-3. **Scope Appropriately** - Use the right scope for the information
-4. **Review Periodically** - Memory files can be manually edited
+1. **Be Specific** - The agent stores specific facts in `Key: Value` format, not vague summaries
+2. **Scope Appropriately** - User-specific facts go in User scope, project context in Chat scope
+3. **Review Periodically** - Memory files are human-readable markdown and can be manually edited
+4. **Fact Reconciliation** - The agent merges related facts automatically (e.g., two hobby mentions become one combined list)

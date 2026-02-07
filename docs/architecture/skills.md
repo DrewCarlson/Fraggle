@@ -1,17 +1,17 @@
-# Skills
+# Tools
 
-Skills are the tools available to the Fraggle agent. They enable the agent to interact with the file system, web, shell, and more.
+Tools are the capabilities available to the Fraggle agent. They enable the agent to interact with the file system, web, shell, and more. Tools are built on [Koog's](https://github.com/JetBrains/koog) `SimpleTool` framework.
 
-## Built-in Skills
+## Built-in Tools
 
-Fraggle includes several skill groups out of the box.
+Fraggle includes several tool groups out of the box.
 
-### Filesystem Skills
+### Filesystem Tools
 
 File operations within the sandbox:
 
-| Skill | Description | Parameters |
-|-------|-------------|------------|
+| Tool | Description | Parameters |
+|------|-------------|------------|
 | `read_file` | Read file contents | `path` (required), `max_lines` (default: 1000) |
 | `write_file` | Write content to a file | `path` (required), `content` (required) |
 | `append_file` | Append content to a file | `path` (required), `content` (required) |
@@ -20,19 +20,18 @@ File operations within the sandbox:
 | `file_exists` | Check if a file or directory exists | `path` (required) |
 | `delete_file` | Delete a file | `path` (required) |
 
-### Web Skills
+### Web Tools
 
 Web fetching and browser automation:
 
-| Skill | Description | Parameters |
-|-------|-------------|------------|
+| Tool | Description | Parameters |
+|------|-------------|------------|
 | `fetch_webpage` | Fetch content from a webpage | `url` (required) |
 | `fetch_api` | Fetch data from an API endpoint | `url` (required), `method` (default: GET) |
-| `send_image` | Download and send an image | `url` (required), `caption` (optional) |
 | `screenshot_page` | Take a screenshot of a webpage | `url` (required), `full_page` (default: false), `caption` (optional) |
 
-!!! note "Playwright Skills"
-    The `fetch_webpage` skill uses Playwright for JavaScript rendering when configured. The `screenshot_page` skill requires Playwright configuration.
+!!! note "Playwright Tools"
+    The `fetch_webpage` tool uses Playwright for JavaScript rendering when configured. The `screenshot_page` tool requires Playwright configuration.
 
 #### Playwright Setup
 
@@ -58,169 +57,91 @@ fraggle:
       wait_after_load: 2000
 ```
 
-### Shell Skills
+### Shell Tools
 
 Command execution in the sandbox:
 
-| Skill | Description | Parameters |
-|-------|-------------|------------|
+| Tool | Description | Parameters |
+|------|-------------|------------|
 | `execute_command` | Execute a shell command | `command` (required), `timeout_seconds` (default: 30) |
 
 !!! warning "Security"
     Shell execution includes basic safeguards against dangerous commands (like `rm -rf /`), but the sandbox configuration determines the actual security level.
 
-### Scheduling Skills
+### Scheduling Tools
 
 Task scheduling for deferred operations:
 
-| Skill | Description | Parameters |
-|-------|-------------|------------|
+| Tool | Description | Parameters |
+|------|-------------|------------|
 | `schedule_task` | Schedule a task for later | `name`, `action`, `delay_seconds`, `repeat_interval_seconds` (optional) |
 | `list_tasks` | List all scheduled tasks | (none) |
 | `get_task` | Get task details | `task_id` |
 | `cancel_task` | Cancel a scheduled task | `task_id` |
 
-## Skill DSL
+## Defining Custom Tools
 
-Skills are defined using a Kotlin DSL:
-
-```kotlin
-skill("my_skill") {
-    description = "A description of what this skill does"
-
-    parameter<String>("input") {
-        description = "Description of this parameter"
-        required = true
-    }
-
-    parameter<Int>("count") {
-        description = "Optional count parameter"
-        default = 10
-    }
-
-    execute { params ->
-        val input = params.get<String>("input")
-        val count = params.getOrDefault("count", 10)
-
-        // Do work...
-
-        SkillResult.Success("Result message")
-    }
-}
-```
-
-### Parameter Types
-
-Supported parameter types:
-
-- `String` - Text values
-- `Int` - Integer numbers
-- `Long` - Long integers
-- `Double` - Floating point numbers
-- `Boolean` - True/false values
-
-### Skill Results
-
-Skills return one of these result types:
+Tools extend Koog's `SimpleTool<Args>` with a `@Serializable` data class for parameters:
 
 ```kotlin
-// Success with text output
-SkillResult.Success("Operation completed")
+class WeatherTool(private val apiClient: HttpClient) : SimpleTool<WeatherTool.Args>(
+    argsSerializer = Args.serializer(),
+    name = "get_weather",
+    description = "Get current weather for a location",
+) {
+    @Serializable
+    data class Args(
+        @LLMDescription("City name or coordinates")
+        val location: String,
+    )
 
-// Error with message
-SkillResult.Error("Something went wrong")
-
-// Image attachment (for send_image, screenshot_page)
-SkillResult.ImageAttachment(
-    imageData = byteArray,
-    mimeType = "image/png",
-    caption = "Optional caption",
-    output = "Description of what was done"
-)
-```
-
-## Skill Registry
-
-Skills are organized into a registry with optional grouping:
-
-```kotlin
-val registry = SkillRegistry {
-    // Ungrouped skills
-    install(mySkill)
-
-    // Grouped skills
-    group("filesystem", "File system operations") {
-        install(readFile)
-        install(writeFile)
-    }
-}
-```
-
-### Default Registry
-
-The `DefaultSkills` object provides factory methods:
-
-```kotlin
-// Full registry with all skills
-val registry = DefaultSkills.createRegistry(
-    sandbox = sandbox,
-    taskScheduler = taskScheduler,
-    playwrightFetcher = playwrightFetcher  // optional
-)
-
-// Minimal registry (file + web only)
-val registry = DefaultSkills.createMinimalRegistry(sandbox)
-
-// Custom selection
-val registry = DefaultSkills.createCustomRegistry(
-    sandbox = sandbox,
-    includeFile = true,
-    includeWeb = true,
-    includeShell = false,
-    includeScheduling = false
-)
-```
-
-## Custom Skills
-
-Add custom skills by implementing the `Skill` interface or using the DSL:
-
-```kotlin
-// Using the DSL
-val weatherSkill = skill("get_weather") {
-    description = "Get current weather for a location"
-
-    parameter<String>("location") {
-        description = "City name or coordinates"
-        required = true
-    }
-
-    execute { params ->
-        val location = params.get<String>("location")
+    override suspend fun execute(args: Args): String {
         // Call weather API...
-        SkillResult.Success("Weather in $location: Sunny, 72°F")
+        return "Weather in ${args.location}: Sunny, 72F"
     }
 }
+```
 
-// Add to registry
-val registry = SkillRegistry {
-    DefaultSkills.createRegistry(sandbox).skills.forEach { install(it) }
-    install(weatherSkill)
+Key points:
+
+- **`@Serializable`** on the `Args` data class enables automatic JSON schema generation for the LLM
+- **`@LLMDescription`** on each field provides the parameter description shown to the LLM
+- **Default values** on fields make parameters optional (e.g., `val max_lines: Int = 1000`)
+- **`execute`** returns a `String` result that the LLM uses for further reasoning
+
+## Tool Registry
+
+Tools are collected into a Koog `ToolRegistry`:
+
+```kotlin
+val registry = ToolRegistry {
+    tool(ReadFileTool(sandbox))
+    tool(WeatherTool(httpClient))
 }
+```
+
+The built-in `DefaultTools.createToolRegistry()` registers all standard tools:
+
+```kotlin
+val registry = DefaultTools.createToolRegistry(
+    sandbox = sandbox,
+    httpClient = httpClient,
+    taskScheduler = taskScheduler,
+    playwrightFetcher = playwrightFetcher,  // optional
+)
 ```
 
 ## Execution Context
 
-Skills receive execution context with information about the current request:
+Tools can access per-request context (chat ID, user ID) via `ToolExecutionContext`:
 
 ```kotlin
-execute { params ->
-    val chatId = params.context?.chatId
-    val userId = params.context?.userId
-
+override suspend fun execute(args: Args): String {
+    val context = ToolExecutionContext.current()
+    val chatId = context?.chatId
     // Use context for chat-specific behavior
-    SkillResult.Success("Response for chat $chatId")
+    return "Response for chat $chatId"
 }
 ```
 
-This context is used by skills like `schedule_task` to know which chat to send scheduled messages to.
+Tools that produce binary output (like `screenshot_page`) add attachments to the context, which the agent sends alongside the text response.

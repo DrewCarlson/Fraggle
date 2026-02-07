@@ -21,14 +21,14 @@ This guide covers running and writing tests for Fraggle.
 ### Specific Test Class
 
 ```bash
-./gradlew :fraggle-agent:test --tests="*AgentTest"
-./gradlew :fraggle-skills:test --tests="*FileSkillsTest"
+./gradlew :fraggle-agent:test --tests="*FileMemoryStoreTest"
+./gradlew :fraggle-skills:test --tests="*SkillTest"
 ```
 
 ### Specific Test Method
 
 ```bash
-./gradlew :fraggle-agent:test --tests="*AgentTest.testReActLoop"
+./gradlew :fraggle-agent:test --tests="*FileMemoryStoreTest.UpdateFactTests*"
 ```
 
 ### With Detailed Output
@@ -76,38 +76,39 @@ class CoroutineTest {
 
 ```kotlin
 class MockTest {
-    private val mockProvider = mockk<LLMProvider>()
+    private val mockSandbox = mockk<Sandbox>()
 
     @Test
     fun `test with mock`() = runTest {
-        coEvery { mockProvider.complete(any()) } returns "mocked response"
+        every { mockSandbox.readFile(any(), any()) } returns
+            SandboxResult.Success("file contents")
 
-        val agent = FraggleAgent(mockProvider)
-        val result = agent.process("input")
+        val tool = ReadFileTool(mockSandbox)
+        val result = tool.execute(ReadFileTool.Args(path = "test.txt"))
 
-        assertEquals("mocked response", result)
-        coVerify { mockProvider.complete(any()) }
+        assertEquals("file contents", result)
+        verify { mockSandbox.readFile("test.txt", 1000) }
     }
 }
 ```
 
-### Testing Skills
+### Testing Tools
+
+Tools extend Koog's `SimpleTool` and can be tested directly by calling `execute`:
 
 ```kotlin
-class SkillTest {
+class ToolTest {
     private val sandbox = mockk<Sandbox>()
 
     @Test
-    fun `test read_file skill`() = runTest {
+    fun `test read_file tool`() = runTest {
         every { sandbox.readFile(any(), any()) } returns
             SandboxResult.Success("file contents")
 
-        val skill = FileSkills.readFile(sandbox)
-        val params = SkillParams(mapOf("path" to "test.txt"))
-        val result = skill.execute(params)
+        val tool = ReadFileTool(sandbox)
+        val result = tool.execute(ReadFileTool.Args(path = "test.txt"))
 
-        assertTrue(result is SkillResult.Success)
-        assertEquals("file contents", (result as SkillResult.Success).output)
+        assertEquals("file contents", result)
     }
 }
 ```
@@ -120,14 +121,15 @@ Test individual components in isolation:
 
 ```kotlin
 // Located in src/test/kotlin/
-class SkillRegistryTest {
+class MemoryStoreTest {
     @Test
-    fun `registry should find skill by name`() {
-        val skill = skill("test") { execute { SkillResult.Success("ok") } }
-        val registry = SkillRegistry { install(skill) }
+    fun `store should save and load facts`() = runTest {
+        val store = FileMemoryStore(tempDir)
+        store.append(MemoryScope.Global, Fact("Test fact"))
 
-        assertNotNull(registry.find("test"))
-        assertNull(registry.find("nonexistent"))
+        val memory = store.load(MemoryScope.Global)
+        assertEquals(1, memory.facts.size)
+        assertEquals("Test fact", memory.facts[0].content)
     }
 }
 ```
@@ -137,18 +139,16 @@ class SkillRegistryTest {
 Test component interactions:
 
 ```kotlin
-class AgentIntegrationTest {
+class ToolIntegrationTest {
     @Test
-    fun `agent should execute skills and return response`() = runTest {
-        val provider = FakeLLMProvider()
-        val sandbox = PermissiveSandbox()
-        val registry = DefaultSkills.createRegistry(sandbox)
+    fun `tool should execute within sandbox`() = runTest {
+        val sandbox = PermissiveSandbox(tempDir)
+        tempDir.resolve("test.txt").writeText("hello world")
 
-        val agent = FraggleAgent(provider, registry)
-        val result = agent.process("read file test.txt")
+        val tool = ReadFileTool(sandbox)
+        val result = tool.execute(ReadFileTool.Args(path = "test.txt"))
 
-        // Verify the agent called the read_file skill
-        assertTrue(result.contains("file contents"))
+        assertTrue(result.contains("hello world"))
     }
 }
 ```
@@ -170,17 +170,12 @@ object TestFixtures {
 }
 ```
 
-### Fake Implementations
+### In-Memory Implementations
 
 ```kotlin
-class FakeLLMProvider : LLMProvider {
-    var responses = mutableListOf<String>()
-    var callCount = 0
-
-    override suspend fun complete(request: Request): String {
-        return responses.getOrElse(callCount++) { "default response" }
-    }
-}
+// InMemoryStore for testing memory without filesystem
+val store = InMemoryStore()
+store.append(MemoryScope.Global, Fact("Test fact"))
 ```
 
 ## Coverage

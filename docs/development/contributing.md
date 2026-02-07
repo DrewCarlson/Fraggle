@@ -124,21 +124,13 @@ Add new skills for:
 
 ## Architecture Notes
 
-### Adding a New Skill
+### Adding a New Tool
 
-1. Create skill in `fraggle-skills/src/main/kotlin/`
-2. Add to appropriate skill group (or create new group)
-3. Register in `DefaultSkills.kt`
+1. Create a class extending `SimpleTool<Args>` in `fraggle-skills/src/main/kotlin/`
+2. Define a `@Serializable` `Args` data class with `@LLMDescription` annotations
+3. Register in `DefaultTools.createToolRegistry()`
 4. Add tests
 5. Document in `docs/architecture/skills.md`
-
-### Adding a New Provider
-
-1. Implement `LLMProvider` interface
-2. Add to provider factory
-3. Add configuration options
-4. Add tests
-5. Document setup
 
 ### Adding a New Bridge
 

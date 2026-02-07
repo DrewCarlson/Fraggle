@@ -3,13 +3,14 @@
 [![codecov](https://codecov.io/gh/DrewCarlson/Fraggle/graph/badge.svg?token=W77U2C9HUB)](https://codecov.io/gh/DrewCarlson/Fraggle)
 
 An AI-powered assistant framework that connects LLMs to messaging platforms with extensible tool capabilities.
+Built on [Koog](https://github.com/JetBrains/koog)'s agent orchestration framework.
 
 ## Highlights
 
 - **Chat Bridge Integration** - Connect to messaging platforms like Signal
 - **Local LLM Support** - Works with LM Studio for fully local, private AI
 - **Cloud Providers** - Also supports OpenAI and Anthropic APIs
-- **Built-in Skills** - File operations, web fetching, shell execution, task scheduling
+- **Built-in Tools** - File operations, web fetching, shell execution, task scheduling
 - **Persistent Memory** - Remembers context across conversations
 - **Sandboxed Execution** - Safe environment for file and shell operations
 - **Web Dashboard** - Monitor and configure your assistant through a web UI
@@ -46,16 +47,16 @@ Full documentation available at **[drewcarlson.github.io/Fraggle](https://drewca
 - [Configuration](https://drewcarlson.github.io/Fraggle/installation/configuration/)
 - [Signal Setup](https://drewcarlson.github.io/Fraggle/installation/signal-setup/)
 - [Architecture](https://drewcarlson.github.io/Fraggle/architecture/overview/)
-- [Skills Reference](https://drewcarlson.github.io/Fraggle/architecture/skills/)
+- [Tools Reference](https://drewcarlson.github.io/Fraggle/architecture/skills/)
 
 ## Project Structure
 
 ```
 Fraggle/
 ├── fraggle-cli/            # CLI application
-├── fraggle-agent/          # Core agent and provider abstractions
+├── fraggle-agent/          # Core agent framework (Koog integration)
 ├── fraggle-signal/         # Signal messenger integration
-├── fraggle-skills/         # Built-in skill implementations
+├── fraggle-skills/         # Built-in tool implementations
 ├── fraggle-api/            # REST API server
 ├── fraggle-dashboard/      # Web dashboard (Compose for Web)
 ├── fraggle-common/         # Shared models (Kotlin Multiplatform)

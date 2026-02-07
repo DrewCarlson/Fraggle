@@ -1,6 +1,6 @@
 # Architecture Overview
 
-Fraggle is built as a modular Kotlin application with clear separation of concerns.
+Fraggle is built as a modular Kotlin application with clear separation of concerns. The agent loop and tool system are powered by [Koog](https://github.com/JetBrains/koog), an AI agent framework.
 
 ## Module Structure
 
@@ -8,13 +8,12 @@ Fraggle is built as a modular Kotlin application with clear separation of concer
 Fraggle/
 ├── fraggle-cli/            # CLI application and entry point
 ├── fraggle-agent/          # Core framework
-│   ├── agent/              # ReAct agent implementation
-│   ├── provider/           # LLM provider abstractions
-│   ├── skill/              # Skill system and DSL
+│   ├── agent/              # Koog agent integration
+│   ├── memory/             # Hierarchical memory storage
 │   └── sandbox/            # Execution sandbox
 ├── fraggle-signal/         # Signal messenger bridge
 ├── fraggle-discord/        # Discord bot bridge
-├── fraggle-skills/         # Built-in skill implementations
+├── fraggle-skills/         # Built-in tool implementations
 ├── fraggle-common/         # Shared models (Kotlin Multiplatform)
 ├── fraggle-api/            # REST API server
 ├── fraggle-dashboard/      # Web dashboard (Compose for Web)
@@ -26,46 +25,36 @@ Fraggle/
 
 ### FraggleAgent
 
-The central component that orchestrates message processing. It implements a ReAct (Reasoning + Acting) loop:
+The central component that orchestrates message processing. It wraps Koog's `AIAgentService` which implements a ReAct (Reasoning + Acting) loop:
 
 1. Receives a message
-2. Sends message + history + tools to LLM
-3. If LLM requests a tool call, executes it and loops back to step 2
-4. If LLM produces a final response, returns it
+2. Builds per-request input (platform context, memory, conversation history)
+3. Delegates to Koog's agent service, which sends the context + tools to the LLM
+4. Koog handles tool calls iteratively until a final response is produced
+5. If auto-memory is enabled, new facts are extracted and reconciled
 
 See [Agent System](agent.md) for details.
 
-### LLM Providers
+### Tool System
 
-Abstraction layer for different LLM backends:
-
-- **LM Studio** - Local inference via OpenAI-compatible API
-- **OpenAI** - GPT models via OpenAI API
-- **Anthropic** - Claude models via Anthropic API
-
-All providers implement the same interface, making it easy to switch between them.
-
-### Skill System
-
-Skills are the tools available to the agent. They're defined using a Kotlin DSL:
+Tools are the capabilities available to the agent. Each tool extends Koog's `SimpleTool` with type-safe serializable parameters:
 
 ```kotlin
-skill("my_skill") {
-    description = "Does something useful"
-
-    parameter<String>("input") {
-        description = "The input value"
-        required = true
-    }
-
-    execute { params ->
-        val input = params.get<String>("input")
-        SkillResult.Success("Result: $input")
-    }
+class MyTool : SimpleTool<MyTool.Args>(
+    argsSerializer = Args.serializer(),
+    name = "my_tool",
+    description = "Does something useful",
+) {
+    @Serializable
+    data class Args(
+        @LLMDescription("The input value")
+        val input: String,
+    )
+    override suspend fun execute(args: Args): String = "Result: ${args.input}"
 }
 ```
 
-See [Skills](skills.md) for the full skill reference.
+See [Tools](skills.md) for the full reference.
 
 ### Memory System
 
@@ -75,7 +64,7 @@ Hierarchical memory storage with three scopes:
 - **Chat** - Per-conversation memory
 - **User** - Per-user memory across chats
 
-Memory is persisted as human-readable markdown files.
+Memory is persisted as human-readable markdown files. A `FraggleMemoryProvider` adapter bridges Fraggle's storage to Koog's memory system.
 
 See [Memory](memory.md) for details.
 
@@ -93,8 +82,8 @@ The sandbox can be configured for different security levels.
 
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│    Chat     │────>│   Agent     │────>│   Skills    │
-│   Bridge    │<────│   (ReAct)   │<────│             │
+│    Chat     │────>│   Agent     │────>│   Tools     │
+│   Bridge    │<────│   (Koog)    │<────│             │
 └─────────────┘     └─────────────┘     └─────────────┘
                           │
                           v
@@ -104,8 +93,8 @@ The sandbox can be configured for different security levels.
 ```
 
 1. **Chat Bridge** receives messages and passes them to the agent
-2. **Agent** processes messages using the ReAct loop, calling skills as needed
-3. **Skills** execute operations and return results
+2. **Agent** builds context and delegates to Koog's agent service, which calls tools as needed
+3. **Tools** execute operations and return results
 4. **Memory** stores and retrieves conversation context
 5. **Agent** generates final response
 6. **Chat Bridge** sends the response back to the user
@@ -127,7 +116,7 @@ The `@Documented` annotation generates runtime documentation that powers the web
 
 Fraggle uses Kotlin Multiplatform for shared code:
 
-- **JVM** - Main application, chat bridges, skills
+- **JVM** - Main application, chat bridges, tools
 - **JS** - Web dashboard (Compose for Web)
 
 Shared modules (like configuration models) compile to both targets.

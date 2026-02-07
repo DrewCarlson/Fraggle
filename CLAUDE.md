@@ -42,8 +42,8 @@ Fraggle is a Kotlin-based AI assistant that integrates with messaging platforms 
 
 - **`fraggle-di`** - Shared DI infrastructure: Metro scopes/qualifiers, HTTP clients, JSON, `CoroutineScope`, `ConfigModule` (sub-config extraction), `FraggleEnvironment` (path resolution)
 - **`fraggle-common`** - Shared models (Kotlin Multiplatform): config data classes, event models, API contracts
-- **`fraggle-agent`** - Core framework: agent loop, LLM provider, skill system, memory, sandbox, chat bridge abstractions. `AgentModule` provides all core services via DI.
-- **`fraggle-skills`** - Built-in skills: filesystem, web fetching, shell execution, task scheduling. `SkillsModule` provides `SkillRegistry`, `TaskScheduler`, `PlaywrightFetcher`.
+- **`fraggle-agent`** - Core framework: Koog agent service, memory, sandbox, chat bridge abstractions. `AgentModule` provides all core services via DI.
+- **`fraggle-skills`** - Built-in tools: filesystem, web fetching, shell execution, task scheduling. `SkillsModule` provides `ToolRegistry`, `TaskScheduler`, `PlaywrightFetcher`.
 - **`fraggle-signal`** - Signal messenger integration. `SignalModule` provides nullable `SignalBridge?`, `MessageRouter?`, `SignalBridgeInitializer?`.
 - **`fraggle-discord`** - Discord bot integration (Kord 0.17.0). `DiscordModule` provides nullable `DiscordBridge?`, `DiscordBridgeInitializer?`.
 - **`fraggle-cli`** - CLI entry point (Clikt), `AppGraph` (central DI graph), `ApiModule`, `ServiceOrchestrator` (thin lifecycle manager)
@@ -58,8 +58,8 @@ The application uses [Metro](https://github.com/AdrianAndroid/Metro) v0.10.2 for
 - `AppGraph` (`fraggle-cli`) — `@DependencyGraph(AppScope::class)`, exposes all top-level bindings
 - `NetworkModule` (`fraggle-di`) — HTTP clients, JSON, `CoroutineScope`
 - `ConfigModule` (`fraggle-di`) — Extracts sub-configs from `FraggleConfig` (e.g., `ProviderConfig`, `MemoryConfig`, `SignalBridgeConfig?`)
-- `AgentModule` (`fraggle-agent`) — `MemoryStore`, `Sandbox`, `PromptManager`, `LLMProvider`, `FraggleAgent`, `ChatBridgeManager`, etc.
-- `SkillsModule` (`fraggle-skills`) — `SkillRegistry`, `TaskScheduler`, `PlaywrightFetcher?`
+- `AgentModule` (`fraggle-agent`) — `MemoryStore`, `Sandbox`, `PromptManager`, `PromptExecutor`, `FraggleAgent`, `ChatBridgeManager`, etc.
+- `SkillsModule` (`fraggle-skills`) — `ToolRegistry`, `TaskScheduler`, `PlaywrightFetcher?`
 - `SignalModule` (`fraggle-signal`) — Nullable chain for Signal services
 - `DiscordModule` (`fraggle-discord`) — Nullable chain for Discord services
 - `ApiModule` (`fraggle-cli`) — `FraggleServicesImpl`, `EmbeddedServer?`
@@ -79,18 +79,25 @@ The application uses [Metro](https://github.com/AdrianAndroid/Metro) v0.10.2 for
 
 ### Key Architectural Patterns
 
-**ReAct Agent Loop** (`FraggleAgent`): Iteratively processes messages, calling tools when needed until a final response is generated. Uses OpenAI function-calling format for tool definitions.
+**Koog Agent** (`FraggleAgent`): Uses [Koog](https://github.com/JetBrains/koog) `AIAgentService` with `singleRunStrategy()` for the agent loop. Koog handles LLM interaction, tool dispatch, and iteration limits natively. `FraggleAgent` builds per-request input (platform context, memory, history) and delegates to the Koog agent.
 
-**Skill System**: DSL-based skill definition with type-safe parameters. Skills convert to OpenAI function format automatically.
+**Tool System**: Tools extend Koog's `SimpleTool<Args>` with `@Serializable` argument data classes and `@LLMDescription` annotations. Tools are collected into a `ToolRegistry` via `DefaultTools.createToolRegistry()`.
 ```kotlin
-skill("my_skill") {
-    description = "Does something"
-    parameter<String>("input") { required = true }
-    execute { params -> SkillResult.Success("result") }
+class MyTool : SimpleTool<MyTool.Args>(
+    argsSerializer = Args.serializer(),
+    name = "my_tool",
+    description = "Does something",
+) {
+    @Serializable
+    data class Args(
+        @LLMDescription("The input value")
+        val input: String,
+    )
+    override suspend fun execute(args: Args): String = "result"
 }
 ```
 
-**Hierarchical Memory**: Three scopes (Global, Chat, User) with file-based persistence as human-readable markdown.
+**Hierarchical Memory**: Three scopes (Global, Chat, User) with file-based persistence as human-readable markdown. Adapted to Koog's `AgentMemoryProvider` via `FraggleMemoryProvider`. When `autoMemory` is enabled, facts are automatically extracted and reconciled via LLM after each response.
 
 **Chat Bridge Abstraction**: `ChatBridge` interface allows multiple messaging platform implementations. `ChatBridgeManager` routes messages with qualified chat IDs (e.g., "signal:+1234567890").
 
@@ -144,6 +151,7 @@ Database.connect(url = url, driver = "org.sqlite.JDBC")
 ### Technology Stack
 
 - Kotlin 2.3.0 on JDK 21
+- Koog 0.6.1 (AI agent framework: agent loop, tool system, memory)
 - Metro 0.10.2 (compile-time dependency injection)
 - Exposed 1.0.0 + SQLite JDBC 3.51.1.0 (database ORM)
 - Ktor 3.4.0 (HTTP client/server)

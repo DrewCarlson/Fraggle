@@ -1,6 +1,6 @@
 # Fraggle
 
-Fraggle is a Kotlin-based AI assistant framework that integrates with messaging platforms. It connects to local or cloud LLM providers and provides an extensible skill system for tasks like file operations, web fetching, and command execution.
+Fraggle is a Kotlin-based AI assistant framework that integrates with messaging platforms. Built on [Koog](https://github.com/JetBrains/koog) for agent orchestration, it connects to local or cloud LLM providers and provides extensible tools for tasks like file operations, web fetching, and command execution.
 
 ## Key Features
 
@@ -9,11 +9,11 @@ Fraggle is a Kotlin-based AI assistant framework that integrates with messaging 
 - :material-chat-processing: **Chat Bridge Integration**
   Connect to messaging platforms like Signal and Discord, with support for direct conversations.
 
-- :material-robot: **ReAct Agent Loop**
-  Iterative reasoning and acting pattern for reliable tool use with any compatible LLM.
+- :material-robot: **Koog Agent**
+  ReAct-style reasoning and acting loop powered by Koog for reliable tool use with any compatible LLM.
 
-- :material-puzzle: **Extensible Skills**
-  DSL-based skill definitions make it easy to add custom capabilities.
+- :material-puzzle: **Extensible Tools**
+  Type-safe tool definitions using Koog's `SimpleTool` framework make it easy to add custom capabilities.
 
 - :material-memory: **Persistent Memory**
   Hierarchical memory system with global, chat, and user scopes.
@@ -48,10 +48,10 @@ See the [Getting Started](installation/getting-started.md) guide for full setup 
 ```
 Fraggle/
 ├── fraggle-cli/            # CLI application entry point
-├── fraggle-agent/          # Core agent, provider, and skill abstractions
+├── fraggle-agent/          # Core agent framework (Koog integration)
 ├── fraggle-signal/         # Signal messaging integration
 ├── fraggle-discord/        # Discord bot integration
-├── fraggle-skills/         # Built-in skill implementations
+├── fraggle-skills/         # Built-in tool implementations
 ├── fraggle-api/            # REST API server
 ├── fraggle-dashboard/      # Web dashboard (Compose for Web)
 ├── fraggle-common/         # Shared models (Kotlin Multiplatform)
@@ -62,8 +62,8 @@ Fraggle/
 ## How It Works
 
 1. **Message Received** - A message arrives via a chat bridge (or interactive mode)
-2. **Agent Processing** - The ReAct loop evaluates the message and available tools
-3. **Skill Execution** - The agent calls skills as needed (file ops, web fetch, etc.)
+2. **Agent Processing** - Koog's agent service evaluates the message and available tools
+3. **Tool Execution** - The agent calls tools as needed (file ops, web fetch, etc.)
 4. **Response Sent** - The final response is delivered back to the user
 
 The agent continues reasoning and acting until it produces a final response or reaches the iteration limit.
