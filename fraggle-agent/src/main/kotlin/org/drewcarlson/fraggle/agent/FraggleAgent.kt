@@ -2,7 +2,16 @@ package org.drewcarlson.fraggle.agent
 
 import ai.koog.agents.core.agent.AIAgentService
 import ai.koog.agents.core.agent.config.AIAgentConfig
-import ai.koog.agents.core.agent.singleRunStrategy
+import ai.koog.agents.core.dsl.builder.forwardTo
+import ai.koog.agents.core.dsl.builder.strategy
+import ai.koog.agents.core.dsl.extension.HistoryCompressionStrategy
+import ai.koog.agents.core.dsl.extension.nodeLLMCompressHistory
+import ai.koog.agents.core.dsl.extension.nodeLLMRequestMultiple
+import ai.koog.agents.core.dsl.extension.nodeLLMSendMultipleToolResults
+import ai.koog.agents.core.dsl.extension.nodeExecuteMultipleTools
+import ai.koog.agents.core.dsl.extension.onMultipleAssistantMessages
+import ai.koog.agents.core.dsl.extension.onMultipleToolCalls
+import ai.koog.agents.core.environment.ReceivedToolResult
 import ai.koog.agents.core.tools.ToolRegistry
 import ai.koog.agents.memory.feature.AgentMemory
 import ai.koog.agents.memory.providers.AgentMemoryProvider
@@ -64,7 +73,7 @@ class FraggleAgent(
     private val agentService = AIAgentService(
         promptExecutor = promptExecutor,
         llmModel = llmModel,
-        strategy = singleRunStrategy(),
+        strategy = compressingSingleRunStrategy(),
         toolRegistry = toolRegistry,
         systemPrompt = "",
         temperature = config.temperature,
@@ -81,13 +90,18 @@ class FraggleAgent(
 
     /**
      * Process an incoming message and generate a response.
+     * Returns a [ProcessResult] containing the response and the updated conversation
+     * (which may have been compressed if it exceeded [AgentConfig.maxHistoryMessages]).
      */
     suspend fun process(
         conversation: Conversation,
         message: IncomingMessage,
         platform: ChatPlatform? = null,
-    ): AgentResponse {
+    ): ProcessResult {
         logger.info("Processing message from ${message.sender.id} in chat ${message.chatId}")
+
+        // Pre-compress conversation if it exceeds the history limit
+        val compressed = compressIfNeeded(conversation)
 
         // Create per-request execution context for tools
         val executionContext = ToolExecutionContext(
@@ -95,20 +109,24 @@ class FraggleAgent(
             userId = message.sender.id,
         )
 
-        return try {
-            val systemPrompt = buildBaseSystemPrompt(promptManager, platform, message.chatId, message.sender.id)
+        val response = try {
+            val systemPrompt = buildBaseSystemPrompt(
+                promptManager = promptManager,
+                platform = platform,
+                chatId = message.chatId,
+                senderId = message.sender.id,
+                historySummary = compressed.historySummary,
+            )
             val agentPrompt = prompt(message.id) {
                 system(systemPrompt)
 
-                conversation.messages
-                    .takeLast(config.maxHistoryMessages)
-                    .forEach { contextMessage ->
-                        if (contextMessage.role == ConversationRole.USER) {
-                            user(contextMessage.content)
-                        } else {
-                            assistant(contextMessage.content)
-                        }
+                compressed.messages.forEach { contextMessage ->
+                    if (contextMessage.role == ConversationRole.USER) {
+                        user(contextMessage.content)
+                    } else {
+                        assistant(contextMessage.content)
                     }
+                }
             }
 
             val result = withContext(ToolExecutionContext.asContextElement(executionContext)) {
@@ -136,10 +154,79 @@ class FraggleAgent(
             logger.error("Koog agent error: ${e.message}", e)
             AgentResponse.Error("Failed to get response from LLM: ${e.message}")
         }
+
+        return ProcessResult(response = response, conversation = compressed)
     }
 
     override fun close() {
         runBlocking { agentService.closeAll() }
+    }
+
+    /**
+     * Compress conversation history if it exceeds the configured limit.
+     * Keeps the most recent 2/3 of messages verbatim and compresses older messages
+     * into a TLDR summary. Existing summaries are included as context for cumulative compression.
+     */
+    private suspend fun compressIfNeeded(conversation: Conversation): Conversation {
+        if (conversation.messages.size <= config.maxHistoryMessages) {
+            return conversation
+        }
+
+        val keepCount = (config.maxHistoryMessages * 2) / 3
+        val recentMessages = conversation.messages.takeLast(keepCount)
+        val oldMessages = conversation.messages.dropLast(keepCount)
+
+        if (oldMessages.isEmpty()) return conversation
+
+        logger.info(
+            "Compressing conversation history: {} total messages, keeping {} recent, compressing {}",
+            conversation.messages.size, recentMessages.size, oldMessages.size,
+        )
+
+        val oldMessagesText = oldMessages.joinToString("\n") { msg ->
+            val role = if (msg.role == ConversationRole.USER) "User" else "Assistant"
+            "$role: ${msg.content}"
+        }
+
+        val existingSummaryBlock = conversation.historySummary?.let {
+            "Previous conversation summary:\n$it\n\n"
+        } ?: ""
+
+        val compressionInput = buildString {
+            append(existingSummaryBlock)
+            appendLine("Messages to compress:")
+            appendLine(oldMessagesText)
+            appendLine()
+            appendLine("Create a concise TL;DR summary that captures:")
+            appendLine("- Key topics discussed and decisions made")
+            appendLine("- Important facts, preferences, or requests from the user")
+            appendLine("- Current status of any ongoing tasks or questions")
+            appendLine("- Any context the assistant would need to continue the conversation naturally")
+        }
+
+        return try {
+            val compressionPrompt = prompt("history-compression", LLMParams(temperature = 0.1)) {
+                system("You are a conversation summarizer. Produce a concise but comprehensive summary of the conversation history provided. Preserve all important context, decisions, and facts. Output only the summary, no preamble.")
+                user(compressionInput)
+            }
+
+            val responses = promptExecutor.execute(prompt = compressionPrompt, model = llmModel)
+            val summary = responses.firstOrNull()?.content?.trim()
+
+            if (summary.isNullOrBlank()) {
+                logger.warn("History compression returned empty result, keeping original conversation")
+                return conversation
+            }
+
+            logger.info("History compressed successfully ({} chars summary)", summary.length)
+            conversation.copy(
+                messages = recentMessages,
+                historySummary = summary,
+            )
+        } catch (e: Exception) {
+            logger.warn("History compression failed, keeping original conversation: ${e.message}")
+            conversation
+        }
     }
 
     /**
@@ -151,6 +238,7 @@ class FraggleAgent(
         platform: ChatPlatform?,
         chatId: String,
         senderId: String,
+        historySummary: String? = null,
     ): String = buildString {
         appendLine(promptManager.buildFullPrompt())
         appendLine()
@@ -162,6 +250,22 @@ class FraggleAgent(
             appendLine(historySection)
         } else {
             logger.warn("AGENT.md missing 'Conversation History' section")
+        }
+
+        if (historySummary != null) {
+            val compressedSection = agentTemplate?.renderSection(
+                "compressed conversation history",
+                mapOf("compressed_summary" to historySummary),
+            )
+            if (compressedSection != null) {
+                appendLine()
+                appendLine(compressedSection)
+            } else {
+                appendLine()
+                appendLine("## Earlier Conversation Summary")
+                appendLine(historySummary)
+            }
+            appendLine()
         }
 
         if (platform != null) {
@@ -436,6 +540,39 @@ private data class ReconciledFact(
 )
 
 /**
+ * Custom strategy that mirrors [singleRunStrategy] (sequential tool calls)
+ * but adds a conditional [nodeLLMCompressHistory] node to handle cases where
+ * tool-heavy runs accumulate many messages during a single agent execution.
+ */
+private fun compressingSingleRunStrategy() = strategy<String, String>("compressing_single_run") {
+    val nodeCallLLM by nodeLLMRequestMultiple()
+    val nodeExecuteTool by nodeExecuteMultipleTools(parallelTools = false)
+    val nodeSendToolResult by nodeLLMSendMultipleToolResults()
+    val nodeCompressHistory by nodeLLMCompressHistory<List<ReceivedToolResult>>(
+        strategy = HistoryCompressionStrategy.WholeHistory,
+        preserveMemory = false,
+    )
+
+    edge(nodeStart forwardTo nodeCallLLM)
+    edge(nodeCallLLM forwardTo nodeExecuteTool onMultipleToolCalls { true })
+    edge(
+        nodeCallLLM forwardTo nodeFinish
+            onMultipleAssistantMessages { true }
+            transformed { it.joinToString("\n") { message -> message.content } }
+    )
+
+    edge(nodeExecuteTool forwardTo nodeCompressHistory)
+    edge(nodeCompressHistory forwardTo nodeSendToolResult)
+
+    edge(nodeSendToolResult forwardTo nodeExecuteTool onMultipleToolCalls { true })
+    edge(
+        nodeSendToolResult forwardTo nodeFinish
+            onMultipleAssistantMessages { true }
+            transformed { it.joinToString("\n") { message -> message.content } }
+    )
+}
+
+/**
  * Agent configuration.
  */
 data class AgentConfig(
@@ -448,12 +585,21 @@ data class AgentConfig(
 )
 
 /**
+ * Result of processing a message, including the updated conversation state.
+ */
+data class ProcessResult(
+    val response: AgentResponse,
+    val conversation: Conversation,
+)
+
+/**
  * Conversation context.
  */
 data class Conversation(
     val id: String,
     val chatId: String,
     val messages: List<ConversationMessage> = emptyList(),
+    val historySummary: String? = null,
 )
 
 data class ConversationMessage(

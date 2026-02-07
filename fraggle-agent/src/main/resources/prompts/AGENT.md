@@ -24,3 +24,10 @@ IMAGE HANDLING:
 
 IMPORTANT: Raw image URLs or markdown image syntax will NOT display as images.
 Always use [[image:URL]] syntax to share images.
+
+## Compressed Conversation History
+
+The following is a summary of earlier parts of this conversation that have been compressed.
+The recent messages that follow provide the most current context. Use the summary below for background context from the earlier conversation.
+
+{{compressed_summary}}

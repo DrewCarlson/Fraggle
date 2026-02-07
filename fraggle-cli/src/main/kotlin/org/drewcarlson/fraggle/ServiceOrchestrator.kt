@@ -180,12 +180,12 @@ class ServiceOrchestrator(
         )
 
         // Process with agent
-        val response = agent.process(conversation, message)
+        val result = agent.process(conversation, message)
 
-        // Update conversation history
-        val responseText = response.contentOrError()
-        conversations[chatId] = conversation.copy(
-            messages = conversation.messages + listOf(
+        // Update conversation history (using potentially compressed conversation)
+        val responseText = result.response.contentOrError()
+        conversations[chatId] = result.conversation.copy(
+            messages = result.conversation.messages + listOf(
                 ConversationMessage(ConversationRole.USER, text),
                 ConversationMessage(ConversationRole.ASSISTANT, responseText),
             )
@@ -290,9 +290,10 @@ class ServiceOrchestrator(
 
             // Process message with platform context
             logger.info("Processing message from ${routedMessage.sender.id} via ${platform.name}")
-            val (response, duration) = measureTimedValue {
+            val (processResult, duration) = measureTimedValue {
                 agent.process(conversation, routedMessage, platform)
             }
+            val response = processResult.response
 
             // Stop typing indicator job
             typingJob.cancel()
@@ -406,9 +407,9 @@ class ServiceOrchestrator(
                 processingDuration = duration,
             ))
 
-            // Update conversation
-            conversations[chatId] = conversation.copy(
-                messages = conversation.messages + listOf(
+            // Update conversation (using potentially compressed conversation)
+            conversations[chatId] = processResult.conversation.copy(
+                messages = processResult.conversation.messages + listOf(
                     ConversationMessage(ConversationRole.USER, messageText),
                     ConversationMessage(ConversationRole.ASSISTANT, finalText),
                 )
