@@ -23,8 +23,8 @@ import org.drewcarlson.fraggle.models.FraggleConfig
 import org.drewcarlson.fraggle.signal.MessageRouter
 import org.drewcarlson.fraggle.signal.SignalBridge
 import org.drewcarlson.fraggle.signal.SignalBridgeInitializer
-import org.drewcarlson.fraggle.skills.scheduling.TaskScheduler
-import org.drewcarlson.fraggle.skills.web.PlaywrightFetcher
+import org.drewcarlson.fraggle.tools.scheduling.TaskScheduler
+import org.drewcarlson.fraggle.tools.web.PlaywrightFetcher
 import java.nio.file.Path
 
 /**
@@ -33,7 +33,7 @@ import java.nio.file.Path
  * This graph provides all application-scoped dependencies including:
  * - HTTP clients (default and LLM-optimized)
  * - Configuration and sub-configs
- * - Agent, skills, memory, sandbox
+ * - Agent, tools, memory, sandbox
  * - Chat bridges (Signal, Discord)
  * - API server
  *

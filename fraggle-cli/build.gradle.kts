@@ -21,7 +21,7 @@ dependencies {
     implementation(project(":fraggle-agent"))
     implementation(project(":fraggle-signal"))
     implementation(project(":fraggle-discord"))
-    implementation(project(":fraggle-skills"))
+    implementation(project(":fraggle-tools"))
     implementation(project(":fraggle-api"))
 
     // Kotlinx

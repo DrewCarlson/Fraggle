@@ -47,7 +47,7 @@ Full documentation available at **[drewcarlson.github.io/Fraggle](https://drewca
 - [Configuration](https://drewcarlson.github.io/Fraggle/installation/configuration/)
 - [Signal Setup](https://drewcarlson.github.io/Fraggle/installation/signal-setup/)
 - [Architecture](https://drewcarlson.github.io/Fraggle/architecture/overview/)
-- [Tools Reference](https://drewcarlson.github.io/Fraggle/architecture/skills/)
+- [Tools Reference](https://drewcarlson.github.io/Fraggle/architecture/tools/)
 
 ## Project Structure
 
@@ -56,7 +56,7 @@ Fraggle/
 ├── fraggle-cli/            # CLI application
 ├── fraggle-agent/          # Core agent framework (Koog integration)
 ├── fraggle-signal/         # Signal messenger integration
-├── fraggle-skills/         # Built-in tool implementations
+├── fraggle-tools/          # Built-in tool implementations
 ├── fraggle-api/            # REST API server
 ├── fraggle-dashboard/      # Web dashboard (Compose for Web)
 ├── fraggle-common/         # Shared models (Kotlin Multiplatform)

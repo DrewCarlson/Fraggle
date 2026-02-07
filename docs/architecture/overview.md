@@ -13,7 +13,7 @@ Fraggle/
 │   └── sandbox/            # Execution sandbox
 ├── fraggle-signal/         # Signal messenger bridge
 ├── fraggle-discord/        # Discord bot bridge
-├── fraggle-skills/         # Built-in tool implementations
+├── fraggle-tools/          # Built-in tool implementations
 ├── fraggle-common/         # Shared models (Kotlin Multiplatform)
 ├── fraggle-api/            # REST API server
 ├── fraggle-dashboard/      # Web dashboard (Compose for Web)
@@ -54,7 +54,7 @@ class MyTool : SimpleTool<MyTool.Args>(
 }
 ```
 
-See [Tools](skills.md) for the full reference.
+See [Tools](tools.md) for the full reference.
 
 ### Memory System
 

@@ -51,7 +51,7 @@ Fraggle/
 ├── fraggle-agent/          # Core agent framework (Koog integration)
 ├── fraggle-signal/         # Signal messaging integration
 ├── fraggle-discord/        # Discord bot integration
-├── fraggle-skills/         # Built-in tool implementations
+├── fraggle-tools/          # Built-in tool implementations
 ├── fraggle-api/            # REST API server
 ├── fraggle-dashboard/      # Web dashboard (Compose for Web)
 ├── fraggle-common/         # Shared models (Kotlin Multiplatform)

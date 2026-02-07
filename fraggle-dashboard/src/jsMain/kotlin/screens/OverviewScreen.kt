@@ -83,8 +83,8 @@ fun OverviewScreen(statusState: DataState<SystemStatus>, wsService: WebSocketSer
                     onClick = { router.navigate("/bridges") },
                 )
                 StatCard(
-                    title = "Available Skills",
-                    value = status.availableSkills.toString(),
+                    title = "Available Tools",
+                    value = status.availableTools.toString(),
                     icon = "bi-tools",
                     iconBgColor = "#f59e0b1a",
                     iconColor = "#f59e0b",

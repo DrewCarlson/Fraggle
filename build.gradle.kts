@@ -13,6 +13,6 @@ dependencies {
     kover(project(":fraggle-agent"))
     kover(project(":fraggle-signal"))
     kover(project(":fraggle-discord"))
-    kover(project(":fraggle-skills"))
+    kover(project(":fraggle-tools"))
     kover(project(":fraggle-api"))
 }

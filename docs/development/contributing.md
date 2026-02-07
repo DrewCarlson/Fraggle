@@ -67,11 +67,11 @@ git checkout -b fix/bug-description
 Write clear commit messages:
 
 ```
-Add weather skill for fetching forecasts
+Add weather tool for fetching forecasts
 
-- Implement WeatherSkill with location parameter
+- Implement WeatherTool with location parameter
 - Add tests for various weather conditions
-- Document skill in skills.md
+- Document tool in tools.md
 ```
 
 ### 5. Push and Create PR
@@ -96,9 +96,9 @@ Then create a pull request on GitHub.
 
 Look for issues labeled `good first issue` on GitHub.
 
-### Skills
+### Tools
 
-Add new skills for:
+Add new tools for:
 
 - External APIs (weather, news, etc.)
 - System operations
@@ -126,11 +126,11 @@ Add new skills for:
 
 ### Adding a New Tool
 
-1. Create a class extending `SimpleTool<Args>` in `fraggle-skills/src/main/kotlin/`
+1. Create a class extending `SimpleTool<Args>` in `fraggle-tools/src/main/kotlin/`
 2. Define a `@Serializable` `Args` data class with `@LLMDescription` annotations
 3. Register in `DefaultTools.createToolRegistry()`
 4. Add tests
-5. Document in `docs/architecture/skills.md`
+5. Document in `docs/architecture/tools.md`
 
 ### Adding a New Bridge
 

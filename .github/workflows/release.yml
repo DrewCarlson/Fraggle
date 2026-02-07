@@ -39,7 +39,7 @@ jobs:
             fraggle-agent/**
             fraggle-signal/**
             fraggle-discord/**
-            fraggle-skills/**
+            fraggle-tools/**
             fraggle-common/**
             fraggle-dashboard/**
             libs/documented-annotations/**

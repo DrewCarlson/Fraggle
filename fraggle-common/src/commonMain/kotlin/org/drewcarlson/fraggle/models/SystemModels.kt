@@ -11,7 +11,7 @@ data class SystemStatus(
     val uptime: Duration,
     val totalChats: Long,
     val connectedBridges: Int,
-    val availableSkills: Int,
+    val availableTools: Int,
     val scheduledTasks: Int,
     val memoryUsage: MemoryUsage,
     val uninitializedBridges: List<String> = emptyList(),

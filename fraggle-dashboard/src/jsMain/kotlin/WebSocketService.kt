@@ -249,7 +249,7 @@ enum class RefreshTrigger {
     Status,
     Chats,
     Bridges,
-    Skills,
+    Tools,
     Memory,
     Scheduler,
 }

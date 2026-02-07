@@ -17,8 +17,8 @@ import org.drewcarlson.fraggle.models.FraggleEvent
 import org.drewcarlson.fraggle.signal.MessageRouter
 import org.drewcarlson.fraggle.signal.SignalBridge
 import org.drewcarlson.fraggle.signal.SignalBridgeInitializer
-import org.drewcarlson.fraggle.skills.scheduling.TaskScheduler
-import org.drewcarlson.fraggle.skills.web.PlaywrightFetcher
+import org.drewcarlson.fraggle.tools.scheduling.TaskScheduler
+import org.drewcarlson.fraggle.tools.web.PlaywrightFetcher
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Clock
@@ -200,7 +200,7 @@ class ServiceOrchestrator(
     fun getAgent(): FraggleAgent = agent
 
     /**
-     * Get the skill registry.
+     * Get the tool registry.
      */
     fun getToolRegistry() = toolRegistry
 

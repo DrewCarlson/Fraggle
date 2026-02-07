@@ -35,8 +35,8 @@ This compiles all modules and runs tests.
 # Signal integration
 ./gradlew :fraggle-signal:build
 
-# Built-in skills
-./gradlew :fraggle-skills:build
+# Built-in tools
+./gradlew :fraggle-tools:build
 
 # CLI application
 ./gradlew :fraggle-cli:build

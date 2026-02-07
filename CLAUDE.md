@@ -22,10 +22,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ./gradlew :fraggle-cli:test
 
 # Run a specific test class
-./gradlew :fraggle-agent:test --tests="*SkillTest"
+./gradlew :fraggle-agent:test --tests="*ToolsTest"
 
 # Run a specific test method (use full pattern)
-./gradlew :fraggle-agent:test --tests="*SkillTest.Execution*"
+./gradlew :fraggle-agent:test --tests="*ToolsTest.Execution*"
 
 # Build the dashboard for development (with vite, the KMP webpack tasks are not used)
 ./gradlew :fraggle-dashboard:jsBrowserDevelopmentDist
@@ -43,7 +43,7 @@ Fraggle is a Kotlin-based AI assistant that integrates with messaging platforms 
 - **`fraggle-di`** - Shared DI infrastructure: Metro scopes/qualifiers, HTTP clients, JSON, `CoroutineScope`, `ConfigModule` (sub-config extraction), `FraggleEnvironment` (path resolution)
 - **`fraggle-common`** - Shared models (Kotlin Multiplatform): config data classes, event models, API contracts
 - **`fraggle-agent`** - Core framework: Koog agent service, memory, sandbox, chat bridge abstractions. `AgentModule` provides all core services via DI.
-- **`fraggle-skills`** - Built-in tools: filesystem, web fetching, shell execution, task scheduling. `SkillsModule` provides `ToolRegistry`, `TaskScheduler`, `PlaywrightFetcher`.
+- **`fraggle-tools`** - Built-in tools: filesystem, web fetching, shell execution, task scheduling. `ToolsModule` provides `ToolRegistry`, `TaskScheduler`, `PlaywrightFetcher`.
 - **`fraggle-signal`** - Signal messenger integration. `SignalModule` provides nullable `SignalBridge?`, `MessageRouter?`, `SignalBridgeInitializer?`.
 - **`fraggle-discord`** - Discord bot integration (Kord 0.17.0). `DiscordModule` provides nullable `DiscordBridge?`, `DiscordBridgeInitializer?`.
 - **`fraggle-cli`** - CLI entry point (Clikt), `AppGraph` (central DI graph), `ApiModule`, `ServiceOrchestrator` (thin lifecycle manager)
@@ -59,7 +59,7 @@ The application uses [Metro](https://github.com/AdrianAndroid/Metro) v0.10.2 for
 - `NetworkModule` (`fraggle-di`) — HTTP clients, JSON, `CoroutineScope`
 - `ConfigModule` (`fraggle-di`) — Extracts sub-configs from `FraggleConfig` (e.g., `ProviderConfig`, `MemoryConfig`, `SignalBridgeConfig?`)
 - `AgentModule` (`fraggle-agent`) — `MemoryStore`, `Sandbox`, `PromptManager`, `PromptExecutor`, `FraggleAgent`, `ChatBridgeManager`, etc.
-- `SkillsModule` (`fraggle-skills`) — `ToolRegistry`, `TaskScheduler`, `PlaywrightFetcher?`
+- `ToolsModule` (`fraggle-tools`) — `ToolRegistry`, `TaskScheduler`, `PlaywrightFetcher?`
 - `SignalModule` (`fraggle-signal`) — Nullable chain for Signal services
 - `DiscordModule` (`fraggle-discord`) — Nullable chain for Discord services
 - `ApiModule` (`fraggle-cli`) — `FraggleServicesImpl`, `EmbeddedServer?`

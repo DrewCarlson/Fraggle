@@ -20,9 +20,9 @@ import org.drewcarlson.fraggle.discord.DiscordOAuth
 import org.drewcarlson.fraggle.memory.MemoryStore
 import org.drewcarlson.fraggle.models.*
 import org.drewcarlson.fraggle.signal.SignalBridge
-import org.drewcarlson.fraggle.skills.scheduling.ScheduledTask
-import org.drewcarlson.fraggle.skills.scheduling.TaskScheduler
-import org.drewcarlson.fraggle.skills.scheduling.TaskStatus
+import org.drewcarlson.fraggle.tools.scheduling.ScheduledTask
+import org.drewcarlson.fraggle.tools.scheduling.TaskScheduler
+import org.drewcarlson.fraggle.tools.scheduling.TaskStatus
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
 import java.util.*
@@ -81,7 +81,7 @@ class FraggleServicesImpl(
             uptime = Clock.System.now() - startTime,
             totalChats = chatHistoryStore.countChats(),
             connectedBridges = registeredBridges.count { bridges.isConnected(it) },
-            availableSkills = toolRegistry.tools.size,
+            availableTools = toolRegistry.tools.size,
             scheduledTasks = taskScheduler.listPendingTasks().size,
             memoryUsage = MemoryUsage(
                 heapUsed = runtime.totalMemory() - runtime.freeMemory(),

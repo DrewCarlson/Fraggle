@@ -14,7 +14,7 @@ This guide covers running and writing tests for Fraggle.
 
 ```bash
 ./gradlew :fraggle-agent:test
-./gradlew :fraggle-skills:test
+./gradlew :fraggle-tools:test
 ./gradlew :fraggle-signal:test
 ```
 
@@ -22,7 +22,7 @@ This guide covers running and writing tests for Fraggle.
 
 ```bash
 ./gradlew :fraggle-agent:test --tests="*FileMemoryStoreTest"
-./gradlew :fraggle-skills:test --tests="*SkillTest"
+./gradlew :fraggle-tools:test --tests="*ToolsTest"
 ```
 
 ### Specific Test Method

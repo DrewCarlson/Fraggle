@@ -115,4 +115,4 @@ $FRAGGLE_ROOT/
 
 - [Configuration Reference](configuration.md) - Full configuration options
 - [Signal Setup](signal-setup.md) - Connect to Signal messenger
-- [Skills](../architecture/skills.md) - Available tools and custom skill development
+- [Tools](../architecture/tools.md) - Available tools and custom tool development

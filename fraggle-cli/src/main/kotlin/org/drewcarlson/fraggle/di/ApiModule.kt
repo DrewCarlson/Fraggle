@@ -18,7 +18,7 @@ import org.drewcarlson.fraggle.memory.MemoryStore
 import org.drewcarlson.fraggle.models.ApiConfig
 import org.drewcarlson.fraggle.models.DashboardConfig
 import org.drewcarlson.fraggle.models.FraggleConfig
-import org.drewcarlson.fraggle.skills.scheduling.TaskScheduler
+import org.drewcarlson.fraggle.tools.scheduling.TaskScheduler
 import java.nio.file.Path
 
 /**

@@ -202,7 +202,7 @@ web:
     user_agent: null              # Custom user agent
 ```
 
-See [Skills - Web Skills](../architecture/skills.md#web-skills) for setup instructions.
+See [Tools - Web Tools](../architecture/tools.md#web-tools) for setup instructions.
 
 ### API Server
 

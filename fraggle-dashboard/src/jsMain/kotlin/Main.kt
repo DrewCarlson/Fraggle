@@ -111,8 +111,8 @@ fun App() {
                     route("/bridges") {
                         BridgesScreen(wsService)
                     }
-                    route("/skills") {
-                        SkillsScreen(wsService)
+                    route("/tools") {
+                        ToolsScreen(wsService)
                     }
                     route("/memory") {
                         MemoryScreen(wsService)
@@ -189,8 +189,8 @@ private fun Sidebar(
             )
             NavItem(
                 icon = "bi-tools",
-                label = "Skills",
-                route = "/skills",
+                label = "Tools",
+                route = "/tools",
                 router = router,
                 collapsed = collapsed,
             )
@@ -317,7 +317,7 @@ private fun getPageTitle(path: String): String = when {
     path == "/" -> "Overview"
     path.startsWith("/chats") -> "Chat History"
     path.startsWith("/bridges") -> "Bridges"
-    path.startsWith("/skills") -> "Skills"
+    path.startsWith("/tools") -> "Tools"
     path.startsWith("/memory") -> "Memory"
     path.startsWith("/scheduler") -> "Scheduler"
     path.startsWith("/settings") -> "Settings"
