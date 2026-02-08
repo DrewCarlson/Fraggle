@@ -641,4 +641,87 @@ object DashboardStyles : StyleSheet() {
         borderRadius(50.percent)
         property("animation", "spin 0.8s linear infinite")
     }
+
+    // ========================================================================
+    // Toast Notifications
+    // ========================================================================
+
+    val toastContainer by style {
+        position(Position.Fixed)
+        bottom(24.px)
+        right(24.px)
+        display(DisplayStyle.Flex)
+        flexDirection(FlexDirection.Column)
+        gap(12.px)
+        property("z-index", "1100")
+        maxWidth(400.px)
+        property("pointer-events", "none")
+    }
+
+    val toast by style {
+        backgroundColor(colorSurface)
+        border(1.px, LineStyle.Solid, colorBorder)
+        borderRadius(12.px)
+        padding(16.px)
+        property("box-shadow", "0 8px 32px rgba(0, 0, 0, 0.4)")
+        property("pointer-events", "auto")
+        property("animation", "slideIn 0.2s ease-out")
+    }
+
+    val toastHeader by style {
+        display(DisplayStyle.Flex)
+        alignItems(AlignItems.Center)
+        gap(10.px)
+        marginBottom(12.px)
+    }
+
+    val toastIcon by style {
+        display(DisplayStyle.Flex)
+        alignItems(AlignItems.Center)
+        justifyContent(JustifyContent.Center)
+        width(32.px)
+        height(32.px)
+        borderRadius(8.px)
+        backgroundColor(Color("#f59e0b20"))
+        color(colorWarning)
+        fontSize(16.px)
+        flexShrink(0)
+    }
+
+    val toastTitle by style {
+        fontSize(14.px)
+        fontWeight(600)
+        color(colorText)
+        flex(1)
+    }
+
+    val toastBody by style {
+        fontSize(13.px)
+        color(colorTextMuted)
+        backgroundColor(colorBackground)
+        padding(10.px, 12.px)
+        borderRadius(6.px)
+        marginBottom(12.px)
+        property("white-space", "pre-wrap")
+        property("word-break", "break-all")
+        maxHeight(120.px)
+        overflow("auto")
+        fontFamily("JetBrains Mono", "monospace")
+        lineHeight("1.4")
+    }
+
+    val toastActions by style {
+        display(DisplayStyle.Flex)
+        justifyContent(JustifyContent.FlexEnd)
+        gap(8.px)
+    }
+
+    val buttonSuccess by style {
+        backgroundColor(colorSuccess)
+        color(Color.white)
+
+        self + hover style {
+            backgroundColor(Color("#16a34a"))
+        }
+    }
 }

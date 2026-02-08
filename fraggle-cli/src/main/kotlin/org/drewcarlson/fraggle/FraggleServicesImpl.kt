@@ -5,9 +5,7 @@ import io.ktor.client.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import org.drewcarlson.fraggle.api.*
 import org.drewcarlson.fraggle.chat.BridgeInitializer
@@ -17,6 +15,8 @@ import org.drewcarlson.fraggle.chat.InitStepResult
 import org.drewcarlson.fraggle.db.ChatHistoryStore
 import org.drewcarlson.fraggle.discord.DiscordBridge
 import org.drewcarlson.fraggle.discord.DiscordOAuth
+import org.drewcarlson.fraggle.events.EventBus
+import org.drewcarlson.fraggle.executor.supervision.EventToolPermissionHandler
 import org.drewcarlson.fraggle.memory.MemoryStore
 import org.drewcarlson.fraggle.models.*
 import org.drewcarlson.fraggle.signal.SignalBridge
@@ -46,13 +46,13 @@ class FraggleServicesImpl(
     private val httpClient: HttpClient,
     private val chatHistoryStore: ChatHistoryStore,
     private val discordBridge: DiscordBridge? = null,
+    private val eventBus: EventBus,
     private val startTime: Instant = Clock.System.now(),
 ) : FraggleServices {
 
     private val logger = LoggerFactory.getLogger(FraggleServicesImpl::class.java)
 
-    private val _events = MutableSharedFlow<FraggleEvent>(replay = 1, extraBufferCapacity = 100)
-    override val events: SharedFlow<FraggleEvent> = _events.asSharedFlow()
+    override val events: SharedFlow<FraggleEvent> = eventBus.events
 
     override val chatHistory: ChatHistoryService = ChatHistoryServiceImpl()
 
@@ -95,7 +95,20 @@ class FraggleServicesImpl(
      * Emit an event to WebSocket clients.
      */
     suspend fun emitEvent(event: FraggleEvent) {
-        _events.emit(event)
+        eventBus.emit(event)
+    }
+
+    /**
+     * Resolve a pending tool permission request from a WebSocket client.
+     */
+    override suspend fun resolveToolPermission(requestId: String, approved: Boolean) {
+        eventBus.emit(
+            FraggleEvent.ToolPermissionGranted(
+                timestamp = Clock.System.now(),
+                requestId = requestId,
+                approved = approved,
+            )
+        )
     }
 
     private inner class ChatHistoryServiceImpl : ChatHistoryService {

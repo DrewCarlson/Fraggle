@@ -17,6 +17,8 @@ import org.drewcarlson.fraggle.db.ChatHistoryStore
 import org.drewcarlson.fraggle.db.FraggleDatabase
 import org.drewcarlson.fraggle.discord.DiscordBridge
 import org.drewcarlson.fraggle.discord.DiscordBridgeInitializer
+import org.drewcarlson.fraggle.events.EventBus
+import org.drewcarlson.fraggle.executor.supervision.ToolPermissionHandler
 import org.drewcarlson.fraggle.memory.MemoryStore
 import org.drewcarlson.fraggle.models.ApiConfig
 import org.drewcarlson.fraggle.models.FraggleConfig
@@ -33,13 +35,13 @@ import java.nio.file.Path
  * This graph provides all application-scoped dependencies including:
  * - HTTP clients (default and LLM-optimized)
  * - Configuration and sub-configs
- * - Agent, tools, memory, sandbox
+ * - Agent, tools, memory, executor
  * - Chat bridges (Signal, Discord)
  * - API server
  *
  * Usage:
  * ```
- * val graph = createAppGraph { create(config, configPath) }
+ * val graph = createAppGraph { create(config, configPath, eventBus, permissionHandler) }
  * ```
  */
 @DependencyGraph(AppScope::class)
@@ -115,6 +117,9 @@ interface AppGraph {
     /** Chat history store*/
     val chatHistoryStore: ChatHistoryStore
 
+    /** Event bus */
+    val eventBus: EventBus
+
     val serviceOrchestrator: ServiceOrchestrator
 
     @DependencyGraph.Factory
@@ -122,6 +127,8 @@ interface AppGraph {
         fun create(
             @Provides config: FraggleConfig,
             @Provides configPath: Path,
+            @Provides eventBus: EventBus,
+            @Provides permissionHandler: ToolPermissionHandler?,
         ): AppGraph
     }
 }

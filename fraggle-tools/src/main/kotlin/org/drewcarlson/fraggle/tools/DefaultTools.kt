@@ -2,7 +2,10 @@ package org.drewcarlson.fraggle.tools
 
 import ai.koog.agents.core.tools.ToolRegistry
 import io.ktor.client.*
-import org.drewcarlson.fraggle.sandbox.Sandbox
+import org.drewcarlson.fraggle.executor.RemoteToolClient
+import org.drewcarlson.fraggle.executor.ToolExecutor
+import org.drewcarlson.fraggle.executor.managed
+import org.drewcarlson.fraggle.executor.supervision.ToolSupervisor
 import org.drewcarlson.fraggle.tools.file.*
 import org.drewcarlson.fraggle.tools.scheduling.*
 import org.drewcarlson.fraggle.tools.shell.ExecuteCommandTool
@@ -18,33 +21,37 @@ object DefaultTools {
 
     /**
      * Create a tool registry with all built-in tools.
+     * File, shell, and web tools are wrapped with [ManagedTool] for supervision
+     * and optional remote forwarding. Scheduling tools are NOT wrapped.
      */
     fun createToolRegistry(
-        sandbox: Sandbox,
+        toolExecutor: ToolExecutor,
         httpClient: HttpClient,
         taskScheduler: TaskScheduler,
+        supervisor: ToolSupervisor,
+        remoteClient: RemoteToolClient? = null,
         playwrightFetcher: PlaywrightFetcher? = null,
     ): ToolRegistry = ToolRegistry {
-        // File tools
-        tool(ReadFileTool(sandbox))
-        tool(WriteFileTool(sandbox))
-        tool(AppendFileTool(sandbox))
-        tool(ListFilesTool(sandbox))
-        tool(SearchFilesTool(sandbox))
-        tool(FileExistsTool(sandbox))
-        tool(DeleteFileTool(sandbox))
+        // File tools (managed)
+        tool(ReadFileTool(toolExecutor).managed(supervisor, remoteClient))
+        tool(WriteFileTool(toolExecutor).managed(supervisor, remoteClient))
+        tool(AppendFileTool(toolExecutor).managed(supervisor, remoteClient))
+        tool(ListFilesTool(toolExecutor).managed(supervisor, remoteClient))
+        tool(SearchFilesTool(toolExecutor).managed(supervisor, remoteClient))
+        tool(FileExistsTool(toolExecutor).managed(supervisor, remoteClient))
+        tool(DeleteFileTool(toolExecutor).managed(supervisor, remoteClient))
 
-        // Web tools
-        tool(FetchWebpageTool(sandbox, playwrightFetcher))
-        tool(FetchApiTool(sandbox, httpClient))
+        // Web tools (managed)
+        tool(FetchWebpageTool(httpClient, playwrightFetcher).managed(supervisor, remoteClient))
+        tool(FetchApiTool(httpClient).managed(supervisor, remoteClient))
         if (playwrightFetcher != null) {
-            tool(ScreenshotPageTool(playwrightFetcher))
+            tool(ScreenshotPageTool(playwrightFetcher).managed(supervisor, remoteClient))
         }
 
-        // Shell tools
-        tool(ExecuteCommandTool(sandbox))
+        // Shell tools (managed)
+        tool(ExecuteCommandTool(toolExecutor).managed(supervisor, remoteClient))
 
-        // Scheduling tools
+        // Scheduling tools (NOT managed — no supervision needed)
         tool(ScheduleTaskTool(taskScheduler))
         tool(ListTasksTool(taskScheduler))
         tool(CancelTaskTool(taskScheduler))

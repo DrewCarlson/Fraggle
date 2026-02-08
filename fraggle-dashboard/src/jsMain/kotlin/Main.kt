@@ -19,6 +19,7 @@ import org.drewcarlson.fraggle.models.SystemStatus
 import org.jetbrains.compose.web.css.Style
 import org.jetbrains.compose.web.dom.*
 import org.jetbrains.compose.web.renderComposableInBody
+import components.ToolPermissionToasts
 import screens.*
 
 /**
@@ -143,6 +144,9 @@ fun App() {
             }
         }
     }
+
+    // Tool permission toast notifications (global, outside routing)
+    ToolPermissionToasts()
 }
 
 @Composable

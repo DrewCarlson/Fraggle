@@ -55,10 +55,13 @@ fraggle:
   memory:
     base_dir: ./data/memory
 
-  # Sandbox settings
+  # Executor settings
   sandbox:
-    type: permissive                  # permissive, docker, gvisor
+    type: local                       # local, remote (also accepts: permissive, docker, gvisor)
     work_dir: ./data/workspace
+    remote_url: ""                    # URL of remote worker (only used when type is remote)
+    supervision: none                 # none, supervised
+    auto_approve: []                  # tools that skip supervision prompts
 
   # Agent settings
   agent:

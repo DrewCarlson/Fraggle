@@ -37,7 +37,7 @@ interface ConfigModule {
 
         @Provides
         @SingleIn(AppScope::class)
-        fun provideSandboxConfig(settings: FraggleSettings): SandboxConfig = settings.sandbox
+        fun provideExecutorConfig(settings: FraggleSettings): ExecutorConfig = settings.executor
 
         @Provides
         @SingleIn(AppScope::class)

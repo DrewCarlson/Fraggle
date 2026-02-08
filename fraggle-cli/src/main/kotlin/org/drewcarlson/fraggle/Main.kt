@@ -12,6 +12,9 @@ import org.drewcarlson.fraggle.chat.BridgeInitializer
 import org.drewcarlson.fraggle.chat.BridgeInitializerRegistry
 import org.drewcarlson.fraggle.chat.InitStepResult
 import org.drewcarlson.fraggle.di.AppGraph
+import org.drewcarlson.fraggle.events.EventBus
+import org.drewcarlson.fraggle.executor.supervision.CliToolPermissionHandler
+import org.drewcarlson.fraggle.executor.supervision.EventToolPermissionHandler
 import org.drewcarlson.fraggle.models.FraggleConfig
 import org.drewcarlson.fraggle.signal.SignalBridgeInitializer
 import org.drewcarlson.fraggle.signal.SignalConfig
@@ -25,7 +28,7 @@ import kotlin.time.Clock
  * Main entry point for Fraggle.
  */
 fun main(args: Array<String>) = Fraggle()
-    .subcommands(RunCommand(), ChatCommand(), ConfigureCommand(), InitBridgeCommand())
+    .subcommands(RunCommand(), ChatCommand(), ConfigureCommand(), InitBridgeCommand(), WorkerCommand())
     .main(args)
 
 class Fraggle : CliktCommand(name = "fraggle") {
@@ -50,8 +53,12 @@ class RunCommand : CliktCommand(name = "run") {
         // Load configuration
         val (config, resolvedConfigPath) = loadConfig()
 
+        // Create EventBus and permission handler
+        val eventBus = EventBus()
+        val permissionHandler = EventToolPermissionHandler(eventBus)
+
         // Create the dependency graph
-        val graph = createGraphFactory<AppGraph.Factory>().create(config, resolvedConfigPath)
+        val graph = createGraphFactory<AppGraph.Factory>().create(config, resolvedConfigPath, eventBus, permissionHandler)
 
         // Create and initialize orchestrator with injected dependencies
         val orchestrator = graph.serviceOrchestrator
@@ -129,8 +136,12 @@ class ChatCommand : CliktCommand(name = "chat") {
         println("Model: ${config.fraggle.provider.model.ifBlank { "(default)" }}")
         println()
 
+        // Create EventBus and CLI permission handler
+        val eventBus = EventBus()
+        val permissionHandler = CliToolPermissionHandler()
+
         // Create the dependency graph
-        val graph = createGraphFactory<AppGraph.Factory>().create(config, resolvedConfigPath)
+        val graph = createGraphFactory<AppGraph.Factory>().create(config, resolvedConfigPath, eventBus, permissionHandler)
 
         // Create and initialize orchestrator with injected dependencies
         val orchestrator = graph.serviceOrchestrator

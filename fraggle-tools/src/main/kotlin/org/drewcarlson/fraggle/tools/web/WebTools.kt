@@ -9,13 +9,10 @@ import io.ktor.http.*
 import kotlinx.serialization.Serializable
 import org.drewcarlson.fraggle.agent.ResponseAttachment
 import org.drewcarlson.fraggle.agent.ToolExecutionContext
-import org.drewcarlson.fraggle.sandbox.Sandbox
-import org.drewcarlson.fraggle.sandbox.SandboxResult
 import org.slf4j.LoggerFactory
-import kotlin.time.Duration.Companion.seconds
 
 class FetchWebpageTool(
-    private val sandbox: Sandbox,
+    private val httpClient: HttpClient,
     private val playwrightFetcher: PlaywrightFetcher?,
 ) : SimpleTool<FetchWebpageTool.Args>(
     argsSerializer = Args.serializer(),
@@ -41,7 +38,7 @@ class FetchWebpageTool(
 
     @Serializable
     data class Args(
-        @LLMDescription("The URL of the webpage to fetch")
+        @param:LLMDescription("The URL of the webpage to fetch")
         val url: String,
     )
 
@@ -80,29 +77,30 @@ class FetchWebpageTool(
             }
         }
 
-        // HTTP fallback
-        return when (val result = sandbox.fetch(args.url, timeout = 30.seconds)) {
-            is SandboxResult.Success -> {
-                val fetch = result.value
-                if (fetch.statusCode in 200..299) {
-                    val body = if (fetch.body.length > 50_000) {
-                        fetch.body.take(50_000) + "\n... (truncated)"
-                    } else {
-                        fetch.body
-                    }
-                    "Status: ${fetch.statusCode}\nContent-Type: ${fetch.contentType ?: "unknown"}\n\n$body"
+        // HTTP fallback using Ktor httpClient
+        return try {
+            val response = httpClient.get(args.url)
+            val body = response.bodyAsText()
+            val statusCode = response.status.value
+            val contentType = response.contentType()?.toString()
+
+            if (statusCode in 200..299) {
+                val truncated = if (body.length > 50_000) {
+                    body.take(50_000) + "\n... (truncated)"
                 } else {
-                    "Error: HTTP ${fetch.statusCode}: ${fetch.body.take(500)}"
+                    body
                 }
+                "Status: $statusCode\nContent-Type: ${contentType ?: "unknown"}\n\n$truncated"
+            } else {
+                "Error: HTTP $statusCode: ${body.take(500)}"
             }
-            is SandboxResult.Denied -> "Error: Access denied: ${result.reason}"
-            is SandboxResult.Error -> "Error: ${result.message}"
+        } catch (e: Exception) {
+            "Error: Failed to fetch webpage: ${e.message}"
         }
     }
 }
 
 class FetchApiTool(
-    private val sandbox: Sandbox,
     private val httpClient: HttpClient,
 ) : SimpleTool<FetchApiTool.Args>(
     argsSerializer = Args.serializer(),
@@ -123,9 +121,9 @@ DO NOT USE FOR:
 ) {
     @Serializable
     data class Args(
-        @LLMDescription("The API endpoint URL to fetch")
+        @param:LLMDescription("The API endpoint URL to fetch")
         val url: String,
-        @LLMDescription("HTTP method (GET, POST, PUT, DELETE, etc.). Defaults to GET.")
+        @param:LLMDescription("HTTP method (GET, POST, PUT, DELETE, etc.). Defaults to GET.")
         val method: String = "GET",
     )
 
@@ -174,11 +172,11 @@ Simply describe or explain the screenshot in your response text - the image will
 
     @Serializable
     data class Args(
-        @LLMDescription("The URL to screenshot")
+        @param:LLMDescription("The URL to screenshot")
         val url: String,
-        @LLMDescription("If true, captures the entire scrollable page. Defaults to false (viewport only).")
+        @param:LLMDescription("If true, captures the entire scrollable page. Defaults to false (viewport only).")
         val full_page: Boolean = false,
-        @LLMDescription("Optional caption to include with the screenshot")
+        @param:LLMDescription("Optional caption to include with the screenshot")
         val caption: String? = null,
     )
 

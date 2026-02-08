@@ -219,26 +219,43 @@ class ConfigureCommand : CliktCommand(name = "configure") {
         }
         settings = settings.copy(memory = memoryConfig)
 
-        // 4. Sandbox
+        // 4. Executor
         println()
-        printSectionHeader(ConfigDocumentation.sandboxConfig)
-        var sandboxConfig = settings.sandbox
-        println("Sandbox types: permissive, docker, gvisor")
-        print("Sandbox type [${sandboxConfig.type.name.lowercase()}]: ")
-        val sandboxType = readlnOrNull()?.trim()?.lowercase()
-        if (!sandboxType.isNullOrEmpty()) {
+        printSectionHeader(ConfigDocumentation.executorConfig)
+        var executorConfig = settings.executor
+        println("Executor types: local, remote")
+        print("Executor type [${executorConfig.type.name.lowercase()}]: ")
+        val executorType = readlnOrNull()?.trim()?.lowercase()
+        if (!executorType.isNullOrEmpty()) {
             try {
-                sandboxConfig = sandboxConfig.copy(type = SandboxType.valueOf(sandboxType.uppercase()))
+                executorConfig = executorConfig.copy(type = ExecutorType.valueOf(executorType.uppercase()))
             } catch (_: Exception) {
-                println("Invalid sandbox type, keeping current value.")
+                println("Invalid executor type, keeping current value.")
             }
         }
-        print("Sandbox work directory [${sandboxConfig.workDir}]: ")
-        val sandboxDir = readlnOrNull()?.trim()
-        if (!sandboxDir.isNullOrEmpty()) {
-            sandboxConfig = sandboxConfig.copy(workDir = sandboxDir)
+        print("Work directory [${executorConfig.workDir}]: ")
+        val execDir = readlnOrNull()?.trim()
+        if (!execDir.isNullOrEmpty()) {
+            executorConfig = executorConfig.copy(workDir = execDir)
         }
-        settings = settings.copy(sandbox = sandboxConfig)
+        if (executorConfig.type == ExecutorType.REMOTE) {
+            print("Remote URL [${executorConfig.remoteUrl.ifBlank { "(not set)" }}]: ")
+            val remoteUrl = readlnOrNull()?.trim()
+            if (!remoteUrl.isNullOrEmpty()) {
+                executorConfig = executorConfig.copy(remoteUrl = remoteUrl)
+            }
+        }
+        println("Supervision modes: none, supervised")
+        print("Supervision [${executorConfig.supervision.name.lowercase()}]: ")
+        val supervisionMode = readlnOrNull()?.trim()?.lowercase()
+        if (!supervisionMode.isNullOrEmpty()) {
+            try {
+                executorConfig = executorConfig.copy(supervision = SupervisionMode.valueOf(supervisionMode.uppercase()))
+            } catch (_: Exception) {
+                println("Invalid supervision mode, keeping current value.")
+            }
+        }
+        settings = settings.copy(executor = executorConfig)
 
         // 5. Agent
         println()

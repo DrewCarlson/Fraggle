@@ -50,6 +50,10 @@ sealed class ClientMessage {
     @Serializable
     @SerialName("cancel_bridge_init")
     data class CancelBridgeInit(val sessionId: String) : ClientMessage()
+
+    @Serializable
+    @SerialName("tool_permission_response")
+    data class ToolPermissionResponse(val requestId: String, val granted: Boolean) : ClientMessage()
 }
 
 /**
@@ -84,6 +88,10 @@ class WebSocketService(
     // Bridge initialization events
     private val _bridgeInitEvents = MutableSharedFlow<FraggleEvent>(extraBufferCapacity = 10)
     val bridgeInitEvents: SharedFlow<FraggleEvent> = _bridgeInitEvents.asSharedFlow()
+
+    // Tool permission events
+    private val _toolPermissionEvents = MutableSharedFlow<FraggleEvent>(extraBufferCapacity = 10)
+    val toolPermissionEvents: SharedFlow<FraggleEvent> = _toolPermissionEvents.asSharedFlow()
 
     // Callbacks for specific data refresh triggers
     private val _refreshTriggers = MutableSharedFlow<RefreshTrigger>(extraBufferCapacity = 10)
@@ -180,6 +188,13 @@ class WebSocketService(
         sendMessage(ClientMessage.CancelBridgeInit(sessionId))
     }
 
+    /**
+     * Respond to a tool permission request.
+     */
+    fun respondToolPermission(requestId: String, granted: Boolean) {
+        sendMessage(ClientMessage.ToolPermissionResponse(requestId, granted))
+    }
+
     private fun sendMessage(message: ClientMessage) {
         scope.launch {
             try {
@@ -227,6 +242,11 @@ class WebSocketService(
                 if (event is FraggleEvent.BridgeInitComplete) {
                     _refreshTriggers.emit(RefreshTrigger.Bridges)
                 }
+            }
+            is FraggleEvent.ToolPermissionRequest,
+            is FraggleEvent.ToolPermissionGranted,
+            is FraggleEvent.ToolPermissionTimeout -> {
+                _toolPermissionEvents.emit(event)
             }
         }
     }

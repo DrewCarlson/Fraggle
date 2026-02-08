@@ -45,13 +45,13 @@ Tasks will execute the specified action when triggered.""",
 ) {
     @Serializable
     data class Args(
-        @LLMDescription("A descriptive name for the task")
+        @param:LLMDescription("A descriptive name for the task")
         val name: String,
-        @LLMDescription("The action/message to execute when the task runs")
+        @param:LLMDescription("The action/message to execute when the task runs")
         val action: String,
-        @LLMDescription("Number of seconds to wait before first execution")
+        @param:LLMDescription("Number of seconds to wait before first execution")
         val delay_seconds: Long,
-        @LLMDescription("For recurring tasks, seconds between executions. 0 for one-time tasks.")
+        @param:LLMDescription("For recurring tasks, seconds between executions. 0 for one-time tasks.")
         val repeat_interval_seconds: Long = 0,
     )
 
@@ -130,7 +130,7 @@ class CancelTaskTool(private val scheduler: TaskScheduler) : SimpleTool<CancelTa
 ) {
     @Serializable
     data class Args(
-        @LLMDescription("The ID of the task to cancel")
+        @param:LLMDescription("The ID of the task to cancel")
         val task_id: String,
     )
 
@@ -150,7 +150,7 @@ class GetTaskTool(private val scheduler: TaskScheduler) : SimpleTool<GetTaskTool
 ) {
     @Serializable
     data class Args(
-        @LLMDescription("The ID of the task")
+        @param:LLMDescription("The ID of the task")
         val task_id: String,
     )
 

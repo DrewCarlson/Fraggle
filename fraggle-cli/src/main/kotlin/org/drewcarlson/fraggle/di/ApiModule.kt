@@ -14,6 +14,7 @@ import org.drewcarlson.fraggle.chat.BridgeInitializerRegistry
 import org.drewcarlson.fraggle.chat.ChatBridgeManager
 import org.drewcarlson.fraggle.db.ChatHistoryStore
 import org.drewcarlson.fraggle.discord.DiscordBridge
+import org.drewcarlson.fraggle.events.EventBus
 import org.drewcarlson.fraggle.memory.MemoryStore
 import org.drewcarlson.fraggle.models.ApiConfig
 import org.drewcarlson.fraggle.models.DashboardConfig
@@ -41,6 +42,7 @@ interface ApiModule {
             @DefaultHttpClient httpClient: HttpClient,
             chatHistoryStore: ChatHistoryStore,
             discordBridge: DiscordBridge?,
+            eventBus: EventBus,
         ): FraggleServicesImpl = FraggleServicesImpl(
             memory = memory,
             toolRegistry = toolRegistry,
@@ -53,6 +55,7 @@ interface ApiModule {
             httpClient = httpClient,
             chatHistoryStore = chatHistoryStore,
             discordBridge = discordBridge,
+            eventBus = eventBus,
         )
 
         @Provides

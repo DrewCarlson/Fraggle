@@ -37,11 +37,13 @@ class ConfigTest {
         }
 
         @Test
-        fun `SandboxConfig defaults to permissive`() {
-            val settings = SandboxConfig()
+        fun `ExecutorConfig defaults to local`() {
+            val settings = ExecutorConfig()
 
-            assertEquals(SandboxType.PERMISSIVE, settings.type)
+            assertEquals(ExecutorType.LOCAL, settings.type)
             assertEquals("./data/workspace", settings.workDir)
+            assertEquals(SupervisionMode.NONE, settings.supervision)
+            assertEquals(emptyList(), settings.autoApprove)
         }
 
         @Test
@@ -155,8 +157,8 @@ class ConfigTest {
             // Memory
             assertEquals("/custom/memory", config.fraggle.memory.baseDir)
 
-            // Sandbox
-            assertEquals("/custom/workspace", config.fraggle.sandbox.workDir)
+            // Executor (sandbox key)
+            assertEquals("/custom/workspace", config.fraggle.executor.workDir)
 
             // Agent
             assertEquals(0.5, config.fraggle.agent.temperature)
@@ -247,9 +249,12 @@ class ConfigTest {
         }
 
         @Test
-        fun `parses all sandbox types`() {
-            val types = listOf("permissive", "docker", "gvisor")
-            val expected = listOf(SandboxType.PERMISSIVE, SandboxType.DOCKER, SandboxType.GVISOR)
+        fun `parses all executor types including legacy aliases`() {
+            val types = listOf("local", "remote", "permissive", "docker", "gvisor")
+            val expected = listOf(
+                ExecutorType.LOCAL, ExecutorType.REMOTE,
+                ExecutorType.LOCAL, ExecutorType.LOCAL, ExecutorType.LOCAL,
+            )
 
             for ((typeName, expectedType) in types.zip(expected)) {
                 val configFile = tempDir.resolve("config-$typeName.yaml")
@@ -260,8 +265,26 @@ class ConfigTest {
                 """.trimIndent())
 
                 val config = ConfigLoader.load(configFile)
-                assertEquals(expectedType, config.fraggle.sandbox.type)
+                assertEquals(expectedType, config.fraggle.executor.type, "Failed for type: $typeName")
             }
+        }
+
+        @Test
+        fun `parses executor supervision and auto_approve`() {
+            val configFile = tempDir.resolve("config-supervision.yaml")
+            configFile.writeText("""
+                fraggle:
+                  sandbox:
+                    type: local
+                    supervision: supervised
+                    auto_approve:
+                      - read_file
+                      - list_files
+            """.trimIndent())
+
+            val config = ConfigLoader.load(configFile)
+            assertEquals(SupervisionMode.SUPERVISED, config.fraggle.executor.supervision)
+            assertEquals(listOf("read_file", "list_files"), config.fraggle.executor.autoApprove)
         }
     }
 

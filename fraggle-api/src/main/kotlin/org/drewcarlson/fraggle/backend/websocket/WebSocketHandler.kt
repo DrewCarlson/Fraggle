@@ -57,6 +57,13 @@ sealed class ClientMessage {
     @Serializable
     @SerialName("cancel_bridge_init")
     data class CancelBridgeInit(val sessionId: String) : ClientMessage()
+
+    /**
+     * Respond to a tool permission request.
+     */
+    @Serializable
+    @SerialName("tool_permission_response")
+    data class ToolPermissionResponse(val requestId: String, val granted: Boolean) : ClientMessage()
 }
 
 /**
@@ -143,6 +150,10 @@ private suspend fun handleClientMessage(
         is ClientMessage.CancelBridgeInit -> {
             logger.info("Cancelling bridge initialization session: ${message.sessionId}")
             services.bridgeInit.cancelInit(message.sessionId)
+        }
+        is ClientMessage.ToolPermissionResponse -> {
+            logger.info("Tool permission response for ${message.requestId}: ${message.granted}")
+            services.resolveToolPermission(message.requestId, message.granted)
         }
     }
 }

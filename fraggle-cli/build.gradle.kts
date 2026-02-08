@@ -37,6 +37,12 @@ dependencies {
     // Logging
     implementation(libs.logback.classic)
 
+    // Ktor Server
+    implementation(ktorLibs.server.autoHeadResponse)
+    implementation(ktorLibs.server.contentNegotiation)
+    implementation(ktorLibs.server.callId)
+    implementation(ktorLibs.server.callLogging)
+
     // Testing
     testImplementation(libs.kotlin.test.junit5)
     testImplementation(libs.junit.jupiter)

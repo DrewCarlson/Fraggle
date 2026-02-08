@@ -26,8 +26,9 @@ data class FraggleSettings(
     val prompts: PromptsConfig = PromptsConfig(),
     @Documented(name = "Memory", description = "Memory storage configuration")
     val memory: MemoryConfig = MemoryConfig(),
-    @Documented(name = "Sandbox", description = "Code execution sandbox configuration")
-    val sandbox: SandboxConfig = SandboxConfig(),
+    @SerialName("sandbox")
+    @Documented(name = "Executor", description = "Tool execution configuration")
+    val executor: ExecutorConfig = ExecutorConfig(),
     @Documented(name = "Agent", description = "AI agent behavior configuration")
     val agent: AgentConfig = AgentConfig(),
     @Documented(name = "Chats", description = "Registered chat configuration")
@@ -200,26 +201,39 @@ data class MemoryConfig(
 
 @Serializable
 @Documented(
-    name = "Sandbox",
-    description = "Configuration for the code execution sandbox",
+    name = "Executor",
+    description = "Configuration for tool execution",
     extras = ["icon=bi-shield-check"],
 )
-data class SandboxConfig(
-    @Documented(name = "Type", description = "Sandbox type (permissive, docker, gvisor)")
-    val type: SandboxType = SandboxType.PERMISSIVE,
+data class ExecutorConfig(
+    @Serializable(with = ExecutorTypeSerializer::class)
+    @Documented(name = "Type", description = "Executor type (local, remote)")
+    val type: ExecutorType = ExecutorType.LOCAL,
     @SerialName("work_dir")
-    @Documented(name = "Work Directory", description = "Working directory for sandbox operations")
+    @Documented(name = "Work Directory", description = "Working directory for tool execution")
     val workDir: String = "./data/workspace",
+    @SerialName("remote_url")
+    @Documented(name = "Remote URL", description = "URL of the remote worker process (only used when type is remote)")
+    val remoteUrl: String = "",
+    @Documented(name = "Supervision", description = "Tool supervision mode (none, supervised)")
+    val supervision: SupervisionMode = SupervisionMode.NONE,
+    @SerialName("auto_approve")
+    @Documented(name = "Auto Approve", description = "List of tool names that are automatically approved without prompting")
+    val autoApprove: List<String> = emptyList(),
 )
 
+@Serializable(with = ExecutorTypeSerializer::class)
+enum class ExecutorType {
+    LOCAL,
+    REMOTE,
+}
+
 @Serializable
-enum class SandboxType {
-    @SerialName("permissive")
-    PERMISSIVE,
-    @SerialName("docker")
-    DOCKER,
-    @SerialName("gvisor")
-    GVISOR,
+enum class SupervisionMode {
+    @SerialName("none")
+    NONE,
+    @SerialName("supervised")
+    SUPERVISED,
 }
 
 @Serializable

@@ -8,7 +8,9 @@ import io.ktor.client.*
 import kotlinx.coroutines.CoroutineScope
 import org.drewcarlson.fraggle.chat.ChatBridgeManager
 import org.drewcarlson.fraggle.chat.OutgoingMessage
-import org.drewcarlson.fraggle.sandbox.Sandbox
+import org.drewcarlson.fraggle.executor.RemoteToolClient
+import org.drewcarlson.fraggle.executor.ToolExecutor
+import org.drewcarlson.fraggle.executor.supervision.ToolSupervisor
 import org.drewcarlson.fraggle.tools.DefaultTools
 import org.drewcarlson.fraggle.tools.scheduling.TaskScheduler
 import org.drewcarlson.fraggle.tools.web.PlaywrightFetcher
@@ -66,14 +68,18 @@ interface ToolsModule {
         @Provides
         @SingleIn(AppScope::class)
         fun provideToolRegistry(
-            sandbox: Sandbox,
+            toolExecutor: ToolExecutor,
             @DefaultHttpClient httpClient: HttpClient,
             taskScheduler: TaskScheduler,
+            supervisor: ToolSupervisor,
+            remoteClient: RemoteToolClient?,
             playwrightFetcher: PlaywrightFetcher?,
         ): ToolRegistry = DefaultTools.createToolRegistry(
-            sandbox = sandbox,
+            toolExecutor = toolExecutor,
             httpClient = httpClient,
             taskScheduler = taskScheduler,
+            supervisor = supervisor,
+            remoteClient = remoteClient,
             playwrightFetcher = playwrightFetcher,
         )
     }

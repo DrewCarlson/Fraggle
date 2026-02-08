@@ -52,6 +52,10 @@ interface NetworkModule {
                 requestTimeoutMillis = 30.seconds.inWholeMilliseconds
                 connectTimeoutMillis = 10.seconds.inWholeMilliseconds
             }
+            Logging {
+                level = LogLevel.ALL
+                logger = Logger.SIMPLE
+            }
             defaultRequest {
                 header(HttpHeaders.UserAgent, "Fraggle/1.0")
             }
@@ -76,8 +80,9 @@ interface NetworkModule {
             install(ContentNegotiation) {
                 json(json)
             }
-            install(Logging) {
-                level = LogLevel.NONE
+            Logging {
+                level = LogLevel.ALL
+                logger = Logger.SIMPLE
             }
             install(HttpTimeout) {
                 requestTimeoutMillis = 5.minutes.inWholeMilliseconds

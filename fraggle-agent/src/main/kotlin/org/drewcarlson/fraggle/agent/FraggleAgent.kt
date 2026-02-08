@@ -33,7 +33,6 @@ import org.drewcarlson.fraggle.memory.MemoryScope
 import org.drewcarlson.fraggle.memory.MemoryStore
 import org.drewcarlson.fraggle.prompt.PromptManager
 import org.drewcarlson.fraggle.provider.Usage
-import org.drewcarlson.fraggle.sandbox.Sandbox
 import org.slf4j.LoggerFactory
 import java.io.Closeable
 import kotlin.time.Clock
@@ -49,7 +48,6 @@ class FraggleAgent(
     private val toolRegistry: ToolRegistry,
     private val memory: MemoryStore,
     private val memoryProvider: AgentMemoryProvider,
-    private val sandbox: Sandbox,
     private val config: AgentConfig,
     private val promptManager: PromptManager,
 ) : Closeable {

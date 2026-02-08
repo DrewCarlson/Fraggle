@@ -18,14 +18,19 @@ import org.drewcarlson.fraggle.chat.ChatBridgeManager
 import org.drewcarlson.fraggle.db.ChatHistoryStore
 import org.drewcarlson.fraggle.db.ExposedChatHistoryStore
 import org.drewcarlson.fraggle.db.FraggleDatabase
+import org.drewcarlson.fraggle.executor.LocalToolExecutor
+import org.drewcarlson.fraggle.executor.RemoteToolClient
+import org.drewcarlson.fraggle.executor.ToolExecutor
+import org.drewcarlson.fraggle.executor.supervision.InteractiveToolSupervisor
+import org.drewcarlson.fraggle.executor.supervision.NoOpToolSupervisor
+import org.drewcarlson.fraggle.executor.supervision.ToolPermissionHandler
+import org.drewcarlson.fraggle.executor.supervision.ToolSupervisor
 import org.drewcarlson.fraggle.memory.FileMemoryStore
 import org.drewcarlson.fraggle.memory.FraggleMemoryProvider
 import org.drewcarlson.fraggle.memory.MemoryStore
 import org.drewcarlson.fraggle.models.*
 import org.drewcarlson.fraggle.prompt.PromptConfig
 import org.drewcarlson.fraggle.prompt.PromptManager
-import org.drewcarlson.fraggle.sandbox.PermissiveSandbox
-import org.drewcarlson.fraggle.sandbox.Sandbox
 import kotlin.io.path.createDirectories
 import org.drewcarlson.fraggle.agent.AgentConfig as RuntimeAgentConfig
 import org.drewcarlson.fraggle.models.AgentConfig as ModelsAgentConfig
@@ -46,14 +51,35 @@ interface AgentModule {
 
         @Provides
         @SingleIn(AppScope::class)
-        fun provideSandbox(config: SandboxConfig): Sandbox {
+        fun provideToolExecutor(config: ExecutorConfig): ToolExecutor {
             val workDir = FraggleEnvironment.resolvePath(config.workDir)
             workDir.createDirectories()
-            return when (config.type) {
-                SandboxType.PERMISSIVE -> PermissiveSandbox(workDir)
-                SandboxType.DOCKER -> PermissiveSandbox(workDir) // fallback
-                SandboxType.GVISOR -> PermissiveSandbox(workDir) // fallback
+            return LocalToolExecutor(workDir)
+        }
+
+        @Provides
+        @SingleIn(AppScope::class)
+        fun provideToolSupervisor(
+            config: ExecutorConfig,
+            handler: ToolPermissionHandler?,
+        ): ToolSupervisor {
+            return when (config.supervision) {
+                SupervisionMode.NONE -> NoOpToolSupervisor()
+                SupervisionMode.SUPERVISED -> {
+                    val permHandler = handler ?: return NoOpToolSupervisor()
+                    InteractiveToolSupervisor(config.autoApprove, permHandler)
+                }
             }
+        }
+
+        @Provides
+        @SingleIn(AppScope::class)
+        fun provideRemoteToolClient(
+            config: ExecutorConfig,
+            @DefaultHttpClient httpClient: HttpClient,
+        ): RemoteToolClient? {
+            if (config.type != ExecutorType.REMOTE || config.remoteUrl.isBlank()) return null
+            return RemoteToolClient(httpClient, config.remoteUrl)
         }
 
         @Provides
@@ -137,7 +163,6 @@ interface AgentModule {
             toolRegistry: ToolRegistry,
             memory: MemoryStore,
             memoryProvider: AgentMemoryProvider,
-            sandbox: Sandbox,
             config: RuntimeAgentConfig,
             promptManager: PromptManager,
         ): FraggleAgent = FraggleAgent(
@@ -145,7 +170,6 @@ interface AgentModule {
             toolRegistry = toolRegistry,
             memory = memory,
             memoryProvider = memoryProvider,
-            sandbox = sandbox,
             config = config,
             promptManager = promptManager,
         )

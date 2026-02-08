@@ -61,6 +61,11 @@ interface FraggleServices {
      * Get current system status.
      */
     suspend fun getStatus(): SystemStatus
+
+    /**
+     * Resolve a pending tool permission request.
+     */
+    suspend fun resolveToolPermission(requestId: String, approved: Boolean)
 }
 
 /**

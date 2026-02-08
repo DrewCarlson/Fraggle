@@ -120,4 +120,38 @@ sealed class FraggleEvent {
         val message: String,
         val recoverable: Boolean,
     ) : FraggleEvent()
+
+    /**
+     * A tool is requesting permission to execute.
+     */
+    @Serializable
+    @SerialName("tool_permission_request")
+    data class ToolPermissionRequest(
+        override val timestamp: Instant,
+        val requestId: String,
+        val chatId: String,
+        val toolName: String,
+        val argsJson: String,
+    ) : FraggleEvent()
+
+    /**
+     * A tool permission request was granted or denied.
+     */
+    @Serializable
+    @SerialName("tool_permission_granted")
+    data class ToolPermissionGranted(
+        override val timestamp: Instant,
+        val requestId: String,
+        val approved: Boolean,
+    ) : FraggleEvent()
+
+    /**
+     * A tool permission request timed out.
+     */
+    @Serializable
+    @SerialName("tool_permission_timeout")
+    data class ToolPermissionTimeout(
+        override val timestamp: Instant,
+        val requestId: String,
+    ) : FraggleEvent()
 }
