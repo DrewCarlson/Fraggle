@@ -1,11 +1,13 @@
 package org.drewcarlson.fraggle.executor
 
 import io.ktor.client.*
+import io.ktor.client.plugins.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlin.time.Duration.Companion.minutes
 
 private val json = Json { ignoreUnknownKeys = true }
 
@@ -22,6 +24,12 @@ class RemoteToolClient(
             val response = httpClient.post("$workerUrl/api/v1/tools/execute") {
                 contentType(ContentType.Application.Json)
                 setBody(request)
+                // Tool execution can take much longer than the default 30s request timeout
+                // (e.g. shell commands, large file operations, web scraping)
+                timeout {
+                    requestTimeoutMillis = 5.minutes.inWholeMilliseconds
+                    socketTimeoutMillis = 5.minutes.inWholeMilliseconds
+                }
             }
             val body = response.bodyAsText()
             val result = json.decodeFromString(RemoteToolResponse.serializer(), body)

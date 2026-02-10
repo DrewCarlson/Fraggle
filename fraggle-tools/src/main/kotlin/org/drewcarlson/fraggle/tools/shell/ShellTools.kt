@@ -3,6 +3,7 @@ package org.drewcarlson.fraggle.tools.shell
 import ai.koog.agents.core.tools.SimpleTool
 import ai.koog.agents.core.tools.annotations.LLMDescription
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.Serializable
@@ -50,9 +51,14 @@ Use this for running scripts, system commands, or other shell operations.""",
                 val process = processBuilder.start()
 
                 val result = withTimeoutOrNull(args.timeout_seconds.seconds) {
-                    val stdout = process.inputStream.bufferedReader().readText()
-                    val stderr = process.errorStream.bufferedReader().readText()
+                    // Read stdout and stderr concurrently to avoid deadlock.
+                    // Sequential reads can deadlock when the process fills one pipe buffer
+                    // while we're blocked reading the other.
+                    val stdoutDeferred = async { process.inputStream.bufferedReader().readText() }
+                    val stderrDeferred = async { process.errorStream.bufferedReader().readText() }
                     val exitCode = process.waitFor()
+                    val stdout = stdoutDeferred.await()
+                    val stderr = stderrDeferred.await()
 
                     Triple(exitCode, stdout.take(maxOutputSize), stderr.take(maxOutputSize))
                 }

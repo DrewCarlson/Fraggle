@@ -1,5 +1,6 @@
 package org.drewcarlson.fraggle
 
+import ai.koog.agents.core.tools.SimpleTool
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
@@ -34,6 +35,7 @@ import org.drewcarlson.fraggle.tools.scheduling.TaskScheduler
 import org.slf4j.LoggerFactory
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Lightweight worker process for remote tool execution.
@@ -71,10 +73,8 @@ class WorkerCommand : CliktCommand(name = "worker") {
             remoteClient = null,
             playwrightFetcher = null,
         )
-
-        val toolMap = toolRegistry.tools.associateBy { it.name }
-
-        logger.info("Worker loaded ${toolMap.size} tools: ${toolMap.keys}")
+        val toolKeys = toolRegistry.tools.map { it.name }
+        logger.info("Worker loaded ${toolRegistry.tools.size} tools: $toolKeys")
 
         val server = embeddedServer(Netty, port = port) {
             install(AutoHeadResponse)
@@ -95,9 +95,8 @@ class WorkerCommand : CliktCommand(name = "worker") {
             }
             routing {
                 get("/health") {
-                    val toolNames = toolMap.keys.toList()
                     call.respondText(
-                        json.encodeToString(toolNames),
+                        json.encodeToString(toolKeys),
                         ContentType.Application.Json,
                     )
                 }
@@ -105,7 +104,7 @@ class WorkerCommand : CliktCommand(name = "worker") {
                 post("/api/v1/tools/execute") {
                     try {
                         val request = call.receive<RemoteToolRequest>()
-                        val tool = toolMap[request.toolName]
+                        val tool = toolRegistry.getToolOrNull(request.toolName)
                         if (tool == null) {
                             val response = RemoteToolResponse(error = "Unknown tool: ${request.toolName}")
                             call.respond(
@@ -116,17 +115,17 @@ class WorkerCommand : CliktCommand(name = "worker") {
                         }
 
                         // Deserialize args using the tool's serializer and execute
-                        val argsElement = json.parseToJsonElement(request.argsJson) as JsonObject
                         @Suppress("UNCHECKED_CAST")
-                        val typedTool = tool as ai.koog.agents.core.tools.SimpleTool<Any>
-                        val args = json.decodeFromJsonElement(typedTool.argsSerializer, argsElement)
+                        val simpleTool = tool as SimpleTool<Any>
+                        val argsElement = json.parseToJsonElement(request.argsJson) as JsonObject
+                        val args = json.decodeFromJsonElement(simpleTool.argsSerializer, argsElement)
                         val result = withContext(Dispatchers.Default) {
-                            typedTool.execute(args)
+                            simpleTool.execute(args)
                         }
 
                         val response = RemoteToolResponse(result = result)
                         call.respond(response)
-                    } catch (e: Exception) {
+                    } catch (e: Throwable) {
                         logger.error("Tool execution error: ${e.message}", e)
                         val response = RemoteToolResponse(error = e.message ?: "Unknown error")
                         call.respond(
@@ -139,7 +138,7 @@ class WorkerCommand : CliktCommand(name = "worker") {
         }
 
         logger.info("Fraggle worker running on port $port")
-        server.start(wait = true)
+        server.startSuspend(wait = true)
         Unit
     }
 }

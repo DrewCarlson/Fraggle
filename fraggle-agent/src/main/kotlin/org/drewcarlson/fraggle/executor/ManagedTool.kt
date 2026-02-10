@@ -1,12 +1,9 @@
 package org.drewcarlson.fraggle.executor
 
 import ai.koog.agents.core.tools.SimpleTool
-import kotlinx.serialization.json.Json
 import org.drewcarlson.fraggle.agent.ToolExecutionContext
 import org.drewcarlson.fraggle.executor.supervision.PermissionResult
 import org.drewcarlson.fraggle.executor.supervision.ToolSupervisor
-
-private val json = Json { ignoreUnknownKeys = true }
 
 /**
  * Wraps a [SimpleTool] with supervision (permission checks) and optional remote forwarding.
@@ -30,11 +27,8 @@ class ManagedTool<Args : Any>(
             is PermissionResult.Timeout -> return "Error: Permission timed out"
         }
 
-        if (remoteClient != null) {
-            return remoteClient.execute(name, argsJson)
-        }
-
-        return delegate.execute(args)
+        return remoteClient?.execute(name, argsJson)
+            ?: delegate.execute(args)
     }
 }
 
@@ -43,5 +37,5 @@ class ManagedTool<Args : Any>(
  */
 fun <Args : Any> SimpleTool<Args>.managed(
     supervisor: ToolSupervisor,
-    remoteClient: RemoteToolClient? = null,
+    remoteClient: RemoteToolClient?,
 ): ManagedTool<Args> = ManagedTool(this, supervisor, remoteClient)
