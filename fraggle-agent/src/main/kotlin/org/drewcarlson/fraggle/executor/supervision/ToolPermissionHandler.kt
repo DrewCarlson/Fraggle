@@ -5,5 +5,5 @@ package org.drewcarlson.fraggle.executor.supervision
  * Implementations handle the actual I/O (CLI stdin, WebSocket events, etc.).
  */
 interface ToolPermissionHandler {
-    suspend fun requestPermission(requestId: String, toolName: String, argsJson: String): Boolean
+    suspend fun requestPermission(requestId: String, toolName: String, argsJson: String, chatId: String): Boolean
 }

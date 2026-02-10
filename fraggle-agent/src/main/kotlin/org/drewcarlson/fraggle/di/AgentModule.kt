@@ -15,9 +15,11 @@ import org.drewcarlson.fraggle.FraggleEnvironment
 import org.drewcarlson.fraggle.agent.FraggleAgent
 import org.drewcarlson.fraggle.chat.BridgeInitializerRegistry
 import org.drewcarlson.fraggle.chat.ChatBridgeManager
+import org.drewcarlson.fraggle.chat.ChatCommandProcessor
 import org.drewcarlson.fraggle.db.ChatHistoryStore
 import org.drewcarlson.fraggle.db.ExposedChatHistoryStore
 import org.drewcarlson.fraggle.db.FraggleDatabase
+import org.drewcarlson.fraggle.events.EventBus
 import org.drewcarlson.fraggle.executor.LocalToolExecutor
 import org.drewcarlson.fraggle.executor.RemoteToolClient
 import org.drewcarlson.fraggle.executor.ToolExecutor
@@ -135,6 +137,11 @@ interface AgentModule {
         @SingleIn(AppScope::class)
         fun provideBridgeInitializerRegistry(): BridgeInitializerRegistry =
             BridgeInitializerRegistry()
+
+        @Provides
+        @SingleIn(AppScope::class)
+        fun provideChatCommandProcessor(eventBus: EventBus): ChatCommandProcessor =
+            ChatCommandProcessor(eventBus)
 
         @Provides
         @SingleIn(AppScope::class)

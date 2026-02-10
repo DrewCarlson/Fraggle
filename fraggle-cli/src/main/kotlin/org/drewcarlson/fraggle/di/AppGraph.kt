@@ -13,6 +13,7 @@ import org.drewcarlson.fraggle.agent.FraggleAgent
 import org.drewcarlson.fraggle.agent.InlineImageProcessor
 import org.drewcarlson.fraggle.chat.BridgeInitializerRegistry
 import org.drewcarlson.fraggle.chat.ChatBridgeManager
+import org.drewcarlson.fraggle.chat.ChatCommandProcessor
 import org.drewcarlson.fraggle.db.ChatHistoryStore
 import org.drewcarlson.fraggle.db.FraggleDatabase
 import org.drewcarlson.fraggle.discord.DiscordBridge
@@ -116,6 +117,9 @@ interface AppGraph {
 
     /** Chat history store*/
     val chatHistoryStore: ChatHistoryStore
+
+    /** Chat command processor for slash commands in chat bridges */
+    val chatCommandProcessor: ChatCommandProcessor
 
     /** Event bus */
     val eventBus: EventBus

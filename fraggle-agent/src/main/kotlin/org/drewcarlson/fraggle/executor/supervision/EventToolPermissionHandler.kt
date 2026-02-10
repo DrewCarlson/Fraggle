@@ -17,12 +17,12 @@ class EventToolPermissionHandler(
     private val eventBus: EventBus,
 ) : ToolPermissionHandler {
 
-    override suspend fun requestPermission(requestId: String, toolName: String, argsJson: String): Boolean {
+    override suspend fun requestPermission(requestId: String, toolName: String, argsJson: String, chatId: String): Boolean {
         eventBus.emit(
             FraggleEvent.ToolPermissionRequest(
                 timestamp = Clock.System.now(),
                 requestId = requestId,
-                chatId = "",
+                chatId = chatId,
                 toolName = toolName,
                 argsJson = argsJson,
             )

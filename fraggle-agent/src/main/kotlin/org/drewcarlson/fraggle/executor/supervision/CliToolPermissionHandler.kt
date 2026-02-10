@@ -10,7 +10,7 @@ import kotlin.time.Duration.Companion.seconds
  */
 class CliToolPermissionHandler : ToolPermissionHandler {
 
-    override suspend fun requestPermission(requestId: String, toolName: String, argsJson: String): Boolean {
+    override suspend fun requestPermission(requestId: String, toolName: String, argsJson: String, chatId: String): Boolean {
         return withContext(Dispatchers.IO) {
             println()
             println("=== Tool Permission Request ===")

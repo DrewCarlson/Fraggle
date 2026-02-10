@@ -9,6 +9,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.drewcarlson.fraggle.agent.*
 import org.drewcarlson.fraggle.chat.*
+import org.drewcarlson.fraggle.events.EventBus
 import org.drewcarlson.fraggle.db.*
 import org.drewcarlson.fraggle.discord.DiscordBridge
 import org.drewcarlson.fraggle.discord.DiscordBridgeInitializer
@@ -51,6 +52,8 @@ class ServiceOrchestrator(
     private val discordBridgeInitializer: DiscordBridgeInitializer?,
     private val apiConfig: ApiConfig,
     private val apiServer: EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration>?,
+    private val chatCommandProcessor: ChatCommandProcessor,
+    private val eventBus: EventBus,
 ) {
     private val logger = LoggerFactory.getLogger(ServiceOrchestrator::class.java)
     private val conversations = ConcurrentHashMap<String, Conversation>()
@@ -117,6 +120,34 @@ class ServiceOrchestrator(
             }
         } else {
             logger.info("No chat bridges configured")
+        }
+
+        // Forward permission request events to the originating chat bridge
+        scope.launch {
+            eventBus.events.collect { event ->
+                when (event) {
+                    is FraggleEvent.ToolPermissionRequest -> {
+                        if (event.chatId.isNotEmpty()) {
+                            chatCommandProcessor.trackPermissionRequest(event.chatId, event.requestId)
+                            val msg = "Tool **${event.toolName}** wants to execute.\n" +
+                                "Args: `${event.argsJson}`\n\n" +
+                                "Reply `/approve` or `/deny`"
+                            try {
+                                bridgeManager.send(event.chatId, OutgoingMessage.Text(msg))
+                            } catch (e: Exception) {
+                                logger.warn("Failed to send permission request to chat: ${e.message}")
+                            }
+                        }
+                    }
+                    is FraggleEvent.ToolPermissionGranted -> {
+                        chatCommandProcessor.clearPermissionRequest(event.requestId)
+                    }
+                    is FraggleEvent.ToolPermissionTimeout -> {
+                        chatCommandProcessor.clearPermissionRequest(event.requestId)
+                    }
+                    else -> {}
+                }
+            }
         }
 
         logger.info("Fraggle is running")
@@ -212,6 +243,18 @@ class ServiceOrchestrator(
             bridgeManager.messages.collect { bridgedMessage ->
                 launch {
                     val chatId = bridgedMessage.qualifiedChatId
+                    val messageText = (bridgedMessage.message.content as? MessageContent.Text)?.text.orEmpty()
+                    if (chatCommandProcessor.isCommand(messageText)) {
+                        val response = when (val result = chatCommandProcessor.handleCommand(chatId, messageText)) {
+                            is CommandResult.Approved -> "Tool execution approved."
+                            is CommandResult.Denied -> "Tool execution denied."
+                            is CommandResult.NoPermissionPending -> "No pending permission request."
+                            is CommandResult.Unknown -> "Unknown command: ${result.command}"
+                        }
+                        bridgeManager.send(chatId, OutgoingMessage.Text(response))
+                        return@launch
+                    }
+
                     val mutex = chatMutexes.getOrPut(chatId) { Mutex() }
                     mutex.withLock {
                         handleMessage(bridgedMessage)
@@ -257,7 +300,7 @@ class ServiceOrchestrator(
 
         try {
             // Emit message received event
-            val messageText = (routedMessage.content as? MessageContent.Text)?.text ?: ""
+            val messageText = (routedMessage.content as? MessageContent.Text)?.text.orEmpty()
             fraggleServices.emitEvent(FraggleEvent.MessageReceived(
                 timestamp = Clock.System.now(),
                 chatId = chatId,

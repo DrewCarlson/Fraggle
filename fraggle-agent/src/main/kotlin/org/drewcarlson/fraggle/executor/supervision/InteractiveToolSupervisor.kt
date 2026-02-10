@@ -16,7 +16,7 @@ class InteractiveToolSupervisor(
 
         val requestId = java.util.UUID.randomUUID().toString()
         return try {
-            val approved = handler.requestPermission(requestId, toolName, argsJson)
+            val approved = handler.requestPermission(requestId, toolName, argsJson, chatId)
             if (approved) PermissionResult.Approved else PermissionResult.Denied("User denied")
         } catch (_: Exception) {
             PermissionResult.Timeout
