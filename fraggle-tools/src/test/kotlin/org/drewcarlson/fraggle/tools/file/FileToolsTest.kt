@@ -55,7 +55,7 @@ class FileToolsTest {
             tempDir.resolve("multiline.txt").writeText("Line 1\nLine 2\nLine 3\nLine 4\nLine 5")
 
             val tool = ReadFileTool(toolExecutor)
-            val result = tool.execute(ReadFileTool.Args(path = "multiline.txt", max_lines = 3))
+            val result = tool.execute(ReadFileTool.Args(path = "multiline.txt", maxLines = 3))
 
             assertEquals("Line 1\nLine 2\nLine 3", result)
         }
@@ -154,8 +154,7 @@ class FileToolsTest {
 
             assertTrue(result.contains("file1.txt"))
             assertTrue(result.contains("file2.txt"))
-            assertTrue(result.contains("[DIR]"))
-            assertTrue(result.contains("subdir"))
+            assertTrue(result.contains("subdir/"))
         }
 
         @Test
@@ -303,16 +302,16 @@ class FileToolsTest {
     }
 
     @Nested
-    inner class FormatSizeTests {
+    inner class TreeOutputTests {
 
         @Test
-        fun `list_files shows file sizes correctly`() = runTest {
+        fun `list_files produces tree output`() = runTest {
             tempDir.resolve("small.txt").writeText("X".repeat(100))
 
             val tool = ListFilesTool(toolExecutor)
             val result = tool.execute(ListFilesTool.Args(path = "."))
 
-            assertTrue(result.contains("B"))
+            assertTrue(result.contains("└── small.txt"))
         }
     }
 }

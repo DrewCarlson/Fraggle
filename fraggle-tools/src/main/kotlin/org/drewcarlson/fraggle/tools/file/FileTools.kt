@@ -4,8 +4,10 @@ import ai.koog.agents.core.tools.SimpleTool
 import ai.koog.agents.core.tools.annotations.LLMDescription
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.drewcarlson.fraggle.executor.ToolExecutor
+import java.nio.file.Path
 import kotlin.io.path.*
 
 class ReadFileTool(private val toolExecutor: ToolExecutor) : SimpleTool<ReadFileTool.Args>(
@@ -17,8 +19,9 @@ class ReadFileTool(private val toolExecutor: ToolExecutor) : SimpleTool<ReadFile
     data class Args(
         @param:LLMDescription("Path to the file to read (relative to workspace or absolute)")
         val path: String,
+        @SerialName("max_lines")
         @param:LLMDescription("Maximum number of lines to read. Defaults to 1000.")
-        val max_lines: Int = 1000,
+        val maxLines: Int = 1000,
     )
 
     override suspend fun execute(args: Args): String {
@@ -28,11 +31,11 @@ class ReadFileTool(private val toolExecutor: ToolExecutor) : SimpleTool<ReadFile
             if (!resolvedPath.isRegularFile()) return "Error: Not a regular file: ${args.path}"
 
             withContext(Dispatchers.IO) {
-                if (args.max_lines == Int.MAX_VALUE) {
+                if (args.maxLines == Int.MAX_VALUE) {
                     resolvedPath.readText()
                 } else {
                     resolvedPath.readLines()
-                        .take(args.max_lines)
+                        .take(args.maxLines)
                         .joinToString("\n")
                 }
             }
@@ -115,36 +118,31 @@ class ListFilesTool(private val toolExecutor: ToolExecutor) : SimpleTool<ListFil
             if (!resolvedPath.exists()) return "Error: Directory not found: ${args.path}"
             if (!resolvedPath.isDirectory()) return "Error: Not a directory: ${args.path}"
 
-            val files = withContext(Dispatchers.IO) {
-                if (args.recursive) {
-                    resolvedPath.walk().toList()
+            withContext(Dispatchers.IO) {
+                val tree = buildTree(resolvedPath, prefix = "", recursive = args.recursive)
+                if (tree.isEmpty()) {
+                    "Directory is empty: ${args.path}"
                 } else {
-                    resolvedPath.listDirectoryEntries()
+                    "${args.path.trimEnd('/')}/\n$tree".trimEnd()
                 }
-            }
-
-            if (files.isEmpty()) {
-                "Directory is empty: ${args.path}"
-            } else {
-                val listing = files.joinToString("\n") { file ->
-                    val isDir = file.isDirectory()
-                    val prefix = if (isDir) "[DIR] " else "      "
-                    val size = if (isDir) "" else " (${formatSize(file.fileSize())})"
-                    "$prefix${file.name}$size"
-                }
-                "Contents of ${args.path}:\n$listing"
             }
         } catch (e: Exception) {
             "Error: Failed to list files: ${e.message}"
         }
     }
 
-    private fun formatSize(bytes: Long): String {
-        return when {
-            bytes < 1024 -> "$bytes B"
-            bytes < 1024 * 1024 -> "${bytes / 1024} KB"
-            bytes < 1024 * 1024 * 1024 -> "${bytes / (1024 * 1024)} MB"
-            else -> "${bytes / (1024 * 1024 * 1024)} GB"
+    private fun buildTree(dir: Path, prefix: String, recursive: Boolean): String = buildString {
+        val entries = dir.listDirectoryEntries()
+            .sortedWith(compareBy({ !it.isDirectory() }, { it.name }))
+        entries.forEachIndexed { index, entry ->
+            val isLast = index == entries.lastIndex
+            val connector = if (isLast) "└── " else "├── "
+            val name = if (entry.isDirectory()) "${entry.name}/" else entry.name
+            appendLine("$prefix$connector$name")
+            if (recursive && entry.isDirectory()) {
+                val childPrefix = prefix + if (isLast) "    " else "│   "
+                append(buildTree(entry, childPrefix, recursive = true))
+            }
         }
     }
 }
