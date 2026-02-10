@@ -738,6 +738,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#supervision-and-remote-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supervision and Remote Execution
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#execution-context" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1064,6 +1075,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#supervision-and-remote-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supervision and Remote Execution
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#execution-context" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1219,7 +1241,7 @@
 </table>
 <div class="admonition warning">
 <p class="admonition-title">Security</p>
-<p>Shell execution includes basic safeguards against dangerous commands (like <code>rm -rf /</code>), but the sandbox configuration determines the actual security level.</p>
+<p>Shell execution includes basic safeguards against dangerous commands (like <code>rm -rf /</code>). Use <a href="../../installation/configuration/#supervision">supervision</a> for interactive approval of tool calls.</p>
 </div>
 <h3 id="scheduling-tools">Scheduling Tools<a class="headerlink" href="#scheduling-tools" title="Permanent link">&para;</a></h3>
 <p>Task scheduling for deferred operations:</p>
@@ -1283,26 +1305,49 @@
 <h2 id="tool-registry">Tool Registry<a class="headerlink" href="#tool-registry" title="Permanent link">&para;</a></h2>
 <p>Tools are collected into a Koog <code>ToolRegistry</code>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kd">val</span><span class="w"> </span><span class="nv">registry</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ToolRegistry</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="n">tool</span><span class="p">(</span><span class="n">ReadFileTool</span><span class="p">(</span><span class="n">sandbox</span><span class="p">))</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="n">tool</span><span class="p">(</span><span class="n">WeatherTool</span><span class="p">(</span><span class="n">httpClient</span><span class="p">))</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="p">}</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="n">tool</span><span class="p">(</span><span class="n">MyTool</span><span class="p">().</span><span class="na">managed</span><span class="p">(</span><span class="n">supervisor</span><span class="p">,</span><span class="w"> </span><span class="n">remoteClient</span><span class="p">))</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="p">}</span>
 </code></pre></div>
 <p>The built-in <code>DefaultTools.createToolRegistry()</code> registers all standard tools:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kd">val</span><span class="w"> </span><span class="nv">registry</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">DefaultTools</span><span class="p">.</span><span class="na">createToolRegistry</span><span class="p">(</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="n">sandbox</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sandbox</span><span class="p">,</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="n">toolExecutor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">toolExecutor</span><span class="p">,</span>
 <a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="n">httpClient</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">httpClient</span><span class="p">,</span>
 <a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="n">taskScheduler</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">taskScheduler</span><span class="p">,</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="n">playwrightFetcher</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">playwrightFetcher</span><span class="p">,</span><span class="w">  </span><span class="c1">// optional</span>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="p">)</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="n">supervisor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">supervisor</span><span class="p">,</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span><span class="n">remoteClient</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">remoteClient</span><span class="p">,</span><span class="w">            </span><span class="c1">// null for local-only</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">    </span><span class="n">playwrightFetcher</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">playwrightFetcher</span><span class="p">,</span><span class="w">  </span><span class="c1">// optional</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="p">)</span>
 </code></pre></div>
+<h2 id="supervision-and-remote-execution">Supervision and Remote Execution<a class="headerlink" href="#supervision-and-remote-execution" title="Permanent link">&para;</a></h2>
+<p>Every tool that performs I/O is wrapped in a <code>ManagedTool</code> before being added to the registry. <code>ManagedTool</code> adds two layers around the underlying tool:</p>
+<ol>
+<li>
+<p><strong>Supervision</strong> — Before executing, the tool checks with a <code>ToolSupervisor</code>. In <code>none</code> mode (<code>NoOpToolSupervisor</code>), all calls are auto-approved. In <code>supervised</code> mode (<code>InteractiveToolSupervisor</code>), the tool name is checked against the <code>auto_approve</code> list; if not listed, a permission request is sent to the user.</p>
+</li>
+<li>
+<p><strong>Remote forwarding</strong> — If a <code>RemoteToolClient</code> is configured (<code>type: remote</code>), the call is forwarded over HTTP to a <a href="../../installation/configuration/#remote-worker">worker process</a> instead of executing locally.</p>
+</li>
+</ol>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>ManagedTool.execute(args)
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>  │
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>  ├─ Supervisor: check permission
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>  │   ├─ auto_approve list → Approved
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>  │   ├─ CLI prompt (fraggle chat) → Approved / Denied
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>  │   └─ WebSocket event (fraggle run) → Approved / Denied
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>  │
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>  ├─ Remote client present? → Forward to worker via HTTP
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>  └─ Otherwise → Execute delegate tool locally
+</code></pre></div>
+<p>Scheduling tools (<code>schedule_task</code>, <code>list_tasks</code>, <code>get_task</code>, <code>cancel_task</code>) are <strong>not</strong> wrapped because they don't perform external I/O.</p>
+<p>See <a href="../../installation/configuration/#executor">Executor configuration</a> for the YAML options.</p>
 <h2 id="execution-context">Execution Context<a class="headerlink" href="#execution-context" title="Permanent link">&para;</a></h2>
 <p>Tools can access per-request context (chat ID, user ID) via <code>ToolExecutionContext</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kd">override</span><span class="w"> </span><span class="kd">suspend</span><span class="w"> </span><span class="kd">fun</span><span class="w"> </span><span class="nf">execute</span><span class="p">(</span><span class="n">args</span><span class="p">:</span><span class="w"> </span><span class="n">Args</span><span class="p">):</span><span class="w"> </span><span class="kt">String</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="kd">val</span><span class="w"> </span><span class="nv">context</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ToolExecutionContext</span><span class="p">.</span><span class="na">current</span><span class="p">()</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="kd">val</span><span class="w"> </span><span class="nv">chatId</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">context</span><span class="o">?.</span><span class="na">chatId</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="c1">// Use context for chat-specific behavior</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="s">&quot;Response for chat </span><span class="si">$</span><span class="n">chatId</span><span class="s">&quot;</span>
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kd">override</span><span class="w"> </span><span class="kd">suspend</span><span class="w"> </span><span class="kd">fun</span><span class="w"> </span><span class="nf">execute</span><span class="p">(</span><span class="n">args</span><span class="p">:</span><span class="w"> </span><span class="n">Args</span><span class="p">):</span><span class="w"> </span><span class="kt">String</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="kd">val</span><span class="w"> </span><span class="nv">context</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ToolExecutionContext</span><span class="p">.</span><span class="na">current</span><span class="p">()</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="kd">val</span><span class="w"> </span><span class="nv">chatId</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">context</span><span class="o">?.</span><span class="na">chatId</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="c1">// Use context for chat-specific behavior</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="s">&quot;Response for chat </span><span class="si">$</span><span class="n">chatId</span><span class="s">&quot;</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="p">}</span>
 </code></pre></div>
 <p>Tools that produce binary output (like <code>screenshot_page</code>) add attachments to the context, which the agent sends alongside the text response.</p>
 

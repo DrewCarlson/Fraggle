@@ -638,10 +638,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#sandbox" class="md-nav__link">
+  <a href="#tool-execution" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Sandbox
+        Tool Execution
       
     </span>
   </a>
@@ -1014,10 +1014,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#sandbox" class="md-nav__link">
+  <a href="#tool-execution" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Sandbox
+        Tool Execution
       
     </span>
   </a>
@@ -1138,29 +1138,26 @@
 </ul>
 <p>Memory is persisted as human-readable markdown files. A <code>FraggleMemoryProvider</code> adapter bridges Fraggle's storage to Koog's memory system.</p>
 <p>See <a href="../memory/">Memory</a> for details.</p>
-<h3 id="sandbox">Sandbox<a class="headerlink" href="#sandbox" title="Permanent link">&para;</a></h3>
-<p>Execution environment for potentially dangerous operations:</p>
-<ul>
-<li>File system access</li>
-<li>Shell command execution</li>
-<li>Network requests</li>
-</ul>
-<p>The sandbox can be configured for different security levels.</p>
+<h3 id="tool-execution">Tool Execution<a class="headerlink" href="#tool-execution" title="Permanent link">&para;</a></h3>
+<p>The executor system controls how tools run, with two dimensions of configuration:</p>
+<p><strong>Execution mode</strong> — Tools run either locally in the Fraggle process (<code>local</code>) or are forwarded to a separate worker process over HTTP (<code>remote</code>). Remote execution isolates tool I/O from the main agent.</p>
+<p><strong>Supervision</strong> — In <code>supervised</code> mode, each tool call requires explicit approval before it runs. Tools listed in <code>auto_approve</code> bypass the prompt. In the CLI (<code>fraggle chat</code>), approval is requested on stdin; in production (<code>fraggle run</code>), a permission event is emitted over the WebSocket API so the dashboard or other clients can approve.</p>
+<p>Every tool that performs I/O (file, shell, web) is wrapped in a <code>ManagedTool</code> that checks supervision and optionally forwards to a remote worker. Scheduling tools are not wrapped since they don't perform external I/O.</p>
 <h2 id="data-flow">Data Flow<a class="headerlink" href="#data-flow" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>│    Chat     │────&gt;│   Agent     │────&gt;│   Tools     │
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>│   Bridge    │&lt;────│   (Koog)    │&lt;────│             │
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>└─────────────┘     └─────────────┘     └─────────────┘
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>                          │
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>                          v
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>                    ┌─────────────┐
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>                    │   Memory    │
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>                    └─────────────┘
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>│    Chat     │────&gt;│   Agent     │────&gt;│ ManagedTool │────&gt;│   Worker    │
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>│   Bridge    │&lt;────│   (Koog)    │&lt;────│ (supervise) │     │  (remote)   │
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>                          │                    │
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>                          v                    v
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>                    ┌─────────────┐     ┌─────────────┐
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>                    │   Memory    │     │  Local I/O  │
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>                    └─────────────┘     └─────────────┘
 </code></pre></div>
 <ol>
 <li><strong>Chat Bridge</strong> receives messages and passes them to the agent</li>
 <li><strong>Agent</strong> builds context and delegates to Koog's agent service, which calls tools as needed</li>
-<li><strong>Tools</strong> execute operations and return results</li>
+<li><strong>ManagedTool</strong> checks supervision (auto-approve or prompt for permission), then either executes locally or forwards to the remote worker</li>
 <li><strong>Memory</strong> stores and retrieves conversation context</li>
 <li><strong>Agent</strong> generates final response</li>
 <li><strong>Chat Bridge</strong> sends the response back to the user</li>
