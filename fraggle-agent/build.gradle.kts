@@ -19,6 +19,7 @@ dependencies {
     // Koog AI Agent Framework
     api(libs.koog.agents)
     api(libs.koog.agents.memory)
+    api(libs.koog.agents.trace)
 
     // Ktor Client for LLM API calls (from fraggle-di)
     implementation(ktorLibs.client.core)

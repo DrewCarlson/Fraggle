@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import org.drewcarlson.fraggle.chat.ChatBridgeManager
 import org.drewcarlson.fraggle.memory.MemoryStore
 import org.drewcarlson.fraggle.models.*
+import org.drewcarlson.fraggle.tracing.TraceStore
 
 /**
  * Services exposed by Fraggle to the API backend.
@@ -51,6 +52,11 @@ interface FraggleServices {
      * Access to Discord OAuth operations.
      */
     val discordOAuth: DiscordOAuthService?
+
+    /**
+     * Access to tracing.
+     */
+    val tracing: TracingService
 
     /**
      * Real-time event stream for WebSocket clients.
@@ -121,4 +127,12 @@ interface ConfigService {
      * Get the current configuration.
      */
     fun getConfig(): ConfigResponse
+}
+
+/**
+ * Service for accessing trace sessions and events.
+ */
+interface TracingService {
+    fun listSessions(limit: Int = 50, offset: Int = 0): List<TraceSession>
+    fun getSession(id: String): TraceSessionDetail?
 }

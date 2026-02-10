@@ -20,6 +20,7 @@ import org.drewcarlson.fraggle.models.ApiConfig
 import org.drewcarlson.fraggle.models.DashboardConfig
 import org.drewcarlson.fraggle.models.FraggleConfig
 import org.drewcarlson.fraggle.tools.scheduling.TaskScheduler
+import org.drewcarlson.fraggle.tracing.TraceStore
 import java.nio.file.Path
 
 /**
@@ -43,6 +44,7 @@ interface ApiModule {
             chatHistoryStore: ChatHistoryStore,
             discordBridge: DiscordBridge?,
             eventBus: EventBus,
+            traceStore: TraceStore,
         ): FraggleServicesImpl = FraggleServicesImpl(
             memory = memory,
             toolRegistry = toolRegistry,
@@ -56,6 +58,7 @@ interface ApiModule {
             chatHistoryStore = chatHistoryStore,
             discordBridge = discordBridge,
             eventBus = eventBus,
+            traceStore = traceStore,
         )
 
         @Provides

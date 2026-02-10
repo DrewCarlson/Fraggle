@@ -110,6 +110,7 @@ fun createApiServer(
                 toolRoutes(services)
                 memoryRoutes(services)
                 schedulerRoutes(services)
+                tracingRoutes(services)
                 settingsRoutes(services)
                 configureWebSockets(services)
             }

@@ -23,6 +23,7 @@ import org.drewcarlson.fraggle.signal.SignalBridge
 import org.drewcarlson.fraggle.tools.scheduling.ScheduledTask
 import org.drewcarlson.fraggle.tools.scheduling.TaskScheduler
 import org.drewcarlson.fraggle.tools.scheduling.TaskStatus
+import org.drewcarlson.fraggle.tracing.TraceStore
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
 import java.util.*
@@ -47,6 +48,7 @@ class FraggleServicesImpl(
     private val chatHistoryStore: ChatHistoryStore,
     private val discordBridge: DiscordBridge? = null,
     private val eventBus: EventBus,
+    private val traceStore: TraceStore,
     private val startTime: Instant = Clock.System.now(),
 ) : FraggleServices {
 
@@ -61,6 +63,8 @@ class FraggleServicesImpl(
     override val config: ConfigService = ConfigServiceImpl()
 
     override val bridgeInit: BridgeInitService = BridgeInitServiceImpl()
+
+    override val tracing: TracingService = TracingServiceImpl()
 
     override val discordOAuth: DiscordOAuthService? = discordBridge?.let { bridge ->
         val config = fraggleConfig.fraggle.bridges.discord
@@ -389,6 +393,14 @@ class FraggleServicesImpl(
                 session.initializer.reset()
             }
         }
+    }
+
+    private inner class TracingServiceImpl : TracingService {
+        override fun listSessions(limit: Int, offset: Int) =
+            traceStore.listSessions(limit, offset)
+
+        override fun getSession(id: String) =
+            traceStore.getSessionDetail(id)
     }
 
     private inner class DiscordOAuthServiceImpl(

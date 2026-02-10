@@ -28,6 +28,7 @@ import org.drewcarlson.fraggle.signal.SignalBridge
 import org.drewcarlson.fraggle.signal.SignalBridgeInitializer
 import org.drewcarlson.fraggle.tools.scheduling.TaskScheduler
 import org.drewcarlson.fraggle.tools.web.PlaywrightFetcher
+import org.drewcarlson.fraggle.tracing.TraceStore
 import java.nio.file.Path
 
 /**
@@ -120,6 +121,9 @@ interface AppGraph {
 
     /** Chat command processor for slash commands in chat bridges */
     val chatCommandProcessor: ChatCommandProcessor
+
+    /** Trace store */
+    val traceStore: TraceStore
 
     /** Event bus */
     val eventBus: EventBus

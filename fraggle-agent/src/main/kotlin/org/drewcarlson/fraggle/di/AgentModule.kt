@@ -33,6 +33,8 @@ import org.drewcarlson.fraggle.memory.MemoryStore
 import org.drewcarlson.fraggle.models.*
 import org.drewcarlson.fraggle.prompt.PromptConfig
 import org.drewcarlson.fraggle.prompt.PromptManager
+import org.drewcarlson.fraggle.tracing.FraggleTraceProcessor
+import org.drewcarlson.fraggle.tracing.TraceStore
 import kotlin.io.path.createDirectories
 import org.drewcarlson.fraggle.agent.AgentConfig as RuntimeAgentConfig
 import org.drewcarlson.fraggle.models.AgentConfig as ModelsAgentConfig
@@ -165,6 +167,17 @@ interface AgentModule {
 
         @Provides
         @SingleIn(AppScope::class)
+        fun provideTraceStore(): TraceStore = TraceStore()
+
+        @Provides
+        @SingleIn(AppScope::class)
+        fun provideFraggleTraceProcessor(
+            traceStore: TraceStore,
+            eventBus: EventBus,
+        ): FraggleTraceProcessor = FraggleTraceProcessor(traceStore, eventBus)
+
+        @Provides
+        @SingleIn(AppScope::class)
         fun provideFraggleAgent(
             promptExecutor: PromptExecutor,
             toolRegistry: ToolRegistry,
@@ -172,6 +185,7 @@ interface AgentModule {
             memoryProvider: AgentMemoryProvider,
             config: RuntimeAgentConfig,
             promptManager: PromptManager,
+            traceProcessor: FraggleTraceProcessor,
         ): FraggleAgent = FraggleAgent(
             promptExecutor = promptExecutor,
             toolRegistry = toolRegistry,
@@ -179,6 +193,7 @@ interface AgentModule {
             memoryProvider = memoryProvider,
             config = config,
             promptManager = promptManager,
+            traceProcessor = traceProcessor,
         )
     }
 }

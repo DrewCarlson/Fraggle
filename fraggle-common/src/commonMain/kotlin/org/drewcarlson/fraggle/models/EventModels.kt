@@ -154,4 +154,26 @@ sealed class FraggleEvent {
         override val timestamp: Instant,
         val requestId: String,
     ) : FraggleEvent()
+
+    /**
+     * A new trace session started.
+     */
+    @Serializable
+    @SerialName("trace_session_started")
+    data class TraceSessionStarted(
+        override val timestamp: Instant,
+        val sessionId: String,
+        val chatId: String,
+    ) : FraggleEvent()
+
+    /**
+     * A trace event was recorded.
+     */
+    @Serializable
+    @SerialName("trace_event")
+    data class TraceEvent(
+        override val timestamp: Instant,
+        val sessionId: String,
+        val event: TraceEventRecord,
+    ) : FraggleEvent()
 }

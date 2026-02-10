@@ -248,6 +248,10 @@ class WebSocketService(
             is FraggleEvent.ToolPermissionTimeout -> {
                 _toolPermissionEvents.emit(event)
             }
+            is FraggleEvent.TraceSessionStarted,
+            is FraggleEvent.TraceEvent -> {
+                _refreshTriggers.emit(RefreshTrigger.Tracing)
+            }
         }
     }
 
@@ -272,6 +276,7 @@ enum class RefreshTrigger {
     Tools,
     Memory,
     Scheduler,
+    Tracing,
 }
 
 val LocalWebSocketService = compositionLocalOf<WebSocketService> { error("WebSocketService is not initialized!") }

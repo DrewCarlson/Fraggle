@@ -1,7 +1,9 @@
 package org.drewcarlson.fraggle.agent
 
 import ai.koog.agents.core.agent.AIAgentService
+import ai.koog.agents.core.agent.ToolCalls
 import ai.koog.agents.core.agent.config.AIAgentConfig
+import ai.koog.agents.core.agent.singleRunStrategy
 import ai.koog.agents.core.dsl.builder.forwardTo
 import ai.koog.agents.core.dsl.builder.strategy
 import ai.koog.agents.core.dsl.extension.HistoryCompressionStrategy
@@ -13,6 +15,7 @@ import ai.koog.agents.core.dsl.extension.onMultipleAssistantMessages
 import ai.koog.agents.core.dsl.extension.onMultipleToolCalls
 import ai.koog.agents.core.environment.ReceivedToolResult
 import ai.koog.agents.core.tools.ToolRegistry
+import ai.koog.agents.features.tracing.feature.Tracing
 import ai.koog.agents.memory.feature.AgentMemory
 import ai.koog.agents.memory.providers.AgentMemoryProvider
 import ai.koog.prompt.dsl.prompt
@@ -33,6 +36,7 @@ import org.drewcarlson.fraggle.memory.MemoryScope
 import org.drewcarlson.fraggle.memory.MemoryStore
 import org.drewcarlson.fraggle.prompt.PromptManager
 import org.drewcarlson.fraggle.provider.Usage
+import org.drewcarlson.fraggle.tracing.FraggleTraceProcessor
 import org.slf4j.LoggerFactory
 import java.io.Closeable
 import kotlin.time.Clock
@@ -50,6 +54,7 @@ class FraggleAgent(
     private val memoryProvider: AgentMemoryProvider,
     private val config: AgentConfig,
     private val promptManager: PromptManager,
+    private val traceProcessor: FraggleTraceProcessor,
 ) : Closeable {
     private val logger = LoggerFactory.getLogger(FraggleAgent::class.java)
 
@@ -71,7 +76,7 @@ class FraggleAgent(
     private val agentService = AIAgentService(
         promptExecutor = promptExecutor,
         llmModel = llmModel,
-        strategy = compressingSingleRunStrategy(),
+        strategy = singleRunStrategy(ToolCalls.PARALLEL),
         toolRegistry = toolRegistry,
         systemPrompt = "",
         temperature = config.temperature,
@@ -81,6 +86,9 @@ class FraggleAgent(
             this.memoryProvider = this@FraggleAgent.memoryProvider
             agentName = "fraggle"
             productName = "fraggle"
+        }
+        install(Tracing) {
+            addMessageProcessor(traceProcessor)
         }
     }
 

@@ -134,6 +134,9 @@ fun App() {
                     route("/scheduler") {
                         SchedulerScreen(wsService)
                     }
+                    route("/tracing") {
+                        TracingScreen(wsService)
+                    }
                     route("/settings") {
                         SettingsScreen()
                     }
@@ -222,6 +225,13 @@ private fun Sidebar(
                 icon = "bi-calendar-event",
                 label = "Scheduler",
                 route = "/scheduler",
+                router = router,
+                collapsed = collapsed,
+            )
+            NavItem(
+                icon = "bi-activity",
+                label = "Tracing",
+                route = "/tracing",
                 router = router,
                 collapsed = collapsed,
             )
@@ -337,6 +347,7 @@ private fun getPageTitle(path: String): String = when {
     path.startsWith("/tools") -> "Tools"
     path.startsWith("/memory") -> "Memory"
     path.startsWith("/scheduler") -> "Scheduler"
+    path.startsWith("/tracing") -> "Tracing"
     path.startsWith("/settings") -> "Settings"
     else -> "Fraggle"
 }
