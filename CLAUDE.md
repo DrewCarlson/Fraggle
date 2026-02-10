@@ -2,6 +2,16 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Development checklist
+
+For any change, consider and apply updates to:
+
+- Project root README.md file
+- mkdocs powered documentation in [docs](docs)
+- Dockerfile and docker-compose.yml files
+- Github workflow files
+- Fraggle Configuration models and related documentation
+
 ## Build and Test Commands
 
 ```bash
