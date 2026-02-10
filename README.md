@@ -12,7 +12,8 @@ Built on [Koog](https://github.com/JetBrains/koog)'s agent orchestration framewo
 - **Cloud Providers** - Also supports OpenAI and Anthropic APIs
 - **Built-in Tools** - File operations, web fetching, shell execution, task scheduling
 - **Persistent Memory** - Remembers context across conversations
-- **Sandboxed Execution** - Safe environment for file and shell operations
+- **Tool Supervision** - Approve or deny tool calls interactively via CLI or dashboard
+- **Remote Execution** - Offload tool execution to a lightweight worker process
 - **Web Dashboard** - Monitor and configure your assistant through a web UI
 
 ## Quick Start
@@ -31,6 +32,9 @@ cd fraggle
 
 # Run with chat bridges enabled
 ./bin/fraggle run
+
+# Start a remote tool worker
+./bin/fraggle worker
 ```
 
 ## Requirements

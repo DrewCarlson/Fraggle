@@ -57,10 +57,13 @@ fraggle:
   memory:
     base_dir: ./data/memory
 
-  # Sandbox settings for file/shell operations
+  # Tool execution settings
   sandbox:
-    type: permissive                  # permissive, docker, gvisor
+    type: local                       # local or remote
     work_dir: ./data/workspace
+    remote_url: ""                    # Worker URL (required when type: remote)
+    supervision: none                 # none or supervised
+    auto_approve: []                  # Tool names to auto-approve in supervised mode
 
   # Agent behavior settings
   agent:
@@ -153,15 +156,72 @@ Memory is stored as human-readable markdown files in hierarchical scopes:
 - **Chat** - Per-conversation memory (`memory/chats/{chat_id}/`)
 - **User** - Per-user memory (`memory/users/{user_id}/`)
 
-### Sandbox
+### Executor
 
-Controls the execution environment for file and shell operations:
+Controls how tools execute file and shell operations. The YAML key is `sandbox` for backward compatibility.
 
-| Type         | Description                                    |
-|--------------|------------------------------------------------|
-| `permissive` | Direct execution with minimal restrictions     |
-| `docker`     | Execute commands in Docker containers          |
-| `gvisor`     | Execute in gVisor-sandboxed containers         |
+| Option         | Description                                               | Default              |
+|----------------|-----------------------------------------------------------|----------------------|
+| `type`         | Execution mode: `local` or `remote`                       | `local`              |
+| `work_dir`     | Working directory for tool operations                     | `./data/workspace`   |
+| `remote_url`   | URL of the remote worker (required when `type: remote`)   | `""`                 |
+| `supervision`  | Permission mode: `none` or `supervised`                   | `none`               |
+| `auto_approve` | Tool names that skip approval in supervised mode          | `[]`                 |
+
+!!! note "Legacy type names"
+    The values `permissive`, `docker`, and `gvisor` are accepted as aliases for `local` for backward compatibility.
+
+#### Execution Modes
+
+**Local** (`type: local`) — Tools run directly in the Fraggle process. This is the default and simplest mode.
+
+**Remote** (`type: remote`) — Tool calls are forwarded over HTTP to a separate worker process. This lets you isolate tool execution on another machine or in a container. You must set `remote_url` to the worker's address and start a worker with `fraggle worker`.
+
+```yaml
+sandbox:
+  type: remote
+  remote_url: http://worker-host:9292
+```
+
+#### Supervision
+
+When `supervision: supervised` is set, every tool call requires explicit approval before it runs. How approval works depends on how Fraggle is started:
+
+- **`fraggle chat`** — Prompts on the terminal (stdin). You have 60 seconds to respond `y` or `n`.
+- **`fraggle run`** — Emits a permission request event over the WebSocket API. The dashboard or any connected client can approve or deny the request within 120 seconds.
+
+Tools listed in `auto_approve` skip the approval prompt entirely.
+
+```yaml
+sandbox:
+  supervision: supervised
+  auto_approve:
+    - list_files
+    - file_exists
+    - read_file
+```
+
+#### Remote Worker
+
+Start a lightweight worker process to handle tool execution:
+
+```bash
+fraggle worker [--port PORT] [--work-dir DIR]
+```
+
+| Option       | Description                      | Default              |
+|--------------|----------------------------------|----------------------|
+| `--port`     | HTTP port to listen on           | `9292`               |
+| `--work-dir` | Working directory for tools      | `./data/workspace`   |
+
+The worker exposes two endpoints:
+
+| Endpoint                      | Method | Description                          |
+|-------------------------------|--------|--------------------------------------|
+| `/health`                     | GET    | Returns a JSON array of tool names   |
+| `/api/v1/tools/execute`       | POST   | Execute a tool and return the result |
+
+The worker loads the same built-in tools as the main process but runs with no supervision and no remote forwarding — it always executes locally.
 
 ### Agent
 

@@ -65,33 +65,33 @@ Memory is persisted as human-readable markdown files. A `FraggleMemoryProvider` 
 
 See [Memory](memory.md) for details.
 
-### Sandbox
+### Tool Execution
 
-Execution environment for potentially dangerous operations:
+The executor system controls how tools run, with two dimensions of configuration:
 
-- File system access
-- Shell command execution
-- Network requests
+**Execution mode** — Tools run either locally in the Fraggle process (`local`) or are forwarded to a separate worker process over HTTP (`remote`). Remote execution isolates tool I/O from the main agent.
 
-The sandbox can be configured for different security levels.
+**Supervision** — In `supervised` mode, each tool call requires explicit approval before it runs. Tools listed in `auto_approve` bypass the prompt. In the CLI (`fraggle chat`), approval is requested on stdin; in production (`fraggle run`), a permission event is emitted over the WebSocket API so the dashboard or other clients can approve.
+
+Every tool that performs I/O (file, shell, web) is wrapped in a `ManagedTool` that checks supervision and optionally forwards to a remote worker. Scheduling tools are not wrapped since they don't perform external I/O.
 
 ## Data Flow
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│    Chat     │────>│   Agent     │────>│   Tools     │
-│   Bridge    │<────│   (Koog)    │<────│             │
-└─────────────┘     └─────────────┘     └─────────────┘
-                          │
-                          v
-                    ┌─────────────┐
-                    │   Memory    │
-                    └─────────────┘
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│    Chat     │────>│   Agent     │────>│ ManagedTool │────>│   Worker    │
+│   Bridge    │<────│   (Koog)    │<────│ (supervise) │     │  (remote)   │
+└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+                          │                    │
+                          v                    v
+                    ┌─────────────┐     ┌─────────────┐
+                    │   Memory    │     │  Local I/O  │
+                    └─────────────┘     └─────────────┘
 ```
 
 1. **Chat Bridge** receives messages and passes them to the agent
 2. **Agent** builds context and delegates to Koog's agent service, which calls tools as needed
-3. **Tools** execute operations and return results
+3. **ManagedTool** checks supervision (auto-approve or prompt for permission), then either executes locally or forwards to the remote worker
 4. **Memory** stores and retrieves conversation context
 5. **Agent** generates final response
 6. **Chat Bridge** sends the response back to the user

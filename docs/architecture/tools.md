@@ -66,7 +66,7 @@ Command execution in the sandbox:
 | `execute_command` | Execute a shell command | `command` (required), `timeout_seconds` (default: 30) |
 
 !!! warning "Security"
-    Shell execution includes basic safeguards against dangerous commands (like `rm -rf /`), but the sandbox configuration determines the actual security level.
+    Shell execution includes basic safeguards against dangerous commands (like `rm -rf /`). Use [supervision](../installation/configuration.md#supervision) for interactive approval of tool calls.
 
 ### Scheduling Tools
 
@@ -115,8 +115,7 @@ Tools are collected into a Koog `ToolRegistry`:
 
 ```kotlin
 val registry = ToolRegistry {
-    tool(ReadFileTool(sandbox))
-    tool(WeatherTool(httpClient))
+    tool(MyTool().managed(supervisor, remoteClient))
 }
 ```
 
@@ -124,12 +123,38 @@ The built-in `DefaultTools.createToolRegistry()` registers all standard tools:
 
 ```kotlin
 val registry = DefaultTools.createToolRegistry(
-    sandbox = sandbox,
+    toolExecutor = toolExecutor,
     httpClient = httpClient,
     taskScheduler = taskScheduler,
+    supervisor = supervisor,
+    remoteClient = remoteClient,            // null for local-only
     playwrightFetcher = playwrightFetcher,  // optional
 )
 ```
+
+## Supervision and Remote Execution
+
+Every tool that performs I/O is wrapped in a `ManagedTool` before being added to the registry. `ManagedTool` adds two layers around the underlying tool:
+
+1. **Supervision** — Before executing, the tool checks with a `ToolSupervisor`. In `none` mode (`NoOpToolSupervisor`), all calls are auto-approved. In `supervised` mode (`InteractiveToolSupervisor`), the tool name is checked against the `auto_approve` list; if not listed, a permission request is sent to the user.
+
+2. **Remote forwarding** — If a `RemoteToolClient` is configured (`type: remote`), the call is forwarded over HTTP to a [worker process](../installation/configuration.md#remote-worker) instead of executing locally.
+
+```
+ManagedTool.execute(args)
+  │
+  ├─ Supervisor: check permission
+  │   ├─ auto_approve list → Approved
+  │   ├─ CLI prompt (fraggle chat) → Approved / Denied
+  │   └─ WebSocket event (fraggle run) → Approved / Denied
+  │
+  ├─ Remote client present? → Forward to worker via HTTP
+  └─ Otherwise → Execute delegate tool locally
+```
+
+Scheduling tools (`schedule_task`, `list_tasks`, `get_task`, `cancel_task`) are **not** wrapped because they don't perform external I/O.
+
+See [Executor configuration](../installation/configuration.md#executor) for the YAML options.
 
 ## Execution Context
 
