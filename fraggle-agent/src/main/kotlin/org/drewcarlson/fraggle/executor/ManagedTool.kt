@@ -15,20 +15,24 @@ class ManagedTool<Args : Any>(
     private val delegate: SimpleTool<Args>,
     private val supervisor: ToolSupervisor,
     private val remoteClient: RemoteToolClient?,
-) : SimpleTool<Args>(delegate.argsSerializer, delegate.name, delegate.descriptor.description) {
+) : SimpleTool<Args>(
+    argsSerializer = delegate.argsSerializer,
+    name = delegate.name,
+    description = delegate.descriptor.description,
+) {
 
     override suspend fun execute(args: Args): String {
         val argsJson = json.encodeToString(delegate.argsSerializer, args)
         val chatId = ToolExecutionContext.current()?.chatId ?: "unknown"
 
-        when (val p = supervisor.checkPermission(name, argsJson, chatId)) {
-            is PermissionResult.Approved -> {}
-            is PermissionResult.Denied -> return "Error: Tool denied: ${p.reason}"
-            is PermissionResult.Timeout -> return "Error: Permission timed out"
+        return when (val p = supervisor.checkPermission(name, argsJson, chatId)) {
+            is PermissionResult.Approved -> {
+                remoteClient?.execute(name, argsJson)
+                    ?: delegate.execute(args)
+            }
+            is PermissionResult.Denied -> "Error: Tool denied: ${p.reason}"
+            is PermissionResult.Timeout -> "Error: Permission timed out"
         }
-
-        return remoteClient?.execute(name, argsJson)
-            ?: delegate.execute(args)
     }
 }
 
