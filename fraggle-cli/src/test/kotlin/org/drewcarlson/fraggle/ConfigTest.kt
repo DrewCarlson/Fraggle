@@ -123,7 +123,7 @@ class ConfigTest {
                     auto_create_missing: false
                   memory:
                     base_dir: /custom/memory
-                  sandbox:
+                  executor:
                     type: permissive
                     work_dir: /custom/workspace
                   agent:
@@ -260,7 +260,7 @@ class ConfigTest {
                 val configFile = tempDir.resolve("config-$typeName.yaml")
                 configFile.writeText("""
                     fraggle:
-                      sandbox:
+                      executor:
                         type: $typeName
                 """.trimIndent())
 
@@ -274,7 +274,7 @@ class ConfigTest {
             val configFile = tempDir.resolve("config-supervision.yaml")
             configFile.writeText("""
                 fraggle:
-                  sandbox:
+                  executor:
                     type: local
                     supervision: supervised
                     auto_approve:

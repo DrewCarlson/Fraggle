@@ -58,7 +58,7 @@ fraggle:
     base_dir: ./data/memory
 
   # Tool execution settings
-  sandbox:
+  executor:
     type: local                       # local or remote
     work_dir: ./data/workspace
     remote_url: ""                    # Worker URL (required when type: remote)
@@ -175,7 +175,7 @@ Controls how tools execute file and shell operations. The YAML key is `sandbox` 
 **Remote** (`type: remote`) — Tool calls are forwarded over HTTP to a separate worker process. This lets you isolate tool execution on another machine or in a container. You must set `remote_url` to the worker's address and start a worker with `fraggle worker`.
 
 ```yaml
-sandbox:
+executor:
   type: remote
   remote_url: http://worker-host:9292
 ```
@@ -190,7 +190,7 @@ When `supervision: supervised` is set, every tool call requires explicit approva
 Tools listed in `auto_approve` skip the approval prompt entirely.
 
 ```yaml
-sandbox:
+executor:
   supervision: supervised
   auto_approve:
     - list_files
