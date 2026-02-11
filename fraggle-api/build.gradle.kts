@@ -36,5 +36,14 @@ dependencies {
 
     // Testing
     testImplementation(ktorLibs.server.testHost)
-    testImplementation(libs.kotlin.test.junit)
+    testImplementation(ktorLibs.client.contentNegotiation)
+    testImplementation(libs.kotlin.test.junit5)
+    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testRuntimeOnly(libs.junit.jupiter.engine)
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
