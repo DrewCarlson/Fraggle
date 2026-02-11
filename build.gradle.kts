@@ -16,3 +16,9 @@ dependencies {
     kover(project(":fraggle-tools"))
     kover(project(":fraggle-api"))
 }
+
+subprojects {
+    System.getenv("GITHUB_REF_NAME")
+        ?.takeIf { it.startsWith("v") }
+        ?.let { version = it.removePrefix("v") }
+}
