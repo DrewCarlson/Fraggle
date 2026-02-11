@@ -54,7 +54,7 @@ class FraggleAgent(
     private val memoryProvider: AgentMemoryProvider,
     private val config: AgentConfig,
     private val promptManager: PromptManager,
-    private val traceProcessor: FraggleTraceProcessor,
+    private val traceProcessor: FraggleTraceProcessor?,
 ) : Closeable {
     private val logger = LoggerFactory.getLogger(FraggleAgent::class.java)
 
@@ -87,8 +87,10 @@ class FraggleAgent(
             agentName = "fraggle"
             productName = "fraggle"
         }
-        install(Tracing) {
-            addMessageProcessor(traceProcessor)
+        if (traceProcessor != null) {
+            install(Tracing) {
+                addMessageProcessor(traceProcessor)
+            }
         }
     }
 

@@ -122,8 +122,8 @@ interface AppGraph {
     /** Chat command processor for slash commands in chat bridges */
     val chatCommandProcessor: ChatCommandProcessor
 
-    /** Trace store */
-    val traceStore: TraceStore
+    /** Trace store (null when tracing is off) */
+    val traceStore: TraceStore?
 
     /** Event bus */
     val eventBus: EventBus

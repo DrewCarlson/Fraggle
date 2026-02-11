@@ -5,6 +5,10 @@ fraggle:
   database:
     path: "./config/fraggle.db"  # SQLite file path
 
+  # Tracing settings
+  tracing:
+    level: off                        # off, metadata, full
+
   # LLM Provider settings
   provider:
     type: lmstudio                    # lmstudio, openai, anthropic

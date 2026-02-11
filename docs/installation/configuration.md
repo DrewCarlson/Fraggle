@@ -90,6 +90,10 @@ fraggle:
       viewport_height: 720
       user_agent: null                # null = browser default
 
+  # Tracing
+  tracing:
+    level: off                        # off, metadata, full
+
   # REST API server
   api:
     enabled: false
@@ -260,6 +264,25 @@ web:
 ```
 
 See [Tools - Web Tools](../architecture/tools.md#web-tools) for setup instructions.
+
+### Tracing
+
+Controls agent tracing and observability. When enabled, trace events are captured during agent execution and viewable via the API and dashboard.
+
+| Option  | Description                             | Default |
+|---------|-----------------------------------------|---------|
+| `level` | Tracing level: `off`, `metadata`, `full`| `off`   |
+
+**Tracing levels:**
+
+- **`off`** — Tracing is completely disabled. No trace events are captured and no overhead is added.
+- **`metadata`** — Trace events are captured (agent lifecycle, tool calls, LLM call timing) but LLM message content is omitted from `detail` fields.
+- **`full`** — Everything is captured, including full LLM request/response content with message payloads and token usage.
+
+```yaml
+tracing:
+  level: full
+```
 
 ### API Server
 

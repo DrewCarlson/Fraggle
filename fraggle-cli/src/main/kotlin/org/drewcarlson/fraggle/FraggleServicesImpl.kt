@@ -48,7 +48,7 @@ class FraggleServicesImpl(
     private val chatHistoryStore: ChatHistoryStore,
     private val discordBridge: DiscordBridge? = null,
     private val eventBus: EventBus,
-    private val traceStore: TraceStore,
+    private val traceStore: TraceStore?,
     private val startTime: Instant = Clock.System.now(),
 ) : FraggleServices {
 
@@ -397,10 +397,10 @@ class FraggleServicesImpl(
 
     private inner class TracingServiceImpl : TracingService {
         override fun listSessions(limit: Int, offset: Int) =
-            traceStore.listSessions(limit, offset)
+            traceStore?.listSessions(limit, offset) ?: emptyList()
 
         override fun getSession(id: String) =
-            traceStore.getSessionDetail(id)
+            traceStore?.getSessionDetail(id)
     }
 
     private inner class DiscordOAuthServiceImpl(

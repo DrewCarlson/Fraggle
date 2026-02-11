@@ -28,4 +28,5 @@ data class TraceEventRecord(
     val phase: String,
     val data: Map<String, String> = emptyMap(),
     val durationMs: Long? = null,
+    val detail: String? = null,
 )

@@ -8,6 +8,7 @@ import androidx.compose.runtime.*
 import apiClient
 import io.ktor.client.call.*
 import io.ktor.client.request.*
+import kotlinx.serialization.json.*
 import org.drewcarlson.fraggle.models.TraceEventRecord
 import org.drewcarlson.fraggle.models.TraceSession
 import org.drewcarlson.fraggle.models.TraceSessionDetail
@@ -172,12 +173,19 @@ private fun SessionDetailView(
     wsService: WebSocketService,
     onBack: () -> Unit,
 ) {
+    var detailEvent by remember { mutableStateOf<TraceEventRecord?>(null) }
+
     val (state, refresh) = rememberRefreshableDataLoader(
         sessionId,
         wsService = wsService,
         refreshOn = setOf(RefreshTrigger.Tracing),
     ) {
         apiClient.get("tracing/sessions/$sessionId").body<TraceSessionDetail>()
+    }
+
+    // LLM Detail Dialog
+    detailEvent?.let { event ->
+        LlmDetailDialog(event = event, onClose = { detailEvent = null })
     }
 
     Section({
@@ -273,6 +281,7 @@ private fun SessionDetailView(
                                         Th({ classes(DashboardStyles.tableHeader) }) { Text("Phase") }
                                         Th({ classes(DashboardStyles.tableHeader) }) { Text("Details") }
                                         Th({ classes(DashboardStyles.tableHeader) }) { Text("Time") }
+                                        Th({ classes(DashboardStyles.tableHeader) }) { Text("Actions") }
                                     }
                                 }
                                 Tbody {
@@ -291,6 +300,17 @@ private fun SessionDetailView(
                                             }
                                             Td({ classes(DashboardStyles.tableCell) }) {
                                                 Text(formatTraceInstant(event.timestamp))
+                                            }
+                                            Td({ classes(DashboardStyles.tableCell) }) {
+                                                if (event.eventType == "llm_call" && event.detail != null) {
+                                                    Button({
+                                                        classes(DashboardStyles.button, DashboardStyles.buttonSmall, DashboardStyles.buttonOutline)
+                                                        onClick { detailEvent = event }
+                                                    }) {
+                                                        I({ classes("bi", "bi-eye") })
+                                                        Text("View")
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -503,6 +523,477 @@ private fun TraceStatBox(label: String, value: String, icon: String) {
                 Text(label)
             }
         }
+    }
+}
+
+@Composable
+private fun LlmDetailDialog(event: TraceEventRecord, onClose: () -> Unit) {
+    val json = try {
+        Json.parseToJsonElement(event.detail!!).jsonObject
+    } catch (_: Exception) {
+        null
+    }
+
+    Div({
+        classes(DashboardStyles.modalOverlay)
+        onClick { e ->
+            if (e.target == e.currentTarget) onClose()
+        }
+    }) {
+        Div({
+            classes(DashboardStyles.modal)
+            onClick { it.stopPropagation() }
+            style {
+                property("max-width", "800px")
+                property("max-height", "85vh")
+                property("min-width", "600px")
+                property("overflow", "hidden")
+                display(DisplayStyle.Flex)
+                flexDirection(FlexDirection.Column)
+            }
+        }) {
+            // Header
+            Div({
+                classes(DashboardStyles.modalHeader)
+                style { property("flex-shrink", "0") }
+            }) {
+                Div({
+                    style {
+                        display(DisplayStyle.Flex)
+                        alignItems(AlignItems.Center)
+                        gap(8.px)
+                    }
+                }) {
+                    H3({ classes(DashboardStyles.modalTitle) }) {
+                        Text(if (event.phase == "starting") "LLM Request" else "LLM Response")
+                    }
+                    PhaseBadge(event.phase)
+                }
+                Button({
+                    classes(DashboardStyles.modalCloseButton)
+                    onClick { onClose() }
+                }) {
+                    I({ classes("bi", "bi-x") })
+                }
+            }
+
+            // Body
+            Div({
+                classes(DashboardStyles.modalBody)
+                style {
+                    property("overflow-y", "auto")
+                    property("flex", "1 1 auto")
+                    property("min-height", "0")
+                }
+            }) {
+                if (json == null) {
+                    Span({
+                        style {
+                            color(Color("#71717a"))
+                            fontSize(13.px)
+                        }
+                    }) {
+                        Text("Unable to parse detail data.")
+                    }
+                } else if (event.phase == "starting") {
+                    LlmRequestContent(json)
+                } else {
+                    LlmResponseContent(json)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LlmRequestContent(json: JsonObject) {
+    // Model section
+    json["model"]?.jsonObject?.let { model ->
+        DetailSection("Model", "bi-cpu") {
+            DetailGrid {
+                DetailGridItem("Provider", model["provider"]?.jsonPrimitive?.contentOrNull ?: "-")
+                DetailGridItem("Model", model["model"]?.jsonPrimitive?.contentOrNull ?: "-")
+                model["contextLength"]?.jsonPrimitive?.longOrNull?.let {
+                    DetailGridItem("Context Length", it.toString())
+                }
+                model["maxOutputTokens"]?.jsonPrimitive?.longOrNull?.let {
+                    DetailGridItem("Max Output Tokens", it.toString())
+                }
+            }
+        }
+    }
+
+    // Parameters section
+    json["params"]?.jsonObject?.let { params ->
+        if (params.isNotEmpty()) {
+            DetailSection("Parameters", "bi-sliders") {
+                DetailGrid {
+                    params["temperature"]?.jsonPrimitive?.doubleOrNull?.let {
+                        DetailGridItem("Temperature", it.toString())
+                    }
+                    params["maxTokens"]?.jsonPrimitive?.intOrNull?.let {
+                        DetailGridItem("Max Tokens", it.toString())
+                    }
+                    params["toolChoice"]?.jsonPrimitive?.contentOrNull?.let {
+                        DetailGridItem("Tool Choice", it)
+                    }
+                    params["numberOfChoices"]?.jsonPrimitive?.intOrNull?.let {
+                        DetailGridItem("Num Choices", it.toString())
+                    }
+                }
+            }
+        }
+    }
+
+    // Available tools section
+    json["tools"]?.jsonArray?.let { tools ->
+        if (tools.isNotEmpty()) {
+            DetailSection("Available Tools", "bi-tools") {
+                Div({
+                    style {
+                        display(DisplayStyle.Flex)
+                        property("flex-wrap", "wrap")
+                        gap(6.px)
+                    }
+                }) {
+                    tools.forEach { tool ->
+                        Span({
+                            style {
+                                padding(2.px, 8.px)
+                                backgroundColor(Color("#f59e0b15"))
+                                borderRadius(4.px)
+                                fontSize(12.px)
+                                color(Color("#f59e0b"))
+                                fontWeight("500")
+                            }
+                        }) {
+                            Text(tool.jsonPrimitive.content)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Messages section
+    json["messages"]?.jsonArray?.let { messages ->
+        DetailSection("Messages (${messages.size})", "bi-chat-left-text") {
+            Div({
+                style {
+                    display(DisplayStyle.Flex)
+                    flexDirection(FlexDirection.Column)
+                    gap(8.px)
+                }
+            }) {
+                messages.forEach { msg ->
+                    val msgObj = msg.jsonObject
+                    val role = msgObj["role"]?.jsonPrimitive?.contentOrNull ?: "unknown"
+                    val content = msgObj["content"]?.jsonPrimitive?.contentOrNull ?: ""
+                    val toolName = msgObj["tool"]?.jsonPrimitive?.contentOrNull
+                    MessageBlock(role, content, toolName)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LlmResponseContent(json: JsonObject) {
+    // Model section
+    json["model"]?.jsonObject?.let { model ->
+        DetailSection("Model", "bi-cpu") {
+            DetailGrid {
+                DetailGridItem("Provider", model["provider"]?.jsonPrimitive?.contentOrNull ?: "-")
+                DetailGridItem("Model", model["model"]?.jsonPrimitive?.contentOrNull ?: "-")
+            }
+        }
+    }
+
+    // Token usage section
+    json["tokenUsage"]?.jsonObject?.let { usage ->
+        DetailSection("Token Usage", "bi-speedometer2") {
+            DetailGrid {
+                usage["input"]?.jsonPrimitive?.intOrNull?.let {
+                    DetailGridItem("Input", it.toString())
+                }
+                usage["output"]?.jsonPrimitive?.intOrNull?.let {
+                    DetailGridItem("Output", it.toString())
+                }
+                usage["total"]?.jsonPrimitive?.intOrNull?.let {
+                    DetailGridItem("Total", it.toString())
+                }
+            }
+        }
+    }
+
+    // Responses section
+    json["responses"]?.jsonArray?.let { responses ->
+        DetailSection("Responses (${responses.size})", "bi-reply") {
+            Div({
+                style {
+                    display(DisplayStyle.Flex)
+                    flexDirection(FlexDirection.Column)
+                    gap(8.px)
+                }
+            }) {
+                responses.forEach { resp ->
+                    val respObj = resp.jsonObject
+                    val role = respObj["role"]?.jsonPrimitive?.contentOrNull ?: "unknown"
+                    val content = respObj["content"]?.jsonPrimitive?.contentOrNull ?: ""
+                    val finishReason = respObj["finishReason"]?.jsonPrimitive?.contentOrNull
+                    val toolCall = respObj["toolCall"]?.jsonObject
+
+                    Div({
+                        style {
+                            backgroundColor(Color("#0f0f1a"))
+                            borderRadius(8.px)
+                            padding(12.px)
+                        }
+                    }) {
+                        // Role badge row
+                        Div({
+                            style {
+                                display(DisplayStyle.Flex)
+                                alignItems(AlignItems.Center)
+                                gap(8.px)
+                                marginBottom(8.px)
+                            }
+                        }) {
+                            RoleBadge(role)
+                            finishReason?.let {
+                                Span({
+                                    style {
+                                        fontSize(11.px)
+                                        color(Color("#71717a"))
+                                    }
+                                }) {
+                                    Text("finish: $it")
+                                }
+                            }
+                        }
+
+                        // Tool call info
+                        if (toolCall != null) {
+                            val toolName = toolCall["name"]?.jsonPrimitive?.contentOrNull ?: "unknown"
+                            val toolArgs = toolCall["arguments"]?.jsonPrimitive?.contentOrNull ?: ""
+                            Div({
+                                style {
+                                    marginBottom(8.px)
+                                }
+                            }) {
+                                Span({
+                                    style {
+                                        fontSize(12.px)
+                                        fontWeight("600")
+                                        color(Color("#f59e0b"))
+                                    }
+                                }) {
+                                    Text("Tool: $toolName")
+                                }
+                            }
+                            Pre({
+                                style {
+                                    backgroundColor(Color("#1a1a2e"))
+                                    padding(10.px)
+                                    borderRadius(6.px)
+                                    fontSize(12.px)
+                                    color(Color("#e4e4e7"))
+                                    property("white-space", "pre-wrap")
+                                    property("word-break", "break-all")
+                                    property("max-height", "200px")
+                                    property("overflow-y", "auto")
+                                    property("margin", "0")
+                                }
+                            }) {
+                                Text(formatJsonString(toolArgs))
+                            }
+                        } else if (content.isNotBlank()) {
+                            // Text content
+                            Pre({
+                                style {
+                                    backgroundColor(Color("#1a1a2e"))
+                                    padding(10.px)
+                                    borderRadius(6.px)
+                                    fontSize(12.px)
+                                    color(Color("#e4e4e7"))
+                                    property("white-space", "pre-wrap")
+                                    property("word-break", "break-word")
+                                    property("max-height", "300px")
+                                    property("overflow-y", "auto")
+                                    property("margin", "0")
+                                }
+                            }) {
+                                Text(content)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DetailSection(title: String, icon: String, content: @Composable () -> Unit) {
+    Div({
+        style {
+            marginBottom(16.px)
+        }
+    }) {
+        Div({
+            style {
+                display(DisplayStyle.Flex)
+                alignItems(AlignItems.Center)
+                gap(6.px)
+                marginBottom(8.px)
+            }
+        }) {
+            I({
+                classes("bi", icon)
+                style {
+                    fontSize(14.px)
+                    color(Color("#6366f1"))
+                }
+            })
+            Span({
+                style {
+                    fontSize(14.px)
+                    fontWeight("600")
+                    color(Color("#e4e4e7"))
+                }
+            }) {
+                Text(title)
+            }
+        }
+        content()
+    }
+}
+
+@Composable
+private fun DetailGrid(content: @Composable () -> Unit) {
+    Div({
+        style {
+            display(DisplayStyle.Grid)
+            property("grid-template-columns", "repeat(auto-fill, minmax(160px, 1fr))")
+            gap(8.px)
+        }
+    }) {
+        content()
+    }
+}
+
+@Composable
+private fun DetailGridItem(label: String, value: String) {
+    Div({
+        style {
+            padding(8.px, 12.px)
+            backgroundColor(Color("#0f0f1a"))
+            borderRadius(6.px)
+        }
+    }) {
+        Div({
+            style {
+                fontSize(11.px)
+                color(Color("#71717a"))
+                marginBottom(2.px)
+            }
+        }) {
+            Text(label)
+        }
+        Div({
+            style {
+                fontSize(13.px)
+                fontWeight("500")
+                color(Color("#e4e4e7"))
+            }
+        }) {
+            Text(value)
+        }
+    }
+}
+
+@Composable
+private fun MessageBlock(role: String, content: String, toolName: String? = null) {
+    Div({
+        style {
+            backgroundColor(Color("#0f0f1a"))
+            borderRadius(8.px)
+            padding(12.px)
+        }
+    }) {
+        Div({
+            style {
+                display(DisplayStyle.Flex)
+                alignItems(AlignItems.Center)
+                gap(8.px)
+                marginBottom(if (content.isNotBlank()) 8.px else 0.px)
+            }
+        }) {
+            RoleBadge(role)
+            toolName?.let {
+                Span({
+                    style {
+                        fontSize(11.px)
+                        color(Color("#71717a"))
+                    }
+                }) {
+                    Text("tool: $it")
+                }
+            }
+        }
+        if (content.isNotBlank()) {
+            Pre({
+                style {
+                    backgroundColor(Color("#1a1a2e"))
+                    padding(10.px)
+                    borderRadius(6.px)
+                    fontSize(12.px)
+                    color(Color("#e4e4e7"))
+                    property("white-space", "pre-wrap")
+                    property("word-break", "break-word")
+                    property("max-height", "200px")
+                    property("overflow-y", "auto")
+                    property("margin", "0")
+                }
+            }) {
+                Text(content)
+            }
+        }
+    }
+}
+
+@Composable
+private fun RoleBadge(role: String) {
+    val color = when (role) {
+        "system" -> "#71717a"
+        "user" -> "#3b82f6"
+        "assistant" -> "#8b5cf6"
+        "tool" -> "#f59e0b"
+        "reasoning" -> "#06b6d4"
+        else -> "#71717a"
+    }
+    Span({
+        style {
+            padding(2.px, 8.px)
+            backgroundColor(Color("${color}20"))
+            borderRadius(4.px)
+            fontSize(11.px)
+            fontWeight("600")
+            color(Color(color))
+            property("text-transform", "uppercase")
+            property("letter-spacing", "0.05em")
+        }
+    }) {
+        Text(role)
+    }
+}
+
+private fun formatJsonString(jsonStr: String): String {
+    return try {
+        val element = Json.parseToJsonElement(jsonStr)
+        Json { prettyPrint = true }.encodeToString(JsonElement.serializer(), element)
+    } catch (_: Exception) {
+        jsonStr
     }
 }
 

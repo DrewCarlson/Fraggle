@@ -41,6 +41,8 @@ data class FraggleSettings(
     val dashboard: DashboardConfig = DashboardConfig(),
     @Documented(name = "Database", description = "Database configuration for persistent storage")
     val database: DatabaseConfig = DatabaseConfig(),
+    @Documented(name = "Tracing", description = "Agent tracing configuration")
+    val tracing: TracingConfig = TracingConfig(),
 )
 
 @Serializable
@@ -420,4 +422,25 @@ data class DashboardConfig(
 data class DatabaseConfig(
     @Documented(name = "Path", description = "Path to the SQLite database file")
     val path: String = "./config/fraggle.db",
+)
+
+@Serializable
+enum class TracingLevel {
+    @SerialName("off")
+    OFF,
+    @SerialName("metadata")
+    METADATA,
+    @SerialName("full")
+    FULL,
+}
+
+@Serializable
+@Documented(
+    name = "Tracing",
+    description = "Configuration for agent tracing and observability",
+    extras = ["icon=bi-activity"],
+)
+data class TracingConfig(
+    @Documented(name = "Level", description = "Tracing level: off (disabled), metadata (events without LLM content), full (everything)")
+    val level: TracingLevel = TracingLevel.OFF,
 )

@@ -44,7 +44,7 @@ interface ApiModule {
             chatHistoryStore: ChatHistoryStore,
             discordBridge: DiscordBridge?,
             eventBus: EventBus,
-            traceStore: TraceStore,
+            traceStore: TraceStore?,
         ): FraggleServicesImpl = FraggleServicesImpl(
             memory = memory,
             toolRegistry = toolRegistry,

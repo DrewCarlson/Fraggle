@@ -4,18 +4,22 @@ import ai.koog.agents.core.feature.message.FeatureMessage
 import ai.koog.agents.core.feature.message.FeatureMessageProcessor
 import ai.koog.agents.core.feature.model.FeatureStringMessage
 import ai.koog.agents.core.feature.model.events.*
+import ai.koog.prompt.message.Message
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.serialization.json.*
 import org.drewcarlson.fraggle.agent.ToolExecutionContext
 import org.drewcarlson.fraggle.events.EventBus
 import org.drewcarlson.fraggle.models.FraggleEvent
 import org.drewcarlson.fraggle.models.TraceEventRecord
+import org.drewcarlson.fraggle.models.TracingLevel
 import org.slf4j.LoggerFactory
 import java.util.UUID
 import kotlin.time.Clock
 import kotlin.time.Instant
 
 class FraggleTraceProcessor(
+    private val level: TracingLevel,
     private val traceStore: TraceStore,
     private val eventBus: EventBus,
 ) : FeatureMessageProcessor() {
@@ -62,7 +66,7 @@ class FraggleTraceProcessor(
             else -> {}
         }
 
-        val (eventType, phase, data, durationMs) = extractEventInfo(event)
+        val (eventType, phase, data, durationMs, detail) = extractEventInfo(event)
 
         val record = TraceEventRecord(
             id = UUID.randomUUID().toString(),
@@ -72,6 +76,7 @@ class FraggleTraceProcessor(
             phase = phase,
             data = data,
             durationMs = durationMs,
+            detail = detail,
         )
 
         traceStore.addEvent(sessionId, record)
@@ -149,6 +154,7 @@ class FraggleTraceProcessor(
                     "model" to event.model.toString(),
                     "tools" to event.tools.takeIf { it.isNotEmpty() }?.joinToString(", "),
                 ),
+                detail = if (level == TracingLevel.FULL) buildLlmRequestDetail(event) else null,
             )
             is LLMCallCompletedEvent -> EventInfo(
                 eventType = "llm_call",
@@ -157,6 +163,7 @@ class FraggleTraceProcessor(
                     "model" to event.model.toString(),
                     "responseCount" to event.responses.size.toString(),
                 ),
+                detail = if (level == TracingLevel.FULL) buildLlmResponseDetail(event) else null,
             )
 
             // Tool calls
@@ -269,6 +276,83 @@ class FraggleTraceProcessor(
         }
     }
 
+    private fun buildLlmRequestDetail(event: LLMCallStartingEvent): String {
+        return buildJsonObject {
+            putJsonArray("messages") {
+                for (msg in event.prompt.messages) {
+                    addJsonObject {
+                        put("role", msg.role.name.lowercase())
+                        put("content", msg.content)
+                        if (msg is Message.Tool.Result) {
+                            msg.tool.let { put("tool", it) }
+                        }
+                    }
+                }
+            }
+            putJsonObject("params") {
+                event.prompt.params.temperature?.let { put("temperature", it) }
+                event.prompt.params.maxTokens?.let { put("maxTokens", it) }
+                event.prompt.params.toolChoice?.let { put("toolChoice", it.toString()) }
+                event.prompt.params.numberOfChoices?.let { put("numberOfChoices", it) }
+            }
+            putJsonObject("model") {
+                put("provider", event.model.provider)
+                put("model", event.model.model)
+                event.model.contextLength?.let { put("contextLength", it) }
+                event.model.maxOutputTokens?.let { put("maxOutputTokens", it) }
+            }
+            putJsonArray("tools") {
+                for (tool in event.tools) {
+                    add(tool)
+                }
+            }
+        }.toString()
+    }
+
+    private fun buildLlmResponseDetail(event: LLMCallCompletedEvent): String {
+        return buildJsonObject {
+            putJsonArray("responses") {
+                for (msg in event.responses) {
+                    addJsonObject {
+                        put("role", msg.role.name.lowercase())
+                        put("content", msg.content)
+                        if (msg is Message.Assistant) {
+                            msg.finishReason?.let { put("finishReason", it) }
+                        }
+                        if (msg is Message.Tool.Call) {
+                            putJsonObject("toolCall") {
+                                put("name", msg.tool)
+                                msg.id?.let { put("id", it) }
+                                put("arguments", msg.content)
+                            }
+                        }
+                        val meta = msg.metaInfo
+                        if (meta is ai.koog.prompt.message.ResponseMetaInfo) {
+                            meta.totalTokensCount?.let { put("totalTokens", it) }
+                            meta.inputTokensCount?.let { put("inputTokens", it) }
+                            meta.outputTokensCount?.let { put("outputTokens", it) }
+                        }
+                    }
+                }
+            }
+            putJsonObject("model") {
+                put("provider", event.model.provider)
+                put("model", event.model.model)
+                event.model.contextLength?.let { put("contextLength", it) }
+                event.model.maxOutputTokens?.let { put("maxOutputTokens", it) }
+            }
+            // Aggregate token usage from the last response with meta info
+            val lastMeta = event.responses.lastOrNull()?.metaInfo
+            if (lastMeta is ai.koog.prompt.message.ResponseMetaInfo) {
+                putJsonObject("tokenUsage") {
+                    lastMeta.totalTokensCount?.let { put("total", it) }
+                    lastMeta.inputTokensCount?.let { put("input", it) }
+                    lastMeta.outputTokensCount?.let { put("output", it) }
+                }
+            }
+        }.toString()
+    }
+
     private fun buildData(vararg pairs: Pair<String, String?>): Map<String, String> {
         return pairs.mapNotNull { (k, v) -> v?.let { k to it } }.toMap()
     }
@@ -279,4 +363,5 @@ private data class EventInfo(
     val phase: String,
     val data: Map<String, String>,
     val durationMs: Long? = null,
+    val detail: String? = null,
 )
