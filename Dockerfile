@@ -23,7 +23,7 @@ RUN addgroup --gid "$PGID" "$USER" \
     && mkdir -p /app/data \
     && chown -R "$USER:$USER" /app
 
-COPY --chown=$USER:$USER fraggle-cli/build/install/fraggle-shadow/ ./
+COPY --chown=$USER:$USER fraggle-cli/build/install/fraggle/ ./
 
 USER $USER
 
