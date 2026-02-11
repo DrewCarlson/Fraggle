@@ -20,11 +20,22 @@ permissions:
 jobs:
   rollup:
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.PAT_TOKEN }}
     steps:
+
+      - name: Validate token
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::PAT_TOKEN secret is not set. A Personal Access Token with the 'workflow' scope is required to push commits that modify workflow files."
+            exit 1
+          fi
+
       - name: Checkout
         uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
         with:
           fetch-depth: 0
+          token: ${{ secrets.PAT_TOKEN }}
 
       - name: Configure Git user
         run: |
@@ -34,7 +45,6 @@ jobs:
       - name: Resolve PR list
         id: resolve
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           INPUT_PR_NUMBERS: ${{ inputs.pr_numbers }}
         run: |
           if [ -n "$INPUT_PR_NUMBERS" ]; then
@@ -51,7 +61,6 @@ jobs:
 
       - name: Create rollup branch and cherry-pick
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_LIST: ${{ steps.resolve.outputs.prs }}
           PR_TITLE: ${{ inputs.title }}
           ACTOR: ${{ github.actor }}
