@@ -12,6 +12,10 @@ application {
     applicationName = "fraggle"
 }
 
+distributions.configureEach {
+    distributionBaseName.set("fraggle")
+}
+
 kotlin {
     jvmToolchain(21)
 }
@@ -61,13 +65,25 @@ tasks.named<JavaExec>("run") {
     environment("FRAGGLE_ROOT", rootProject.projectDir.resolve("runtime-dev").absolutePath)
 }
 
+tasks.shadowDistZip {
+    archiveVersion.set("")
+}
+
+tasks.shadowDistTar {
+    archiveVersion.set("")
+}
+
 val dashboard = evaluationDependsOn(":fraggle-dashboard")
 
 tasks.shadowJar {
     dependsOn(dashboard.tasks.getByName("jsBrowserProductionDist"))
+    archiveFileName.set("fraggle.jar")
     archiveBaseName.set("fraggle")
-    archiveClassifier.set("")
+    archiveClassifier.set("fraggle")
     archiveVersion.set("")
+    manifest {
+        attributes(mapOf("Main-Class" to application.mainClass.get()))
+    }
     mergeServiceFiles()
     from(dashboard.layout.buildDirectory.file("vite/js/productionExecutable")) {
         into("dashboard")
