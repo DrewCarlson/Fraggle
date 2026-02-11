@@ -26,7 +26,6 @@ data class FraggleSettings(
     val prompts: PromptsConfig = PromptsConfig(),
     @Documented(name = "Memory", description = "Memory storage configuration")
     val memory: MemoryConfig = MemoryConfig(),
-    @SerialName("sandbox")
     @Documented(name = "Executor", description = "Tool execution configuration")
     val executor: ExecutorConfig = ExecutorConfig(),
     @Documented(name = "Agent", description = "AI agent behavior configuration")
@@ -227,7 +226,9 @@ data class ExecutorConfig(
 )
 
 enum class ExecutorType {
+    @SerialName("local")
     LOCAL,
+    @SerialName("remote")
     REMOTE,
 }
 

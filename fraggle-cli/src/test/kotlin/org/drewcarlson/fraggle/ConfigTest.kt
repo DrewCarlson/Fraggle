@@ -124,7 +124,7 @@ class ConfigTest {
                   memory:
                     base_dir: /custom/memory
                   executor:
-                    type: permissive
+                    type: local
                     work_dir: /custom/workspace
                   agent:
                     temperature: 0.5
@@ -249,12 +249,9 @@ class ConfigTest {
         }
 
         @Test
-        fun `parses all executor types including legacy aliases`() {
+        fun `parses all executor types`() {
             val types = listOf("local", "remote")
-            val expected = listOf(
-                ExecutorType.LOCAL, ExecutorType.REMOTE,
-                ExecutorType.LOCAL, ExecutorType.LOCAL, ExecutorType.LOCAL,
-            )
+            val expected = listOf(ExecutorType.LOCAL, ExecutorType.REMOTE)
 
             for ((typeName, expectedType) in types.zip(expected)) {
                 val configFile = tempDir.resolve("config-$typeName.yaml")
