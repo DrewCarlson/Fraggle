@@ -103,7 +103,7 @@ jobs:
           java-version: 21
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@576fcbecfed70890e466eeffd7c78d93b30b0472
+        uses: gradle/actions/setup-gradle@2b9247147a6efbddfece21c734c99ddc4c696eee
 
       - name: Build Shadow Distribution
         run: >
