@@ -57,7 +57,7 @@ fraggle:
 
   # Executor settings
   sandbox:
-    type: local                       # local, remote (also accepts: permissive, docker, gvisor)
+    type: local                       # local, remote
     work_dir: ./data/workspace
     remote_url: ""                    # URL of remote worker (only used when type is remote)
     supervision: none                 # none, supervised

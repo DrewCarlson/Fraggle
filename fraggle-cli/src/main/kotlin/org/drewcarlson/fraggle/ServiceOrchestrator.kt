@@ -14,6 +14,7 @@ import org.drewcarlson.fraggle.db.*
 import org.drewcarlson.fraggle.discord.DiscordBridge
 import org.drewcarlson.fraggle.discord.DiscordBridgeInitializer
 import org.drewcarlson.fraggle.models.ApiConfig
+import org.drewcarlson.fraggle.models.ExecutorConfig
 import org.drewcarlson.fraggle.models.FraggleEvent
 import org.drewcarlson.fraggle.signal.MessageRouter
 import org.drewcarlson.fraggle.signal.SignalBridge
@@ -54,6 +55,7 @@ class ServiceOrchestrator(
     private val apiServer: EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration>?,
     private val chatCommandProcessor: ChatCommandProcessor,
     private val eventBus: EventBus,
+    private val executorConfig: ExecutorConfig,
 ) {
     private val logger = LoggerFactory.getLogger(ServiceOrchestrator::class.java)
     private val conversations = ConcurrentHashMap<String, Conversation>()
@@ -127,7 +129,7 @@ class ServiceOrchestrator(
             eventBus.events.collect { event ->
                 when (event) {
                     is FraggleEvent.ToolPermissionRequest -> {
-                        if (event.chatId.isNotEmpty()) {
+                        if (executorConfig.bridgeApproval && event.chatId.isNotEmpty()) {
                             chatCommandProcessor.trackPermissionRequest(event.chatId, event.requestId)
                             val msg = "Tool **${event.toolName}** wants to execute.\n" +
                                 "Args: `${event.argsJson}`\n\n" +

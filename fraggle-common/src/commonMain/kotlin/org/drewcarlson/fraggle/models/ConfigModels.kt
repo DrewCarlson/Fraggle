@@ -206,7 +206,6 @@ data class MemoryConfig(
     extras = ["icon=bi-shield-check"],
 )
 data class ExecutorConfig(
-    @Serializable(with = ExecutorTypeSerializer::class)
     @Documented(name = "Type", description = "Executor type (local, remote)")
     val type: ExecutorType = ExecutorType.LOCAL,
     @SerialName("work_dir")
@@ -220,9 +219,11 @@ data class ExecutorConfig(
     @SerialName("auto_approve")
     @Documented(name = "Auto Approve", description = "List of tool names that are automatically approved without prompting")
     val autoApprove: List<String> = emptyList(),
+    @SerialName("bridge_approval")
+    @Documented(name = "Bridge Approval", description = "Whether to forward tool permission requests to chat bridges for approval (always available in chat mode and dashboard)")
+    val bridgeApproval: Boolean = true,
 )
 
-@Serializable(with = ExecutorTypeSerializer::class)
 enum class ExecutorType {
     LOCAL,
     REMOTE,

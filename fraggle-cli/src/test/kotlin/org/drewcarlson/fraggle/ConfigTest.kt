@@ -250,7 +250,7 @@ class ConfigTest {
 
         @Test
         fun `parses all executor types including legacy aliases`() {
-            val types = listOf("local", "remote", "permissive", "docker", "gvisor")
+            val types = listOf("local", "remote")
             val expected = listOf(
                 ExecutorType.LOCAL, ExecutorType.REMOTE,
                 ExecutorType.LOCAL, ExecutorType.LOCAL, ExecutorType.LOCAL,

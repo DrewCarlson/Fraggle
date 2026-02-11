@@ -168,9 +168,6 @@ Controls how tools execute file and shell operations. The YAML key is `sandbox` 
 | `supervision`  | Permission mode: `none` or `supervised`                   | `none`               |
 | `auto_approve` | Tool names that skip approval in supervised mode          | `[]`                 |
 
-!!! note "Legacy type names"
-    The values `permissive`, `docker`, and `gvisor` are accepted as aliases for `local` for backward compatibility.
-
 #### Execution Modes
 
 **Local** (`type: local`) — Tools run directly in the Fraggle process. This is the default and simplest mode.
