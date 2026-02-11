@@ -18,10 +18,10 @@
     </appender>
 
     <!-- Fraggle logging -->
-    <logger name="org.drewcarlson.fraggle" level="INFO"/>
+    <logger name="fraggle" level="INFO"/>
 
     <!-- Signal CLI logging - set to DEBUG to see raw JSON messages -->
-    <logger name="org.drewcarlson.fraggle.signal.SignalCli" level="DEBUG"/>
+    <logger name="fraggle.signal.SignalCli" level="DEBUG"/>
 
     <!-- Ktor client logging (reduce verbosity) -->
     <logger name="io.ktor.client" level="WARN"/>

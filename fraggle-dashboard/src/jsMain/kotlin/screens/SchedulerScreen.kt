@@ -8,7 +8,7 @@ import androidx.compose.runtime.Composable
 import apiClient
 import io.ktor.client.call.*
 import io.ktor.client.request.*
-import org.drewcarlson.fraggle.models.ScheduledTaskInfo
+import fraggle.models.ScheduledTaskInfo
 import org.jetbrains.compose.web.css.*
 import org.jetbrains.compose.web.dom.*
 import rememberRefreshableDataLoader

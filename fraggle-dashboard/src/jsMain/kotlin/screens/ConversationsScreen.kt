@@ -8,9 +8,9 @@ import androidx.compose.runtime.*
 import apiClient
 import io.ktor.client.call.*
 import io.ktor.client.request.*
-import org.drewcarlson.fraggle.models.ChatDetail
-import org.drewcarlson.fraggle.models.ChatMessageRecord
-import org.drewcarlson.fraggle.models.ChatSummary
+import fraggle.models.ChatDetail
+import fraggle.models.ChatMessageRecord
+import fraggle.models.ChatSummary
 import org.jetbrains.compose.web.css.*
 import org.jetbrains.compose.web.dom.*
 import rememberRefreshableDataLoader

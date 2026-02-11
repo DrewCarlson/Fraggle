@@ -8,7 +8,7 @@ import androidx.compose.runtime.*
 import apiClient
 import io.ktor.client.call.*
 import io.ktor.client.request.*
-import org.drewcarlson.fraggle.models.ToolInfo
+import fraggle.models.ToolInfo
 import org.jetbrains.compose.web.css.*
 import org.jetbrains.compose.web.dom.*
 import rememberRefreshableDataLoader

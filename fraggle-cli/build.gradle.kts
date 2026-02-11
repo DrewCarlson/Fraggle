@@ -8,7 +8,7 @@ plugins {
 }
 
 application {
-    mainClass.set("org.drewcarlson.fraggle.MainKt")
+    mainClass.set("fraggle.MainKt")
     applicationName = "fraggle"
 }
 

@@ -4,7 +4,7 @@ import DashboardStyles
 import WebSocketService
 import androidx.compose.runtime.*
 import kotlinx.coroutines.flow.collectLatest
-import org.drewcarlson.fraggle.models.FraggleEvent
+import fraggle.models.FraggleEvent
 import org.jetbrains.compose.web.attributes.InputType
 import org.jetbrains.compose.web.attributes.placeholder
 import org.jetbrains.compose.web.css.*

@@ -9,7 +9,7 @@ import apiClient
 import components.BridgeInitDialog
 import io.ktor.client.call.*
 import io.ktor.client.request.*
-import org.drewcarlson.fraggle.models.BridgeInfo
+import fraggle.models.BridgeInfo
 import org.jetbrains.compose.web.css.*
 import org.jetbrains.compose.web.dom.*
 import rememberRefreshableDataLoader

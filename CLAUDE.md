@@ -117,7 +117,7 @@ class MyTool : SimpleTool<MyTool.Args>(
 
 ### Database (Exposed ORM + SQLite)
 
-The application uses [JetBrains Exposed](https://github.com/JetBrains/Exposed) 1.0.0 with SQLite JDBC 3.51.1.0 for chat history and message metadata persistence. All database code lives in `fraggle-agent/src/main/kotlin/org/drewcarlson/fraggle/db/`.
+The application uses [JetBrains Exposed](https://github.com/JetBrains/Exposed) 1.0.0 with SQLite JDBC 3.51.1.0 for chat history and message metadata persistence. All database code lives in `fraggle-agent/src/main/kotlin/fraggle/db/`.
 
 **Critical: Exposed 1.0 API packages.** Exposed 1.0.0 uses `v1`-namespaced packages — **not** the legacy `org.jetbrains.exposed.sql.*` packages:
 ```kotlin

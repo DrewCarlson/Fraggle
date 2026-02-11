@@ -5,7 +5,7 @@ import LocalWebSocketService
 import androidx.compose.runtime.*
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.serialization.json.*
-import org.drewcarlson.fraggle.models.FraggleEvent
+import fraggle.models.FraggleEvent
 import org.jetbrains.compose.web.css.*
 import org.jetbrains.compose.web.dom.*
 

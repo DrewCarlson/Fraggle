@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import org.drewcarlson.fraggle.models.FraggleEvent
+import fraggle.models.FraggleEvent
 
 /**
  * WebSocket connection state.

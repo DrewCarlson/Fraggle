@@ -9,11 +9,11 @@ import apiClient
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
-import org.drewcarlson.fraggle.models.FactInfo
-import org.drewcarlson.fraggle.models.MemoryResponse
-import org.drewcarlson.fraggle.models.MemoryScopeInfo
-import org.drewcarlson.fraggle.models.MemoryScopesResponse
-import org.drewcarlson.fraggle.models.UpdateFactRequest
+import fraggle.models.FactInfo
+import fraggle.models.MemoryResponse
+import fraggle.models.MemoryScopeInfo
+import fraggle.models.MemoryScopesResponse
+import fraggle.models.UpdateFactRequest
 import kotlinx.browser.window
 import org.jetbrains.compose.web.attributes.InputType
 import org.jetbrains.compose.web.attributes.placeholder

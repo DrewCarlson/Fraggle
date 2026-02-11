@@ -15,7 +15,7 @@ import kotlinx.browser.window
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.serialization.json.Json
-import org.drewcarlson.fraggle.models.SystemStatus
+import fraggle.models.SystemStatus
 import org.jetbrains.compose.web.css.Style
 import org.jetbrains.compose.web.dom.*
 import org.jetbrains.compose.web.renderComposableInBody

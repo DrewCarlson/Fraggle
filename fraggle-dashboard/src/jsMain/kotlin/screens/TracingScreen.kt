@@ -9,9 +9,9 @@ import apiClient
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import kotlinx.serialization.json.*
-import org.drewcarlson.fraggle.models.TraceEventRecord
-import org.drewcarlson.fraggle.models.TraceSession
-import org.drewcarlson.fraggle.models.TraceSessionDetail
+import fraggle.models.TraceEventRecord
+import fraggle.models.TraceSession
+import fraggle.models.TraceSessionDetail
 import org.jetbrains.compose.web.css.*
 import org.jetbrains.compose.web.dom.*
 import rememberRefreshableDataLoader

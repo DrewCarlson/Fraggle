@@ -9,7 +9,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import app.softwork.routingcompose.Router
 import kotlinx.coroutines.delay
-import org.drewcarlson.fraggle.models.SystemStatus
+import fraggle.models.SystemStatus
 import org.jetbrains.compose.web.css.*
 import org.jetbrains.compose.web.dom.*
 import rememberConnectionState
