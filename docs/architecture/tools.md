@@ -136,17 +136,20 @@ val registry = DefaultTools.createToolRegistry(
 
 Every tool that performs I/O is wrapped in a `ManagedTool` before being added to the registry. `ManagedTool` adds two layers around the underlying tool:
 
-1. **Supervision** — Before executing, the tool checks with a `ToolSupervisor`. In `none` mode (`NoOpToolSupervisor`), all calls are auto-approved. In `supervised` mode (`InteractiveToolSupervisor`), the tool name is checked against the `auto_approve` list; if not listed, a permission request is sent to the user.
+1. **Supervision** — Before executing, the tool checks with a `ToolSupervisor`. In `none` mode (`NoOpToolSupervisor`), all calls are auto-approved. In `supervised` mode (`InteractiveToolSupervisor`), the tool call is evaluated against policy-based `tool_policies` rules. Each rule can specify `allow`, `deny`, or `ask` policies, with optional argument pattern constraints (e.g., deny `write_file` for paths under `/etc/**`). How patterns are matched depends on the `@ToolArg` annotation on the tool's Args property: `PATH` arguments are normalized before glob matching to prevent traversal attacks, `SHELL_COMMAND` arguments are parsed and each command is matched against patterns (simple flag-aware `value` patterns or structured `commands` with flag allowlists/denylists and typed positional arg matching), and unannotated arguments use plain glob matching. If no rule matches, a permission request is sent to the user.
 
 2. **Remote forwarding** — If a `RemoteToolClient` is configured (`type: remote`), the call is forwarded over HTTP to a [worker process](../installation/configuration.md#remote-worker) instead of executing locally.
 
 ```
 ManagedTool.execute(args)
   │
-  ├─ Supervisor: check permission
-  │   ├─ auto_approve list → Approved
-  │   ├─ CLI prompt (fraggle chat) → Approved / Denied
-  │   └─ WebSocket event (fraggle run) → Approved / Denied
+  ├─ Supervisor: evaluate policy rules (first match wins)
+  │   ├─ policy: allow → Approved
+  │   ├─ policy: deny  → Denied (no user prompt)
+  │   ├─ policy: ask   → Delegate to user
+  │   ├─ no match      → Delegate to user
+  │   │   ├─ CLI prompt (fraggle chat) → Approved / Denied
+  │   │   └─ WebSocket event (fraggle run) → Approved / Denied
   │
   ├─ Remote client present? → Forward to worker via HTTP
   └─ Otherwise → Execute delegate tool locally

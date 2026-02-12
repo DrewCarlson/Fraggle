@@ -43,7 +43,7 @@ class ConfigTest {
             assertEquals(ExecutorType.LOCAL, settings.type)
             assertEquals("./data/workspace", settings.workDir)
             assertEquals(SupervisionMode.NONE, settings.supervision)
-            assertEquals(emptyList(), settings.autoApprove)
+            assertEquals(emptyList(), settings.toolPolicies)
         }
 
         @Test
@@ -267,21 +267,211 @@ class ConfigTest {
         }
 
         @Test
-        fun `parses executor supervision and auto_approve`() {
-            val configFile = tempDir.resolve("config-supervision.yaml")
+        fun `parses tool_policies with object rules`() {
+            val configFile = tempDir.resolve("config-rules.yaml")
             configFile.writeText("""
                 fraggle:
                   executor:
-                    type: local
                     supervision: supervised
-                    auto_approve:
-                      - read_file
-                      - list_files
+                    tool_policies:
+                      - tool: list_files
+                      - tool: write_file
+                        args:
+                          - name: path
+                            value:
+                              - "/workspace/**"
             """.trimIndent())
 
             val config = ConfigLoader.load(configFile)
-            assertEquals(SupervisionMode.SUPERVISED, config.fraggle.executor.supervision)
-            assertEquals(listOf("read_file", "list_files"), config.fraggle.executor.autoApprove)
+            assertEquals(2, config.fraggle.executor.toolPolicies.size)
+            assertEquals("list_files", config.fraggle.executor.toolPolicies[0].tool)
+            assertEquals(ApprovalPolicy.ALLOW, config.fraggle.executor.toolPolicies[0].policy)
+            assertTrue(config.fraggle.executor.toolPolicies[0].args.isEmpty())
+            assertEquals("write_file", config.fraggle.executor.toolPolicies[1].tool)
+            assertEquals(1, config.fraggle.executor.toolPolicies[1].args.size)
+            assertEquals("path", config.fraggle.executor.toolPolicies[1].args[0].name)
+            assertEquals(listOf("/workspace/**"), config.fraggle.executor.toolPolicies[1].args[0].value)
+            assertNull(config.fraggle.executor.toolPolicies[1].args[0].policy)
+        }
+
+        @Test
+        fun `parses tool_policies with policy field`() {
+            val configFile = tempDir.resolve("config-policy.yaml")
+            configFile.writeText("""
+                fraggle:
+                  executor:
+                    supervision: supervised
+                    tool_policies:
+                      - tool: read_file
+                        policy: allow
+                      - tool: write_file
+                        policy: deny
+                        args:
+                          - name: path
+                            value: ["/etc/**"]
+                      - tool: execute_command
+                        policy: ask
+            """.trimIndent())
+
+            val config = ConfigLoader.load(configFile)
+            assertEquals(3, config.fraggle.executor.toolPolicies.size)
+
+            assertEquals("read_file", config.fraggle.executor.toolPolicies[0].tool)
+            assertEquals(ApprovalPolicy.ALLOW, config.fraggle.executor.toolPolicies[0].policy)
+
+            assertEquals("write_file", config.fraggle.executor.toolPolicies[1].tool)
+            assertEquals(ApprovalPolicy.DENY, config.fraggle.executor.toolPolicies[1].policy)
+
+            assertEquals("execute_command", config.fraggle.executor.toolPolicies[2].tool)
+            assertEquals(ApprovalPolicy.ASK, config.fraggle.executor.toolPolicies[2].policy)
+        }
+
+        @Test
+        fun `parses arg-level policy`() {
+            val configFile = tempDir.resolve("config-arg-policy.yaml")
+            configFile.writeText("""
+                fraggle:
+                  executor:
+                    supervision: supervised
+                    tool_policies:
+                      - tool: execute_command
+                        policy: allow
+                        args:
+                          - name: command
+                            value: ["ls"]
+                          - name: working_dir
+                            value: ["/sensitive/**"]
+                            policy: deny
+            """.trimIndent())
+
+            val config = ConfigLoader.load(configFile)
+            assertEquals(1, config.fraggle.executor.toolPolicies.size)
+
+            val rule = config.fraggle.executor.toolPolicies[0]
+            assertEquals("execute_command", rule.tool)
+            assertEquals(ApprovalPolicy.ALLOW, rule.policy)
+            assertEquals(2, rule.args.size)
+
+            assertEquals("command", rule.args[0].name)
+            assertEquals(listOf("ls"), rule.args[0].value)
+            assertNull(rule.args[0].policy)
+
+            assertEquals("working_dir", rule.args[1].name)
+            assertEquals(listOf("/sensitive/**"), rule.args[1].value)
+            assertEquals(ApprovalPolicy.DENY, rule.args[1].policy)
+        }
+
+        @Test
+        fun `default policy is allow when omitted`() {
+            val configFile = tempDir.resolve("config-default-policy.yaml")
+            configFile.writeText("""
+                fraggle:
+                  executor:
+                    supervision: supervised
+                    tool_policies:
+                      - tool: list_files
+            """.trimIndent())
+
+            val config = ConfigLoader.load(configFile)
+            assertEquals(1, config.fraggle.executor.toolPolicies.size)
+            assertEquals(ApprovalPolicy.ALLOW, config.fraggle.executor.toolPolicies[0].policy)
+        }
+
+        @Test
+        fun `parses tool_policies with structured command patterns`() {
+            val configFile = tempDir.resolve("config-cmd-patterns.yaml")
+            configFile.writeText("""
+                fraggle:
+                  executor:
+                    supervision: supervised
+                    tool_policies:
+                      - tool: execute_command
+                        policy: allow
+                        args:
+                          - name: command
+                            commands:
+                              - command: cat
+                                paths: ["/workspace/**"]
+                              - command: grep
+                                allow_flags: ["-r", "-i", "-n"]
+                                paths: ["/workspace/**"]
+                              - command: chmod
+                                deny_flags: ["-R", "--recursive"]
+                                args: ["*"]
+                                paths: ["/workspace/**"]
+                              - command: rm
+                                deny_flags: ["-r", "-R", "-f"]
+            """.trimIndent())
+
+            val config = ConfigLoader.load(configFile)
+            assertEquals(1, config.fraggle.executor.toolPolicies.size)
+
+            val rule = config.fraggle.executor.toolPolicies[0]
+            val matcher = rule.args[0]
+            assertEquals("command", matcher.name)
+            assertTrue(matcher.value.isEmpty())
+            assertEquals(4, matcher.commands.size)
+
+            // cat — paths only
+            val cat = matcher.commands[0]
+            assertEquals("cat", cat.command)
+            assertNull(cat.allowFlags)
+            assertTrue(cat.denyFlags.isEmpty())
+            assertEquals(listOf("/workspace/**"), cat.paths)
+            assertTrue(cat.args.isEmpty())
+
+            // grep — allow_flags + paths
+            val grep = matcher.commands[1]
+            assertEquals("grep", grep.command)
+            assertEquals(listOf("-r", "-i", "-n"), grep.allowFlags)
+            assertTrue(grep.denyFlags.isEmpty())
+            assertEquals(listOf("/workspace/**"), grep.paths)
+
+            // chmod — deny_flags + args + paths
+            val chmod = matcher.commands[2]
+            assertEquals("chmod", chmod.command)
+            assertNull(chmod.allowFlags)
+            assertEquals(listOf("-R", "--recursive"), chmod.denyFlags)
+            assertEquals(listOf("*"), chmod.args)
+            assertEquals(listOf("/workspace/**"), chmod.paths)
+
+            // rm — deny_flags only
+            val rm = matcher.commands[3]
+            assertEquals("rm", rm.command)
+            assertEquals(listOf("-r", "-R", "-f"), rm.denyFlags)
+            assertTrue(rm.paths.isEmpty())
+            assertTrue(rm.args.isEmpty())
+        }
+
+        @Test
+        fun `parses tool_policies with value list for shell commands`() {
+            val configFile = tempDir.resolve("config-commands.yaml")
+            configFile.writeText("""
+                fraggle:
+                  executor:
+                    supervision: supervised
+                    tool_policies:
+                      - tool: execute_command
+                        policy: allow
+                        args:
+                          - name: command
+                            value:
+                              - ls
+                              - "cat /workspace/**"
+                              - grep
+            """.trimIndent())
+
+            val config = ConfigLoader.load(configFile)
+            assertEquals(1, config.fraggle.executor.toolPolicies.size)
+
+            val rule = config.fraggle.executor.toolPolicies[0]
+            assertEquals("execute_command", rule.tool)
+            assertEquals(1, rule.args.size)
+
+            val matcher = rule.args[0]
+            assertEquals("command", matcher.name)
+            assertEquals(listOf("ls", "cat /workspace/**", "grep"), matcher.value)
+            assertNull(matcher.policy)
         }
     }
 

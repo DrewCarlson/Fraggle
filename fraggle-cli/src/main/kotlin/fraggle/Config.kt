@@ -28,7 +28,7 @@ object ConfigLoader {
     private val yaml = Yaml(
         configuration = YamlConfiguration(
             strictMode = false,
-        )
+        ),
     )
 
     /**

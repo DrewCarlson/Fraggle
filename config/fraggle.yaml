@@ -65,7 +65,7 @@ fraggle:
     work_dir: ./data/workspace
     remote_url: ""                    # URL of remote worker (only used when type is remote)
     supervision: none                 # none, supervised
-    auto_approve: []                  # tools that skip supervision prompts
+    tool_policies: []                 # policy-based rules for tool approval (allow, deny, ask)
 
   # Agent settings
   agent:

@@ -25,7 +25,9 @@ import fraggle.executor.RemoteToolClient
 import fraggle.executor.ToolExecutor
 import fraggle.executor.supervision.InteractiveToolSupervisor
 import fraggle.executor.supervision.NoOpToolSupervisor
+import fraggle.executor.supervision.ToolArgTypes
 import fraggle.executor.supervision.ToolPermissionHandler
+import fraggle.executor.supervision.ToolPolicyEvaluator
 import fraggle.executor.supervision.ToolSupervisor
 import fraggle.memory.FileMemoryStore
 import fraggle.memory.FraggleMemoryProvider
@@ -68,12 +70,14 @@ interface AgentModule {
         fun provideToolSupervisor(
             config: ExecutorConfig,
             handler: ToolPermissionHandler?,
+            argTypes: ToolArgTypes,
         ): ToolSupervisor {
             return when (config.supervision) {
                 SupervisionMode.NONE -> NoOpToolSupervisor()
                 SupervisionMode.SUPERVISED -> {
                     val permHandler = handler ?: return NoOpToolSupervisor()
-                    InteractiveToolSupervisor(config.autoApprove, permHandler)
+                    val evaluator = ToolPolicyEvaluator(config.toolPolicies, argTypes)
+                    InteractiveToolSupervisor(evaluator, permHandler)
                 }
             }
         }

@@ -200,6 +200,78 @@ data class MemoryConfig(
     val baseDir: String = "./data/memory",
 )
 
+/**
+ * Policy for a tool policy rule or argument matcher.
+ */
+@Serializable
+enum class ApprovalPolicy {
+    @SerialName("allow")
+    ALLOW,
+    @SerialName("ask")
+    ASK,
+    @SerialName("deny")
+    DENY,
+}
+
+/**
+ * Structured command pattern for fine-grained shell command matching.
+ *
+ * Provides explicit control over flags and positional arguments instead of
+ * the simple `"executable argPattern..."` string format in [ArgMatcher.value].
+ *
+ * @property command The executable name to match (e.g., "cat", "grep").
+ * @property allowFlags Allowlist of flags. `null` means any flags are OK; empty list means no flags allowed.
+ * @property denyFlags Denylist of flags. Checked before [allowFlags] — takes precedence.
+ * @property paths Glob patterns for path-like positional arguments (normalized before matching).
+ * @property args Glob patterns for non-path positional arguments (plain match, no normalization).
+ */
+@Serializable
+data class CommandPattern(
+    val command: String,
+    @SerialName("allow_flags")
+    val allowFlags: List<String>? = null,
+    @SerialName("deny_flags")
+    val denyFlags: List<String> = emptyList(),
+    val paths: List<String> = emptyList(),
+    val args: List<String> = emptyList(),
+)
+
+/**
+ * Matches a specific named argument's value against a list of patterns.
+ *
+ * How [value] patterns are interpreted depends on the `@ToolArg` annotation
+ * on the corresponding tool `Args` property:
+ * - `@ToolArg(PATH)`: patterns are glob-matched against the normalized path
+ * - `@ToolArg(SHELL_COMMAND)`: patterns are shell-aware command patterns
+ *   (simple string patterns via [value], or structured [CommandPattern] via [commands])
+ * - No annotation: patterns are plain glob-matched against the raw string value
+ *
+ * For shell commands, [commands] takes precedence over [value] when non-empty.
+ *
+ * An optional [policy] overrides the tool-level policy for this argument.
+ */
+@Serializable
+data class ArgMatcher(
+    val name: String,
+    val value: List<String> = emptyList(),
+    val commands: List<CommandPattern> = emptyList(),
+    val policy: ApprovalPolicy? = null,
+)
+
+/**
+ * A tool policy rule matching a tool name with optional argument matchers and policy.
+ *
+ * Rules are evaluated top-to-bottom, first match wins. The effective policy is
+ * determined by the most restrictive arg-level policy (deny > ask > allow),
+ * falling back to the tool-level [policy] (default: ALLOW).
+ */
+@Serializable
+data class ToolPolicy(
+    val tool: String,
+    val policy: ApprovalPolicy = ApprovalPolicy.ALLOW,
+    val args: List<ArgMatcher> = emptyList(),
+)
+
 @Serializable
 @Documented(
     name = "Executor",
@@ -217,9 +289,9 @@ data class ExecutorConfig(
     val remoteUrl: String = "",
     @Documented(name = "Supervision", description = "Tool supervision mode (none, supervised)")
     val supervision: SupervisionMode = SupervisionMode.NONE,
-    @SerialName("auto_approve")
-    @Documented(name = "Auto Approve", description = "List of tool names that are automatically approved without prompting")
-    val autoApprove: List<String> = emptyList(),
+    @SerialName("tool_policies")
+    @Documented(name = "Tool Policies", description = "Policy-based rules for tool approval (supports allow, deny, ask policies with argument matchers)")
+    val toolPolicies: List<ToolPolicy> = emptyList(),
     @SerialName("bridge_approval")
     @Documented(name = "Bridge Approval", description = "Whether to forward tool permission requests to chat bridges for approval (always available in chat mode and dashboard)")
     val bridgeApproval: Boolean = true,

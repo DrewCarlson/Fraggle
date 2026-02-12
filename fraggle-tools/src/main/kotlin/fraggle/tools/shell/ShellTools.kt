@@ -8,6 +8,8 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.Serializable
 import fraggle.executor.ToolExecutor
+import fraggle.executor.supervision.ToolArg
+import fraggle.executor.supervision.ToolArgKind
 import kotlin.time.Duration.Companion.seconds
 
 class ExecuteCommandTool(private val toolExecutor: ToolExecutor) : SimpleTool<ExecuteCommandTool.Args>(
@@ -19,6 +21,7 @@ Use this for running scripts, system commands, or other shell operations.""",
 ) {
     @Serializable
     data class Args(
+        @ToolArg(ToolArgKind.SHELL_COMMAND)
         @param:LLMDescription("The shell command to execute")
         val command: String,
         @param:LLMDescription("Maximum time to wait for the command to complete. Defaults to 30 seconds.")

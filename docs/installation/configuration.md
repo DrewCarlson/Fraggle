@@ -63,7 +63,7 @@ fraggle:
     work_dir: ./data/workspace
     remote_url: ""                    # Worker URL (required when type: remote)
     supervision: none                 # none or supervised
-    auto_approve: []                  # Tool names to auto-approve in supervised mode
+    tool_policies: []                  # Policy-based rules for tool approval (allow, deny, ask)
 
   # Agent behavior settings
   agent:
@@ -170,7 +170,7 @@ Controls how tools execute file and shell operations. The YAML key is `sandbox` 
 | `work_dir`     | Working directory for tool operations                     | `./data/workspace`   |
 | `remote_url`   | URL of the remote worker (required when `type: remote`)   | `""`                 |
 | `supervision`  | Permission mode: `none` or `supervised`                   | `none`               |
-| `auto_approve` | Tool names that skip approval in supervised mode          | `[]`                 |
+| `tool_policies` | Policy-based rules for tool approval (allow, deny, ask with arg matchers and shell-aware command matching) | `[]`  |
 
 #### Execution Modes
 
@@ -191,16 +191,165 @@ When `supervision: supervised` is set, every tool call requires explicit approva
 - **`fraggle chat`** — Prompts on the terminal (stdin). You have 60 seconds to respond `y` or `n`.
 - **`fraggle run`** — Emits a permission request event over the WebSocket API. The dashboard or any connected client can approve or deny the request within 120 seconds.
 
-Tools listed in `auto_approve` skip the approval prompt entirely.
+Rules in `tool_policies` are evaluated top-to-bottom, first match wins. Each rule specifies a `tool` name and an optional `policy` (`allow`, `deny`, or `ask`). The default policy is `allow`.
 
 ```yaml
 executor:
   supervision: supervised
-  auto_approve:
-    - list_files
-    - file_exists
-    - read_file
+  tool_policies:
+    # Simplest: tool name only (policy defaults to allow)
+    - tool: list_files
+
+    # Explicit policy with argument constraints
+    - tool: read_file
+      policy: allow
+      args:
+        - name: path
+          value: [/workspace/**]
+
+    # Allow reading only markdown files under /workspace
+    - tool: read_file
+      policy: allow
+      args:
+        - name: path
+          value: ["/workspace/{*.md,**/*.md}"]
+
+    # Deny specific patterns
+    - tool: write_file
+      policy: deny
+      args:
+        - name: path
+          value: [/etc/**]
+
+    # Arg-level policy override
+    - tool: execute_command
+      policy: allow
+      args:
+        - name: command
+          value: [ls]
+        - name: working_dir
+          value: [/sensitive/**]
+          policy: deny
 ```
+
+##### Policies
+
+| Policy  | Behavior                                                     |
+|---------|--------------------------------------------------------------|
+| `allow` | Tool call is approved immediately (default)                  |
+| `deny`  | Tool call is denied immediately without consulting the user  |
+| `ask`   | Tool call is forwarded to the user for interactive approval  |
+
+When a rule has no `policy` field, it defaults to `allow`. When no rule matches a tool call, the call is forwarded to the user (same as `ask`).
+
+##### Argument Matchers
+
+When a rule includes `args`, all matchers must pass for the rule to match. The `value` field is a list of patterns. How patterns are interpreted depends on the tool's argument type:
+
+- **Path arguments** (e.g., `read_file.path`, `write_file.path`): patterns are glob-matched against the normalized path. Normalization prevents traversal attacks (e.g., `/workspace/../etc/passwd` is normalized to `/etc/passwd` and will not match `/workspace/**`).
+- **Shell command arguments** (e.g., `execute_command.command`): patterns are shell-aware command patterns (see below).
+- **Other arguments**: patterns are plain glob-matched against the raw string value.
+
+| Pattern                       | Matches                                              |
+|-------------------------------|------------------------------------------------------|
+| `/workspace/**`               | Any file at any depth under /workspace               |
+| `/workspace/*/*.md`           | `.md` files exactly one directory under /workspace   |
+| `/workspace/**/*.md`          | `.md` files at any depth under /workspace (not direct children) |
+| `/workspace/{*.md,**/*.md}`   | `.md` files at any depth including direct children   |
+| `*.txt`                       | Any .txt filename                                    |
+| `/data/?`                     | Single character under /data                         |
+| `*.{txt,md}`                  | Files ending in .txt or .md                          |
+
+**Note on `**` vs `**/*`:** The pattern `/workspace/**` matches any file at any depth (including direct children). However, `/workspace/**/*.md` requires at least one intermediate directory — it will **not** match `/workspace/readme.md`. To match `.md` files at all depths including direct children, use the brace expansion pattern `/workspace/{*.md,**/*.md}`.
+
+Each argument matcher can also have its own `policy` field that overrides the tool-level policy. When multiple arg-level policies are present, the most restrictive one wins (`deny` > `ask` > `allow`).
+
+##### Shell-aware Command Matching
+
+For `execute_command` and similar shell tools, the `command` argument is automatically evaluated with shell-aware matching. The shell string is parsed and decomposed into individual commands (handling `&&`, `||`, `;`, `|`, `$(...)`, backticks, subshells, and process substitutions). Every parsed command must match at least one pattern for the rule to match. If any command doesn't match, the rule falls through.
+
+There are two formats for defining command patterns: **simple value patterns** and **structured command patterns**.
+
+###### Simple Value Patterns
+
+Each `value` pattern is interpreted as `"executable [argPatterns...]"`. Flags (arguments starting with `-`) are automatically skipped when matching positional arguments against patterns.
+
+- `ls` — allow `ls` with any arguments and any flags
+- `cat /workspace/**` — allow `cat` with any flags, but only with positional args matching `/workspace/**`
+- `grep` — allow `grep` with any arguments
+
+```yaml
+executor:
+  supervision: supervised
+  tool_policies:
+    # Whitelist safe commands — only these executables are allowed
+    - tool: execute_command
+      policy: allow
+      args:
+        - name: command
+          value:
+            - ls
+            - "cat /workspace/**"
+            - grep
+            - echo
+            - uname
+
+    # Explicitly deny dangerous commands
+    - tool: execute_command
+      policy: deny
+      args:
+        - name: command
+          value:
+            - rm
+            - dd
+            - mkfs
+```
+
+When argument patterns are provided (e.g., `cat /workspace/**`), every positional argument of the parsed command must match at least one pattern. Flags like `-n` or `--verbose` are skipped. Path arguments are normalized to prevent path traversal.
+
+###### Structured Command Patterns
+
+For fine-grained control over flags and positional arguments, use the `commands` field instead of `value`. Each entry is a `CommandPattern` with:
+
+| Field         | Type           | Description                                                                 |
+|---------------|----------------|-----------------------------------------------------------------------------|
+| `command`     | `string`       | Executable name to match (required)                                         |
+| `allow_flags` | `list<string>` | Flag allowlist. `null` = any flags OK (default); `[]` = no flags allowed    |
+| `deny_flags`  | `list<string>` | Flag denylist. Checked first — takes precedence over `allow_flags`          |
+| `paths`       | `list<string>` | Glob patterns for path-like positional args (normalized before matching)    |
+| `args`        | `list<string>` | Glob patterns for non-path positional args (plain match, no normalization)  |
+
+Positional arguments are classified as **path-like** (starts with `/`, `./`, `../`, `~`, or contains `/` without `://`) or **value-like** (everything else). Path-like args are matched against `paths` patterns; value-like args are matched against `args` patterns. If both `paths` and `args` are empty, any positional arguments are allowed — the constraint is only on the executable and flags.
+
+```yaml
+executor:
+  supervision: supervised
+  tool_policies:
+    - tool: execute_command
+      args:
+        - name: command
+          commands:
+            # Path-only constraint, any flags
+            - command: cat
+              paths: ["/workspace/**"]
+
+            # Flag allowlist + path constraint
+            - command: grep
+              allow_flags: ["-r", "-i", "-n", "-l", "-c", "-v", "-E", "-P", "-e"]
+              paths: ["/workspace/**"]
+
+            # Flag denylist + mixed positional args
+            - command: chmod
+              deny_flags: ["-R", "--recursive"]
+              args: ["*"]               # permission value (644, +x, etc.)
+              paths: ["/workspace/**"]  # target path
+
+            # Flag-only restriction, any positional args
+            - command: rm
+              deny_flags: ["-r", "-R", "-f", "--recursive", "--force"]
+```
+
+Flag patterns support globs (e.g., `-*f*` matches `-rf`, `-force`). Combined flags like `-rf` are matched as-is — list all relevant forms explicitly or use globs.
 
 #### Remote Worker
 

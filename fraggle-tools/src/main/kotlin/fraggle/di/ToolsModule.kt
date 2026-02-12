@@ -10,6 +10,7 @@ import fraggle.chat.ChatBridgeManager
 import fraggle.chat.OutgoingMessage
 import fraggle.executor.RemoteToolClient
 import fraggle.executor.ToolExecutor
+import fraggle.executor.supervision.ToolArgTypes
 import fraggle.executor.supervision.ToolSupervisor
 import fraggle.tools.DefaultTools
 import fraggle.tools.scheduling.TaskScheduler
@@ -64,6 +65,10 @@ interface ToolsModule {
             scope: CoroutineScope,
             bridgeManager: ChatBridgeManager,
         ): TaskScheduler = TaskScheduler(scope, createTaskCallback(bridgeManager))
+
+        @Provides
+        @SingleIn(AppScope::class)
+        fun provideToolArgTypes(): ToolArgTypes = DefaultTools.extractArgTypes()
 
         @Provides
         @SingleIn(AppScope::class)

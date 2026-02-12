@@ -7,6 +7,8 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import fraggle.executor.ToolExecutor
+import fraggle.executor.supervision.ToolArg
+import fraggle.executor.supervision.ToolArgKind
 import java.nio.file.Path
 import kotlin.io.path.*
 
@@ -17,6 +19,7 @@ class ReadFileTool(private val toolExecutor: ToolExecutor) : SimpleTool<ReadFile
 ) {
     @Serializable
     data class Args(
+        @ToolArg(ToolArgKind.PATH)
         @param:LLMDescription("Path to the file to read (relative to workspace or absolute)")
         val path: String,
         @SerialName("max_lines")
@@ -52,6 +55,7 @@ class WriteFileTool(private val toolExecutor: ToolExecutor) : SimpleTool<WriteFi
 ) {
     @Serializable
     data class Args(
+        @ToolArg(ToolArgKind.PATH)
         @param:LLMDescription("Path to the file to write (relative to workspace or absolute)")
         val path: String,
         @param:LLMDescription("Content to write to the file")
@@ -79,6 +83,7 @@ class AppendFileTool(private val toolExecutor: ToolExecutor) : SimpleTool<Append
 ) {
     @Serializable
     data class Args(
+        @ToolArg(ToolArgKind.PATH)
         @param:LLMDescription("Path to the file to append to")
         val path: String,
         @param:LLMDescription("Content to append to the file")
@@ -106,6 +111,7 @@ class ListFilesTool(private val toolExecutor: ToolExecutor) : SimpleTool<ListFil
 ) {
     @Serializable
     data class Args(
+        @ToolArg(ToolArgKind.PATH)
         @param:LLMDescription("Directory path to list (relative to workspace or absolute)")
         val path: String,
         @param:LLMDescription("Whether to list files recursively. Defaults to false.")
@@ -154,6 +160,7 @@ class SearchFilesTool(private val toolExecutor: ToolExecutor) : SimpleTool<Searc
 ) {
     @Serializable
     data class Args(
+        @ToolArg(ToolArgKind.PATH)
         @param:LLMDescription("Directory path to search in")
         val path: String,
         @param:LLMDescription("Pattern to match (supports * and ? wildcards)")
@@ -197,6 +204,7 @@ class FileExistsTool(private val toolExecutor: ToolExecutor) : SimpleTool<FileEx
 ) {
     @Serializable
     data class Args(
+        @ToolArg(ToolArgKind.PATH)
         @param:LLMDescription("Path to check")
         val path: String,
     )
@@ -222,6 +230,7 @@ class DeleteFileTool(private val toolExecutor: ToolExecutor) : SimpleTool<Delete
 ) {
     @Serializable
     data class Args(
+        @ToolArg(ToolArgKind.PATH)
         @param:LLMDescription("Path to the file to delete")
         val path: String,
     )

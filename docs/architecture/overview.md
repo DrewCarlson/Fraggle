@@ -71,7 +71,7 @@ The executor system controls how tools run, with two dimensions of configuration
 
 **Execution mode** — Tools run either locally in the Fraggle process (`local`) or are forwarded to a separate worker process over HTTP (`remote`). Remote execution isolates tool I/O from the main agent.
 
-**Supervision** — In `supervised` mode, each tool call requires explicit approval before it runs. Tools listed in `auto_approve` bypass the prompt. In the CLI (`fraggle chat`), approval is requested on stdin; in production (`fraggle run`), a permission event is emitted over the WebSocket API so the dashboard or other clients can approve.
+**Supervision** — In `supervised` mode, each tool call is evaluated against policy-based rules before it runs. Rules can specify `allow`, `deny`, or `ask` policies with optional argument pattern constraints (e.g., deny `write_file` for paths under `/etc/**`). Path arguments are normalized to prevent traversal attacks. When no rule matches or the policy is `ask`, approval is requested interactively — on stdin in the CLI (`fraggle chat`) or via a WebSocket permission event in production (`fraggle run`).
 
 Every tool that performs I/O (file, shell, web) is wrapped in a `ManagedTool` that checks supervision and optionally forwards to a remote worker. Scheduling tools are not wrapped since they don't perform external I/O.
 
@@ -91,7 +91,7 @@ Every tool that performs I/O (file, shell, web) is wrapped in a `ManagedTool` th
 
 1. **Chat Bridge** receives messages and passes them to the agent
 2. **Agent** builds context and delegates to Koog's agent service, which calls tools as needed
-3. **ManagedTool** checks supervision (auto-approve or prompt for permission), then either executes locally or forwards to the remote worker
+3. **ManagedTool** checks supervision (evaluate tool policies or prompt for permission), then either executes locally or forwards to the remote worker
 4. **Memory** stores and retrieves conversation context
 5. **Agent** generates final response
 6. **Chat Bridge** sends the response back to the user
