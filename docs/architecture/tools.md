@@ -79,6 +79,22 @@ Task scheduling for deferred operations:
 | `get_task` | Get task details | `task_id` |
 | `cancel_task` | Cancel a scheduled task | `task_id` |
 
+### Time Tools
+
+Time and timezone utilities:
+
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `get_current_time` | Get current date/time in any timezone | `timezone` (optional, IANA ID) |
+
+The agent also receives the host server's current ISO 8601 timestamp in every system prompt, so it always knows the current date and time without needing a tool call. The `get_current_time` tool is used when the agent needs to convert to a specific timezone (e.g., answering "What time is it in Tokyo?").
+
+The agent can determine a user's local time by:
+
+- Checking the user's timezone from memory (auto-extracted from conversations)
+- Using the `Timezone` field in the user profile (`USER.md`)
+- Asking the user for their location
+
 ## Defining Custom Tools
 
 Tools extend Koog's `SimpleTool<Args>` with a `@Serializable` data class for parameters:

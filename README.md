@@ -10,7 +10,7 @@ Built on [Koog](https://github.com/JetBrains/koog)'s agent orchestration framewo
 - **Chat Bridge Integration** - Connect to messaging platforms like Signal
 - **Local LLM Support** - Works with LM Studio for fully local, private AI
 - **Cloud Providers** - Also supports OpenAI and Anthropic APIs
-- **Built-in Tools** - File operations, web fetching, shell execution, task scheduling
+- **Built-in Tools** - File operations, web fetching, shell execution, task scheduling, time/timezone
 - **Persistent Memory** - Remembers context across conversations
 - **Tool Supervision** - Approve or deny tool calls interactively via CLI or dashboard
 - **Remote Execution** - Offload tool execution to a lightweight worker process

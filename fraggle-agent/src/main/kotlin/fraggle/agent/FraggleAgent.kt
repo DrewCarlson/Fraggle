@@ -37,6 +37,9 @@ import fraggle.memory.MemoryStore
 import fraggle.prompt.PromptManager
 import fraggle.provider.Usage
 import fraggle.tracing.FraggleTraceProcessor
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.offsetIn
+import kotlinx.datetime.toLocalDateTime
 import org.slf4j.LoggerFactory
 import java.io.Closeable
 import kotlin.time.Clock
@@ -249,6 +252,14 @@ class FraggleAgent(
         historySummary: String? = null,
     ): String = buildString {
         appendLine(promptManager.buildFullPrompt())
+        appendLine()
+
+        // Inject current host timestamp so the agent always knows the current date/time
+        val now = Clock.System.now()
+        val hostTz = TimeZone.currentSystemDefault()
+        val local = now.toLocalDateTime(hostTz)
+        val offset = now.offsetIn(hostTz)
+        appendLine("Current time: ${local}${offset} ($hostTz)")
         appendLine()
 
         val historySection = agentTemplate?.renderSection("conversation history")

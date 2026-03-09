@@ -14,6 +14,7 @@ import fraggle.executor.supervision.ToolSupervisor
 import fraggle.tools.file.*
 import fraggle.tools.scheduling.*
 import fraggle.tools.shell.ExecuteCommandTool
+import fraggle.tools.time.GetCurrentTimeTool
 import fraggle.tools.web.FetchApiTool
 import fraggle.tools.web.FetchWebpageTool
 import fraggle.tools.web.PlaywrightFetcher
@@ -97,6 +98,9 @@ object DefaultTools {
 
         // Shell tools (managed)
         tool(ExecuteCommandTool(toolExecutor).managed(supervisor, remoteClient))
+
+        // Time tools (NOT managed — no supervision needed)
+        tool(GetCurrentTimeTool())
 
         // Scheduling tools (NOT managed — no supervision needed)
         tool(ScheduleTaskTool(taskScheduler))
