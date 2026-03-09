@@ -26,6 +26,7 @@ import ai.koog.prompt.executor.clients.openai.OpenAIChatParams
 import ai.koog.prompt.executor.clients.openai.base.models.ReasoningEffort
 import ai.koog.prompt.message.AttachmentContent
 import ai.koog.prompt.message.ContentPart
+import ai.koog.prompt.message.Message
 import ai.koog.prompt.params.LLMParams
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -249,7 +250,7 @@ class FraggleAgent(
             }
 
             val responses = promptExecutor.execute(prompt = compressionPrompt, model = llmModel)
-            val summary = responses.firstOrNull()?.content?.trim()
+            val summary = responses.filterIsInstance<Message.Assistant>().firstOrNull()?.content?.trim()
 
             if (summary.isNullOrBlank()) {
                 logger.warn("History compression returned empty result, keeping original conversation")
@@ -395,7 +396,7 @@ class FraggleAgent(
     }
 
     private suspend fun extractMemoryViaLLM(message: IncomingMessage, response: String) {
-        val userText = (message.content as? MessageContent.Text)?.text ?: return
+        val userText = buildKoogInput(message)
 
         try {
             val userScope = MemoryScope.User(message.sender.id)
@@ -522,7 +523,7 @@ class FraggleAgent(
         }
 
         val responses = promptExecutor.execute(prompt = extractionPrompt, model = llmModel)
-        val result = responses.firstOrNull()?.content?.trim() ?: return emptyList()
+        val result = responses.filterIsInstance<Message.Assistant>().firstOrNull()?.content?.trim() ?: return emptyList()
 
         val factsJson = result
             .removePrefix("```json").removePrefix("```")
@@ -570,7 +571,7 @@ class FraggleAgent(
         }
 
         val responses = promptExecutor.execute(prompt = reconcilePrompt, model = llmModel)
-        val result = responses.firstOrNull()?.content?.trim() ?: return fallback()
+        val result = responses.filterIsInstance<Message.Assistant>().firstOrNull()?.content?.trim() ?: return fallback()
 
         val factsJson = result
             .removePrefix("```json").removePrefix("```")

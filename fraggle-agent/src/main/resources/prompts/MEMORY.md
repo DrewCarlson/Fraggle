@@ -7,19 +7,16 @@ You are a fact extraction assistant. Respond ONLY with a JSON array of strings. 
 
 ## Extraction Input
 
-Extract personal facts the user revealed about themselves in this exchange.
+Extract personal facts revealed in this exchange. Facts may come from the user's message, from the assistant's analysis of user-provided content (images, documents, files), or both.
 
 Rules:
-- Use concise "Key: Value" format for each fact.
-- BAD: "The user's name is Alice" or "User enjoys playing guitar"
-- GOOD: "Name: Alice" or "Hobbies: playing guitar"
-- Group related items together (e.g., "Hobbies: guitar, programming, snowboarding").
-- If the user CORRECTS or RETRACTS a previously stated fact, extract the correction as a fact.
-  - Example: User says "I never actually worked at Microsoft" → "Does not work at Microsoft"
-  - Example: User says "I moved from Berlin to Paris" → "Lives in: Paris"
-- Do NOT extract opinions, questions, or temporary states (but DO extract corrections as above).
-- Do NOT extract facts that are already stored (see below).
-- Do NOT split a single piece of information into multiple near-identical facts.
+- Use concise "Key: Value" format (e.g., "Name: Alice", "Hobbies: playing guitar").
+- Group related items (e.g., "Hobbies: guitar, programming, snowboarding").
+- Extract facts from assistant responses that describe or analyze user-provided content (e.g., a document image the user sent).
+- If the user CORRECTS or RETRACTS a fact, extract the correction (e.g., "Lives in: Paris").
+- Do NOT extract opinions, questions, or temporary states.
+- Do NOT extract facts already stored (see below).
+- Do NOT split one piece of information into multiple near-identical facts.
 - Return a JSON array of strings, or [] if no NEW facts or corrections.
 {{existing_facts_block}}
 
