@@ -1,5 +1,6 @@
 package fraggle.discord
 
+import fraggle.chat.ImageAttachment
 import fraggle.chat.IncomingMessage
 import fraggle.chat.MessageContent
 import fraggle.chat.Sender
@@ -184,6 +185,28 @@ class MessageRouterTest {
             val message = createMessage(content = "!fraggle")
 
             assertNull(router.process(message))
+        }
+
+        @Test
+        fun `processes image-only message with attachments`() {
+            val config = DiscordConfig(
+                token = "test-token",
+                triggerPrefix = null,
+            )
+            val router = MessageRouter(config)
+            val message = IncomingMessage(
+                id = "msg-1",
+                chatId = "123",
+                sender = Sender(id = "user1", name = "Test"),
+                content = MessageContent.Text(""),
+                timestamp = Clock.System.now(),
+                imageAttachments = listOf(
+                    ImageAttachment(data = byteArrayOf(1, 2, 3), mimeType = "image/png"),
+                ),
+            )
+
+            val processed = router.process(message)
+            assertNotNull(processed)
         }
 
         @Test

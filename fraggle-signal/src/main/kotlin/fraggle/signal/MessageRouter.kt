@@ -51,37 +51,38 @@ class MessageRouter(
             return false
         }
 
-        // Get text content
+        // Get text content — allow through if message has image attachments
         val textContent = (message.content as? MessageContent.Text)?.text
-        if (textContent == null) {
-            logger.debug("Ignoring non-text message")
+        if (textContent == null && message.imageAttachments.isEmpty()) {
+            logger.debug("Ignoring non-text message without attachments")
             return false
         }
 
         // Check trigger requirements
         val trigger = getTriggerForChat(chatId)
+        val text = textContent ?: ""
 
         return when {
             // Direct messages with trigger
-            isDirectMessage && trigger != null && textContent.startsWith(trigger) -> true
+            isDirectMessage && trigger != null && text.startsWith(trigger) -> true
 
             // Direct messages without trigger (if respondToDirectMessages is enabled)
             isDirectMessage && trigger == null && config.respondToDirectMessages -> true
 
             // Direct messages with trigger requirement but no trigger
-            isDirectMessage && trigger != null && !textContent.startsWith(trigger) -> {
+            isDirectMessage && trigger != null && !text.startsWith(trigger) -> {
                 // Still process if respondToDirectMessages is true (trigger is optional for DMs)
                 config.respondToDirectMessages
             }
 
             // Group messages require trigger
-            isGroup && trigger != null && textContent.startsWith(trigger) -> true
+            isGroup && trigger != null && text.startsWith(trigger) -> true
 
             // Group messages without trigger requirement
             isGroup && trigger == null -> true
 
             // Group messages that don't match trigger
-            isGroup && trigger != null && !textContent.startsWith(trigger) -> {
+            isGroup && trigger != null && !text.startsWith(trigger) -> {
                 logger.debug("Ignoring group message without trigger")
                 false
             }

@@ -133,6 +133,7 @@ interface AgentModule {
                 maxTokens = agentConfig.maxTokens,
                 maxIterations = agentConfig.maxIterations,
                 maxHistoryMessages = agentConfig.maxHistoryMessages,
+                vision = agentConfig.vision,
             )
         }
 

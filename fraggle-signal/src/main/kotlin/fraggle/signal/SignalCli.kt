@@ -699,15 +699,28 @@ class SignalCli(
             val groupId = groupInfo?.get("groupId")?.jsonPrimitive?.contentOrNull
                 ?: groupV2?.get("id")?.jsonPrimitive?.contentOrNull
 
-            if (messageText != null) {
-                logger.debug("Received message from $effectiveSource: ${messageText.take(50)}...")
+            // Parse attachments
+            val attachments = dataMessage["attachments"]?.jsonArray?.mapNotNull { attachmentEl ->
+                val att = attachmentEl.jsonObject
+                val contentType = att["contentType"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
+                SignalAttachment(
+                    contentType = contentType,
+                    filename = att["filename"]?.jsonPrimitive?.contentOrNull,
+                    id = att["id"]?.jsonPrimitive?.contentOrNull,
+                    size = att["size"]?.jsonPrimitive?.longOrNull,
+                )
+            } ?: emptyList()
+
+            if (messageText != null || attachments.isNotEmpty()) {
+                logger.debug("Received message from $effectiveSource: ${messageText?.take(50) ?: "[attachment]"}...")
                 val message = SignalMessage(
                     source = effectiveSource,
                     sourceName = sourceName,
                     timestamp = timestamp,
-                    message = messageText,
+                    message = messageText ?: "",
                     groupId = groupId,
                     isGroupMessage = groupId != null,
+                    attachments = attachments,
                 )
                 messageChannel.send(message)
             }
@@ -778,6 +791,17 @@ data class SignalMessage(
     val message: String,
     val groupId: String?,
     val isGroupMessage: Boolean,
+    val attachments: List<SignalAttachment> = emptyList(),
+)
+
+/**
+ * Attachment metadata from signal-cli JSON-RPC.
+ */
+data class SignalAttachment(
+    val contentType: String,
+    val filename: String?,
+    val id: String?,
+    val size: Long?,
 )
 
 /**

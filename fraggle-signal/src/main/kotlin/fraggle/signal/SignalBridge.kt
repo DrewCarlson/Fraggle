@@ -10,6 +10,10 @@ import kotlinx.coroutines.withContext
 import fraggle.chat.*
 import org.slf4j.LoggerFactory
 import java.nio.file.Files
+import java.nio.file.Path
+import kotlin.io.path.exists
+import kotlin.io.path.listDirectoryEntries
+import kotlin.io.path.readBytes
 import kotlin.io.path.writeBytes
 
 /**
@@ -228,6 +232,13 @@ IMPORTANT LIMITATIONS:
             source
         }
 
+        // Read image attachments from signal-cli's data directory
+        val imageAttachments = attachments
+            .filter { it.contentType.startsWith("image/") }
+            .mapNotNull { attachment ->
+                readSignalAttachment(attachment)
+            }
+
         return IncomingMessage(
             id = "$source-${timestamp.toEpochMilliseconds()}",
             chatId = chatId,
@@ -237,6 +248,42 @@ IMPORTANT LIMITATIONS:
             ),
             content = MessageContent.Text(message),
             timestamp = timestamp,
+            imageAttachments = imageAttachments,
         )
+    }
+
+    /**
+     * Read an attachment file from signal-cli's data directory.
+     * signal-cli stores received attachments in <configDir>/data/<account>/attachments/.
+     */
+    private fun readSignalAttachment(attachment: SignalAttachment): ImageAttachment? {
+        val attachmentId = attachment.id ?: return null
+
+        val attachmentsDir = Path.of(config.configDir, "data", config.phoneNumber, "attachments")
+        if (!attachmentsDir.exists()) {
+            logger.debug("Attachments directory not found: $attachmentsDir")
+            return null
+        }
+
+        // signal-cli stores attachments as <id> or <id>.<ext>
+        val attachmentFile = attachmentsDir.listDirectoryEntries().firstOrNull { entry ->
+            entry.fileName.toString().startsWith(attachmentId)
+        }
+
+        if (attachmentFile == null || !attachmentFile.exists()) {
+            logger.debug("Attachment file not found for id: $attachmentId")
+            return null
+        }
+
+        return try {
+            ImageAttachment(
+                data = attachmentFile.readBytes(),
+                mimeType = attachment.contentType,
+                filename = attachment.filename,
+            )
+        } catch (e: Exception) {
+            logger.warn("Failed to read attachment file $attachmentFile: ${e.message}")
+            null
+        }
     }
 }

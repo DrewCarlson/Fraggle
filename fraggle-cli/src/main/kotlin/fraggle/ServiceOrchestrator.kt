@@ -246,7 +246,7 @@ class ServiceOrchestrator(
                 launch {
                     val chatId = bridgedMessage.qualifiedChatId
                     val messageText = (bridgedMessage.message.content as? MessageContent.Text)?.text.orEmpty()
-                    if (chatCommandProcessor.isCommand(messageText)) {
+                    if (messageText.isNotEmpty() && chatCommandProcessor.isCommand(messageText)) {
                         val response = when (val result = chatCommandProcessor.handleCommand(chatId, messageText)) {
                             is CommandResult.Approved -> "Tool execution approved."
                             is CommandResult.Denied -> "Tool execution denied."

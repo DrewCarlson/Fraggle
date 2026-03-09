@@ -1,5 +1,6 @@
 package fraggle.signal
 
+import fraggle.chat.ImageAttachment
 import fraggle.chat.IncomingMessage
 import fraggle.chat.MessageContent
 import fraggle.chat.Sender
@@ -302,7 +303,7 @@ class MessageRouterTest {
     inner class NonTextMessages {
 
         @Test
-        fun `rejects non-text messages`() {
+        fun `rejects non-text messages without attachments`() {
             val router = MessageRouter(createConfig())
             val imageMessage = createImageMessage()
 
@@ -310,11 +311,49 @@ class MessageRouterTest {
         }
 
         @Test
-        fun `process returns null for non-text messages`() {
+        fun `process returns null for non-text messages without attachments`() {
             val router = MessageRouter(createConfig())
             val imageMessage = createImageMessage()
 
             assertNull(router.process(imageMessage))
+        }
+
+        @Test
+        fun `processes messages with image attachments`() {
+            val router = MessageRouter(createConfig())
+            val message = IncomingMessage(
+                id = "msg-1",
+                chatId = "+1111111111",
+                sender = Sender(id = "+1111111111", name = "Test User"),
+                content = MessageContent.Text("What is this?"),
+                timestamp = Clock.System.now(),
+                imageAttachments = listOf(
+                    ImageAttachment(data = byteArrayOf(1, 2, 3), mimeType = "image/png"),
+                ),
+            )
+
+            assertTrue(router.shouldProcess(message))
+            assertNotNull(router.process(message))
+        }
+
+        @Test
+        fun `processes image-only messages with attachments`() {
+            val router = MessageRouter(createConfig(
+                triggerPrefix = null,
+                respondToDirectMessages = true,
+            ))
+            val message = IncomingMessage(
+                id = "msg-1",
+                chatId = "+1111111111",
+                sender = Sender(id = "+1111111111", name = "Test User"),
+                content = MessageContent.Image(data = byteArrayOf(), mimeType = "image/png"),
+                timestamp = Clock.System.now(),
+                imageAttachments = listOf(
+                    ImageAttachment(data = byteArrayOf(1, 2, 3), mimeType = "image/png"),
+                ),
+            )
+
+            assertTrue(router.shouldProcess(message))
         }
     }
 

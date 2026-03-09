@@ -16,7 +16,8 @@ class MessageRouter(private val config: DiscordConfig) {
      */
     fun shouldProcess(message: IncomingMessage): Boolean {
         val channelId = message.chatId
-        val content = (message.content as? MessageContent.Text)?.text ?: return false
+        val content = (message.content as? MessageContent.Text)?.text
+            ?: if (message.imageAttachments.isNotEmpty()) "" else return false
 
         // Check allowed channels
         if (config.allowedChannelIds.isNotEmpty() && channelId !in config.allowedChannelIds) {
@@ -59,7 +60,7 @@ class MessageRouter(private val config: DiscordConfig) {
             return null
         }
 
-        val content = (message.content as? MessageContent.Text)?.text ?: return null
+        val content = (message.content as? MessageContent.Text)?.text ?: ""
         val channelId = message.chatId
 
         // Get the applicable trigger
@@ -73,7 +74,8 @@ class MessageRouter(private val config: DiscordConfig) {
             content
         }
 
-        if (processedText.isBlank()) {
+        // Allow through if there are image attachments even without text
+        if (processedText.isBlank() && message.imageAttachments.isEmpty()) {
             return null
         }
 

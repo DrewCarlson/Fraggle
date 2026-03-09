@@ -330,6 +330,8 @@ data class AgentConfig(
     @SerialName("max_history_messages")
     @Documented(name = "Max History", description = "Maximum number of messages to include in conversation history")
     val maxHistoryMessages: Int = 20,
+    @Documented(name = "Vision", description = "Whether to pass images from chat messages to the LLM for vision analysis (requires a vision-capable model)")
+    val vision: Boolean = false,
 )
 
 @Serializable

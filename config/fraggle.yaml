@@ -73,6 +73,7 @@ fraggle:
     max_tokens: 4096
     max_iterations: 10
     max_history_messages: 20
+    vision: false                     # Pass images from chat to the LLM (requires vision-capable model)
 
   # Registered chats (optional - if empty, responds to all)
   chats:

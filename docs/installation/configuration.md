@@ -383,6 +383,7 @@ Controls agent behavior during the ReAct loop:
 | `max_tokens`          | Maximum response tokens                  | `4096`  |
 | `max_iterations`      | Maximum tool-use cycles per request      | `10`    |
 | `max_history_messages`| Messages to include in context           | `20`    |
+| `vision`              | Pass images from chat messages to the LLM for vision analysis (requires a vision-capable model) | `false` |
 
 ### Registered Chats
 

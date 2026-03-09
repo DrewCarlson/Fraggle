@@ -40,10 +40,11 @@ interface DiscordModule {
         @SingleIn(AppScope::class)
         fun provideDiscordBridge(
             config: DiscordConfig?,
+            @DefaultHttpClient httpClient: HttpClient,
             scope: CoroutineScope,
         ): DiscordBridge? {
             if (config == null) return null
-            return DiscordBridge(config, scope)
+            return DiscordBridge(config, httpClient, scope)
         }
 
         @Provides

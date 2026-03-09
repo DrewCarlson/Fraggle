@@ -4,6 +4,7 @@ import dev.kord.common.entity.ChannelType
 import dev.kord.common.entity.Snowflake
 import dev.kord.core.Kord
 import dev.kord.core.behavior.channel.createMessage
+import dev.kord.core.entity.Attachment
 import dev.kord.core.entity.channel.DmChannel
 import dev.kord.core.entity.channel.GuildMessageChannel
 import dev.kord.core.entity.channel.MessageChannel
@@ -11,7 +12,10 @@ import dev.kord.core.event.message.MessageCreateEvent
 import dev.kord.core.on
 import dev.kord.gateway.Intent
 import dev.kord.gateway.PrivilegedIntent
+import io.ktor.client.*
+import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
+import io.ktor.client.statement.*
 import io.ktor.utils.io.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -30,6 +34,7 @@ import kotlin.time.Clock
  */
 class DiscordBridge(
     private val config: DiscordConfig,
+    private val httpClient: HttpClient = HttpClient(),
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
 ) : ChatBridge {
     private val logger = LoggerFactory.getLogger(DiscordBridge::class.java)
@@ -338,7 +343,12 @@ IMPORTANT LIMITATIONS:
 
         // Extract message text (strip trigger if present)
         val messageText = extractMessageText(message.content, channelId)
-        if (messageText.isBlank()) return
+
+        // Download image attachments
+        val imageAttachments = downloadImageAttachments(message.attachments)
+
+        // Skip if no text and no images
+        if (messageText.isBlank() && imageAttachments.isEmpty()) return
 
         // Get sender info
         val author = message.author ?: return
@@ -360,9 +370,45 @@ IMPORTANT LIMITATIONS:
             timestamp = Clock.System.now(),
             replyTo = message.referencedMessage?.id?.toString(),
             mentions = message.mentionedUserIds.map { it.toString() },
+            imageAttachments = imageAttachments,
         )
 
         messageFlow.emit(incomingMessage)
+    }
+
+    /**
+     * Download image attachments from a Discord message.
+     * Filters for image content types and downloads the binary data.
+     */
+    private suspend fun downloadImageAttachments(attachments: Set<Attachment>): List<ImageAttachment> {
+        val imageAttachments = attachments.filter { it.isImage }
+        if (imageAttachments.isEmpty()) return emptyList()
+
+        return imageAttachments.mapNotNull { attachment ->
+            try {
+                val url = attachment.url
+                val response = httpClient.get(url)
+                val data = response.bodyAsBytes()
+
+                // Determine MIME type from content type or filename
+                val mimeType = attachment.contentType
+                    ?: when {
+                        attachment.filename.endsWith(".png", ignoreCase = true) -> "image/png"
+                        attachment.filename.endsWith(".gif", ignoreCase = true) -> "image/gif"
+                        attachment.filename.endsWith(".webp", ignoreCase = true) -> "image/webp"
+                        else -> "image/jpeg"
+                    }
+
+                ImageAttachment(
+                    data = data,
+                    mimeType = mimeType,
+                    filename = attachment.filename,
+                )
+            } catch (e: Exception) {
+                logger.warn("Failed to download attachment ${attachment.filename}: ${e.message}")
+                null
+            }
+        }
     }
 
     private fun shouldProcessMessage(channelId: String, isDm: Boolean, content: String): Boolean {

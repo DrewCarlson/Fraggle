@@ -109,7 +109,31 @@ data class IncomingMessage(
     val timestamp: Instant,
     val replyTo: String? = null,
     val mentions: List<String> = emptyList(),
+    val imageAttachments: List<ImageAttachment> = emptyList(),
 )
+
+/**
+ * An image attachment received from a chat platform.
+ * Stored as raw bytes for passing to vision-capable LLMs.
+ */
+data class ImageAttachment(
+    val data: ByteArray,
+    val mimeType: String,
+    val filename: String? = null,
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is ImageAttachment) return false
+        return data.contentEquals(other.data) && mimeType == other.mimeType && filename == other.filename
+    }
+
+    override fun hashCode(): Int {
+        var result = data.contentHashCode()
+        result = 31 * result + mimeType.hashCode()
+        result = 31 * result + (filename?.hashCode() ?: 0)
+        return result
+    }
+}
 
 /**
  * Sender information.

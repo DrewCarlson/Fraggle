@@ -22,12 +22,17 @@ import ai.koog.prompt.dsl.prompt
 import ai.koog.prompt.executor.model.PromptExecutor
 import ai.koog.prompt.llm.LLMCapability
 import ai.koog.prompt.llm.LLModel
+import ai.koog.prompt.executor.clients.openai.OpenAIChatParams
+import ai.koog.prompt.executor.clients.openai.base.models.ReasoningEffort
+import ai.koog.prompt.message.AttachmentContent
+import ai.koog.prompt.message.ContentPart
 import ai.koog.prompt.params.LLMParams
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import fraggle.chat.ChatPlatform
+import fraggle.chat.ImageAttachment
 import fraggle.chat.IncomingMessage
 import fraggle.chat.MessageContent
 import fraggle.memory.Fact
@@ -67,12 +72,13 @@ class FraggleAgent(
     private val llmModel = LLModel(
         provider = KoogLLMProvider.OpenAI,
         id = config.model,
-        capabilities = listOf(
-            LLMCapability.Temperature,
-            LLMCapability.Tools,
-            LLMCapability.Completion,
-            LLMCapability.OpenAIEndpoint.Completions,
-        ),
+        capabilities = buildList {
+            add(LLMCapability.Temperature)
+            add(LLMCapability.Tools)
+            add(LLMCapability.Completion)
+            add(LLMCapability.OpenAIEndpoint.Completions)
+            if (config.vision) add(LLMCapability.Vision.Image)
+        },
         contextLength = config.maxTokens,
     )
 
@@ -128,6 +134,8 @@ class FraggleAgent(
                 senderId = message.sender.id,
                 historySummary = compressed.historySummary,
             )
+            val imageAttachments = if (config.vision) message.imageAttachments else emptyList()
+            val userInput = buildKoogInput(message)
             val agentPrompt = prompt(message.id) {
                 system(systemPrompt)
 
@@ -138,11 +146,30 @@ class FraggleAgent(
                         assistant(contextMessage.content)
                     }
                 }
+
+                // Include image attachments with the user's text in a single multipart message.
+                // The text will also be appended by Koog as agentInput, but combining them here
+                // ensures the LLM sees images associated with the user's text in one message.
+                if (imageAttachments.isNotEmpty()) {
+                    user {
+                        text(userInput)
+                        for (attachment in imageAttachments) {
+                            image(
+                                ContentPart.Image(
+                                    content = AttachmentContent.Binary.Bytes(attachment.data),
+                                    format = attachment.mimeType.substringAfter("/", "jpeg"),
+                                    mimeType = attachment.mimeType,
+                                    fileName = attachment.filename,
+                                )
+                            )
+                        }
+                    }
+                }
             }
 
             val result = withContext(ToolExecutionContext.asContextElement(executionContext)) {
                 agentService.createAgentAndRun(
-                    agentInput = buildKoogInput(message),
+                    agentInput = userInput,
                     agentConfig = AIAgentConfig(
                         prompt = agentPrompt,
                         model = llmModel,
@@ -216,7 +243,7 @@ class FraggleAgent(
         }
 
         return try {
-            val compressionPrompt = prompt("history-compression", LLMParams(temperature = 0.1)) {
+            val compressionPrompt = prompt("history-compression", OpenAIChatParams(temperature = 0.1, reasoningEffort = ReasoningEffort.NONE)) {
                 system("You are a conversation summarizer. Produce a concise but comprehensive summary of the conversation history provided. Preserve all important context, decisions, and facts. Output only the summary, no preamble.")
                 user(compressionInput)
             }
@@ -357,6 +384,14 @@ class FraggleAgent(
             is MessageContent.Reaction -> "[Reaction: ${content.emoji}]"
         }
         append(userContent)
+
+        // When vision is enabled and images are attached, add a hint
+        if (config.vision && message.imageAttachments.isNotEmpty()) {
+            val count = message.imageAttachments.size
+            if (userContent.isBlank()) {
+                append("[User sent ${if (count == 1) "an image" else "$count images"}]")
+            }
+        }
     }
 
     private suspend fun extractMemoryViaLLM(message: IncomingMessage, response: String) {
@@ -481,7 +516,7 @@ class FraggleAgent(
             return emptyList()
         }
 
-        val extractionPrompt = prompt("memory-extraction", LLMParams(temperature = 0.1)) {
+        val extractionPrompt = prompt("memory-extraction", OpenAIChatParams(temperature = 0.1, reasoningEffort = ReasoningEffort.NONE)) {
             system(systemText)
             user(inputText)
         }
@@ -529,7 +564,7 @@ class FraggleAgent(
             return fallback()
         }
 
-        val reconcilePrompt = prompt("memory-reconciliation", LLMParams(temperature = 0.1)) {
+        val reconcilePrompt = prompt("memory-reconciliation", OpenAIChatParams(temperature = 0.1, reasoningEffort = ReasoningEffort.NONE)) {
             system(systemText)
             user(inputText)
         }
@@ -601,6 +636,7 @@ data class AgentConfig(
     val maxIterations: Int = 10,
     val maxHistoryMessages: Int = 20,
     val autoMemory: Boolean = true,
+    val vision: Boolean = false,
 )
 
 /**
