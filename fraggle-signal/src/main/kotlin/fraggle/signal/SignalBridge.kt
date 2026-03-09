@@ -254,24 +254,16 @@ IMPORTANT LIMITATIONS:
 
     /**
      * Read an attachment file from signal-cli's data directory.
-     * signal-cli stores received attachments in <configDir>/data/<account>/attachments/.
+     * Prefers the `file` path provided by signal-cli's JSON-RPC response,
+     * falling back to searching the attachments directory by ID.
      */
     private fun readSignalAttachment(attachment: SignalAttachment): ImageAttachment? {
-        val attachmentId = attachment.id ?: return null
-
-        val attachmentsDir = Path.of(config.configDir, "data", config.phoneNumber, "attachments")
-        if (!attachmentsDir.exists()) {
-            logger.debug("Attachments directory not found: $attachmentsDir")
-            return null
-        }
-
-        // signal-cli stores attachments as <id> or <id>.<ext>
-        val attachmentFile = attachmentsDir.listDirectoryEntries().firstOrNull { entry ->
-            entry.fileName.toString().startsWith(attachmentId)
-        }
-
-        if (attachmentFile == null || !attachmentFile.exists()) {
-            logger.debug("Attachment file not found for id: $attachmentId")
+        val attachmentFile = resolveAttachmentFile(attachment)
+        if (attachmentFile == null) {
+            logger.warn(
+                "Could not locate attachment file (id={}, file={}, contentType={})",
+                attachment.id, attachment.file, attachment.contentType,
+            )
             return null
         }
 
@@ -285,5 +277,37 @@ IMPORTANT LIMITATIONS:
             logger.warn("Failed to read attachment file $attachmentFile: ${e.message}")
             null
         }
+    }
+
+    /**
+     * Resolve the attachment file path. Tries the direct `file` path from signal-cli first,
+     * then falls back to searching the attachments directory by ID prefix.
+     */
+    private fun resolveAttachmentFile(attachment: SignalAttachment): Path? {
+        // Prefer the direct file path provided by signal-cli
+        attachment.file?.let { filePath ->
+            val path = Path.of(filePath)
+            if (path.exists()) return path
+            logger.debug("Attachment file path from signal-cli does not exist: $filePath")
+        }
+
+        // Fall back to ID-based lookup
+        val attachmentId = attachment.id ?: return null
+        val attachmentsDir = Path.of(config.configDir, "data", config.phoneNumber, "attachments")
+        if (!attachmentsDir.exists()) {
+            logger.debug("Attachments directory not found: $attachmentsDir")
+            return null
+        }
+
+        // signal-cli stores attachments as <id> or <id>.<ext>
+        val file = attachmentsDir.listDirectoryEntries().firstOrNull { entry ->
+            entry.fileName.toString().startsWith(attachmentId)
+        }
+
+        if (file == null) {
+            logger.debug("Attachment file not found for id: $attachmentId in $attachmentsDir")
+        }
+
+        return file
     }
 }

@@ -708,6 +708,7 @@ class SignalCli(
                     filename = att["filename"]?.jsonPrimitive?.contentOrNull,
                     id = att["id"]?.jsonPrimitive?.contentOrNull,
                     size = att["size"]?.jsonPrimitive?.longOrNull,
+                    file = att["file"]?.jsonPrimitive?.contentOrNull,
                 )
             } ?: emptyList()
 
@@ -802,6 +803,7 @@ data class SignalAttachment(
     val filename: String?,
     val id: String?,
     val size: Long?,
+    val file: String?,
 )
 
 /**
