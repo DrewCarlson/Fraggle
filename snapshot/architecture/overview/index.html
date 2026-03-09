@@ -1141,7 +1141,7 @@
 <h3 id="tool-execution">Tool Execution<a class="headerlink" href="#tool-execution" title="Permanent link">&para;</a></h3>
 <p>The executor system controls how tools run, with two dimensions of configuration:</p>
 <p><strong>Execution mode</strong> — Tools run either locally in the Fraggle process (<code>local</code>) or are forwarded to a separate worker process over HTTP (<code>remote</code>). Remote execution isolates tool I/O from the main agent.</p>
-<p><strong>Supervision</strong> — In <code>supervised</code> mode, each tool call requires explicit approval before it runs. Tools listed in <code>auto_approve</code> bypass the prompt. In the CLI (<code>fraggle chat</code>), approval is requested on stdin; in production (<code>fraggle run</code>), a permission event is emitted over the WebSocket API so the dashboard or other clients can approve.</p>
+<p><strong>Supervision</strong> — In <code>supervised</code> mode, each tool call is evaluated against policy-based rules before it runs. Rules can specify <code>allow</code>, <code>deny</code>, or <code>ask</code> policies with optional argument pattern constraints (e.g., deny <code>write_file</code> for paths under <code>/etc/**</code>). Path arguments are normalized to prevent traversal attacks. When no rule matches or the policy is <code>ask</code>, approval is requested interactively — on stdin in the CLI (<code>fraggle chat</code>) or via a WebSocket permission event in production (<code>fraggle run</code>).</p>
 <p>Every tool that performs I/O (file, shell, web) is wrapped in a <code>ManagedTool</code> that checks supervision and optionally forwards to a remote worker. Scheduling tools are not wrapped since they don't perform external I/O.</p>
 <h2 id="data-flow">Data Flow<a class="headerlink" href="#data-flow" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
@@ -1157,7 +1157,7 @@
 <ol>
 <li><strong>Chat Bridge</strong> receives messages and passes them to the agent</li>
 <li><strong>Agent</strong> builds context and delegates to Koog's agent service, which calls tools as needed</li>
-<li><strong>ManagedTool</strong> checks supervision (auto-approve or prompt for permission), then either executes locally or forwards to the remote worker</li>
+<li><strong>ManagedTool</strong> checks supervision (evaluate tool policies or prompt for permission), then either executes locally or forwards to the remote worker</li>
 <li><strong>Memory</strong> stores and retrieves conversation context</li>
 <li><strong>Agent</strong> generates final response</li>
 <li><strong>Chat Bridge</strong> sends the response back to the user</li>

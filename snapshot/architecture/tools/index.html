@@ -710,6 +710,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#time-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Time Tools
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1047,6 +1058,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#time-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Time Tools
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1276,6 +1298,31 @@
 </tr>
 </tbody>
 </table>
+<h3 id="time-tools">Time Tools<a class="headerlink" href="#time-tools" title="Permanent link">&para;</a></h3>
+<p>Time and timezone utilities:</p>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Description</th>
+<th>Parameters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>get_current_time</code></td>
+<td>Get current date/time in any timezone</td>
+<td><code>timezone</code> (optional, IANA ID)</td>
+</tr>
+</tbody>
+</table>
+<p>The agent also receives the host server's current ISO 8601 timestamp in every system prompt, so it always knows the current date and time without needing a tool call. The <code>get_current_time</code> tool is used when the agent needs to convert to a specific timezone (e.g., answering "What time is it in Tokyo?").</p>
+<p>The agent can determine a user's local time by:</p>
+<ul>
+<li>Checking the user's timezone from memory (auto-extracted from conversations)</li>
+<li>Using the <code>Timezone</code> field in the user profile (<code>USER.md</code>)</li>
+<li>Asking the user for their location</li>
+</ul>
 <h2 id="defining-custom-tools">Defining Custom Tools<a class="headerlink" href="#defining-custom-tools" title="Permanent link">&para;</a></h2>
 <p>Tools extend Koog's <code>SimpleTool&lt;Args&gt;</code> with a <code>@Serializable</code> data class for parameters:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kd">class</span><span class="w"> </span><span class="nc">WeatherTool</span><span class="p">(</span><span class="kd">private</span><span class="w"> </span><span class="kd">val</span><span class="w"> </span><span class="nv">apiClient</span><span class="p">:</span><span class="w"> </span><span class="n">HttpClient</span><span class="p">)</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="n">SimpleTool</span><span class="o">&lt;</span><span class="n">WeatherTool</span><span class="p">.</span><span class="na">Args</span><span class="o">&gt;</span><span class="p">(</span>
@@ -1322,7 +1369,7 @@
 <p>Every tool that performs I/O is wrapped in a <code>ManagedTool</code> before being added to the registry. <code>ManagedTool</code> adds two layers around the underlying tool:</p>
 <ol>
 <li>
-<p><strong>Supervision</strong> — Before executing, the tool checks with a <code>ToolSupervisor</code>. In <code>none</code> mode (<code>NoOpToolSupervisor</code>), all calls are auto-approved. In <code>supervised</code> mode (<code>InteractiveToolSupervisor</code>), the tool name is checked against the <code>auto_approve</code> list; if not listed, a permission request is sent to the user.</p>
+<p><strong>Supervision</strong> — Before executing, the tool checks with a <code>ToolSupervisor</code>. In <code>none</code> mode (<code>NoOpToolSupervisor</code>), all calls are auto-approved. In <code>supervised</code> mode (<code>InteractiveToolSupervisor</code>), the tool call is evaluated against policy-based <code>tool_policies</code> rules. Each rule can specify <code>allow</code>, <code>deny</code>, or <code>ask</code> policies, with optional argument pattern constraints (e.g., deny <code>write_file</code> for paths under <code>/etc/**</code>). How patterns are matched depends on the <code>@ToolArg</code> annotation on the tool's Args property: <code>PATH</code> arguments are normalized before glob matching to prevent traversal attacks, <code>SHELL_COMMAND</code> arguments are parsed and each command is matched against patterns (simple flag-aware <code>value</code> patterns or structured <code>commands</code> with flag allowlists/denylists and typed positional arg matching), and unannotated arguments use plain glob matching. If no rule matches, a permission request is sent to the user.</p>
 </li>
 <li>
 <p><strong>Remote forwarding</strong> — If a <code>RemoteToolClient</code> is configured (<code>type: remote</code>), the call is forwarded over HTTP to a <a href="../../installation/configuration/#remote-worker">worker process</a> instead of executing locally.</p>
@@ -1330,13 +1377,16 @@
 </ol>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>ManagedTool.execute(args)
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>  │
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>  ├─ Supervisor: check permission
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>  │   ├─ auto_approve list → Approved
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>  │   ├─ CLI prompt (fraggle chat) → Approved / Denied
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>  │   └─ WebSocket event (fraggle run) → Approved / Denied
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>  │
-<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>  ├─ Remote client present? → Forward to worker via HTTP
-<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>  └─ Otherwise → Execute delegate tool locally
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>  ├─ Supervisor: evaluate policy rules (first match wins)
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>  │   ├─ policy: allow → Approved
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>  │   ├─ policy: deny  → Denied (no user prompt)
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>  │   ├─ policy: ask   → Delegate to user
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>  │   ├─ no match      → Delegate to user
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>  │   │   ├─ CLI prompt (fraggle chat) → Approved / Denied
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>  │   │   └─ WebSocket event (fraggle run) → Approved / Denied
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>  │
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>  ├─ Remote client present? → Forward to worker via HTTP
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>  └─ Otherwise → Execute delegate tool locally
 </code></pre></div>
 <p>Scheduling tools (<code>schedule_task</code>, <code>list_tasks</code>, <code>get_task</code>, <code>cancel_task</code>) are <strong>not</strong> wrapped because they don't perform external I/O.</p>
 <p>See <a href="../../installation/configuration/#executor">Executor configuration</a> for the YAML options.</p>
