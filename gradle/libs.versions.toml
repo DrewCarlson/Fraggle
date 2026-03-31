@@ -21,7 +21,7 @@ routing-compose = "0.5.0"
 kord = "0.17.0"
 exposed = "1.0.0"
 sqlite-jdbc = "3.51.1.0"
-koog = "0.6.1"
+koog = "0.7.3"
 
 [libraries]
 # Kotlin
