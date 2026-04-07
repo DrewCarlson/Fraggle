@@ -4,7 +4,6 @@ import ai.koog.agents.core.agent.AIAgentService
 import ai.koog.agents.core.agent.ToolCalls
 import ai.koog.agents.core.agent.config.AIAgentConfig
 import ai.koog.agents.core.agent.singleRunStrategy
-import ai.koog.agents.core.dsl.builder.forwardTo
 import ai.koog.agents.core.dsl.builder.strategy
 import ai.koog.agents.core.dsl.extension.HistoryCompressionStrategy
 import ai.koog.agents.core.dsl.extension.nodeLLMCompressHistory
@@ -27,13 +26,10 @@ import ai.koog.prompt.executor.clients.openai.base.models.ReasoningEffort
 import ai.koog.prompt.message.AttachmentContent
 import ai.koog.prompt.message.ContentPart
 import ai.koog.prompt.message.Message
-import ai.koog.prompt.params.LLMParams
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import fraggle.chat.ChatPlatform
-import fraggle.chat.ImageAttachment
 import fraggle.chat.IncomingMessage
 import fraggle.chat.MessageContent
 import fraggle.memory.Fact
@@ -168,7 +164,7 @@ class FraggleAgent(
                 }
             }
 
-            val result = withContext(ToolExecutionContext.asContextElement(executionContext)) {
+            val rawResult = withContext(ToolExecutionContext.asContextElement(executionContext)) {
                 agentService.createAgentAndRun(
                     agentInput = userInput,
                     agentConfig = AIAgentConfig(
@@ -180,6 +176,7 @@ class FraggleAgent(
                     )
                 )
             }
+            val result = ReasoningContentFilter.strip(rawResult)
 
             if (config.autoMemory && result.isNotBlank()) {
                 extractMemoryViaLLM(message, result)
@@ -198,7 +195,7 @@ class FraggleAgent(
     }
 
     override fun close() {
-        runBlocking { agentService.closeAll() }
+        promptExecutor.close()
     }
 
     /**
@@ -250,9 +247,11 @@ class FraggleAgent(
             }
 
             val responses = promptExecutor.execute(prompt = compressionPrompt, model = llmModel)
-            val summary = responses.filterIsInstance<Message.Assistant>().firstOrNull()?.content?.trim()
+            val summary = responses.filterIsInstance<Message.Assistant>().firstOrNull()?.content
+                ?.let { ReasoningContentFilter.strip(it) }
+                ?.takeIf { it.isNotBlank() }
 
-            if (summary.isNullOrBlank()) {
+            if (summary == null) {
                 logger.warn("History compression returned empty result, keeping original conversation")
                 return conversation
             }
@@ -523,7 +522,9 @@ class FraggleAgent(
         }
 
         val responses = promptExecutor.execute(prompt = extractionPrompt, model = llmModel)
-        val result = responses.filterIsInstance<Message.Assistant>().firstOrNull()?.content?.trim() ?: return emptyList()
+        val result = responses.filterIsInstance<Message.Assistant>().firstOrNull()?.content
+            ?.let { ReasoningContentFilter.strip(it) }
+            ?: return emptyList()
 
         val factsJson = result
             .removePrefix("```json").removePrefix("```")
@@ -571,7 +572,9 @@ class FraggleAgent(
         }
 
         val responses = promptExecutor.execute(prompt = reconcilePrompt, model = llmModel)
-        val result = responses.filterIsInstance<Message.Assistant>().firstOrNull()?.content?.trim() ?: return fallback()
+        val result = responses.filterIsInstance<Message.Assistant>().firstOrNull()?.content
+            ?.let { ReasoningContentFilter.strip(it) }
+            ?: return fallback()
 
         val factsJson = result
             .removePrefix("```json").removePrefix("```")
@@ -613,7 +616,7 @@ private fun compressingSingleRunStrategy() = strategy<String, String>("compressi
     edge(
         nodeCallLLM forwardTo nodeFinish
             onMultipleAssistantMessages { true }
-            transformed { it.joinToString("\n") { message -> message.content } }
+            transformed { ReasoningContentFilter.strip(it.joinToString("\n") { message -> message.content }) }
     )
 
     edge(nodeExecuteTool forwardTo nodeCompressHistory)
@@ -623,7 +626,7 @@ private fun compressingSingleRunStrategy() = strategy<String, String>("compressi
     edge(
         nodeSendToolResult forwardTo nodeFinish
             onMultipleAssistantMessages { true }
-            transformed { it.joinToString("\n") { message -> message.content } }
+            transformed { ReasoningContentFilter.strip(it.joinToString("\n") { message -> message.content }) }
     )
 }
 

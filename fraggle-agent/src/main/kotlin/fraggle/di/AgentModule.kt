@@ -4,7 +4,7 @@ import ai.koog.agents.core.tools.ToolRegistry
 import ai.koog.agents.memory.providers.AgentMemoryProvider
 import ai.koog.prompt.executor.clients.openai.OpenAIClientSettings
 import ai.koog.prompt.executor.clients.openai.OpenAILLMClient
-import ai.koog.prompt.executor.llms.SingleLLMPromptExecutor
+import ai.koog.prompt.executor.llms.MultiLLMPromptExecutor
 import ai.koog.prompt.executor.model.PromptExecutor
 import dev.zacsweers.metro.ContributesTo
 import dev.zacsweers.metro.Provides
@@ -118,7 +118,7 @@ interface AgentModule {
                 settings = OpenAIClientSettings(baseUrl = config.url),
                 baseClient = httpClient,
             )
-            return SingleLLMPromptExecutor(client)
+            return MultiLLMPromptExecutor(client)
         }
 
         @Provides

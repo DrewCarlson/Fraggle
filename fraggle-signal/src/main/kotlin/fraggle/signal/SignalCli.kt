@@ -189,18 +189,25 @@ class SignalCli(
     }
 
     private fun handleStderrLine(line: String) {
+        // Check for fatal errors first, regardless of log level classification.
+        // Some fatal messages (e.g., "User X is not registered.") don't contain "Error"
+        // and would otherwise be missed, causing infinite reconnect loops.
+        if (isFatalError(line)) {
+            logger.error("signal-cli stderr (fatal): $line")
+            lastStderrError = line
+            scope.launch {
+                handleFatalError(line)
+            }
+            return
+        }
+
         // Classify the severity of stderr messages
         when {
             line.contains("Error", ignoreCase = true) -> {
                 logger.error("signal-cli stderr: $line")
                 lastStderrError = line
 
-                // Check for fatal errors that indicate we should not reconnect
-                if (isFatalError(line)) {
-                    scope.launch {
-                        handleFatalError(line)
-                    }
-                } else if (isTransientError(line)) {
+                if (isTransientError(line)) {
                     // Transient errors will be handled by reconnection logic
                     logger.warn("Transient error detected, will attempt reconnection if stream closes")
                 }
@@ -265,6 +272,18 @@ class SignalCli(
 
     private suspend fun handleUnexpectedDisconnect(reason: String) {
         if (stopRequested) return
+
+        // If a fatal error was already detected (e.g., "not registered"),
+        // don't attempt reconnection — the fatal handler already set Failed state.
+        val currentState = _connectionState.value
+        if (currentState is ConnectionState.Failed && !currentState.recoverable) {
+            logger.warn("Disconnect after fatal error, not reconnecting: $reason")
+            _isRunning.value = false
+            cleanupProcess()
+            pendingRequests.values.forEach { it.completeExceptionally(SignalCliException("Connection lost: $reason")) }
+            pendingRequests.clear()
+            return
+        }
 
         logger.warn("Unexpected disconnect: $reason")
         _isRunning.value = false

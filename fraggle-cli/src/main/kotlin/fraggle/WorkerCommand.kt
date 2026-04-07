@@ -1,6 +1,8 @@
 package fraggle
 
 import ai.koog.agents.core.tools.SimpleTool
+import ai.koog.serialization.kotlinx.KotlinxSerializer
+import ai.koog.serialization.kotlinx.toKoogJSONObject
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
@@ -35,7 +37,6 @@ import fraggle.tools.scheduling.TaskScheduler
 import org.slf4j.LoggerFactory
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
-import kotlin.time.Duration.Companion.seconds
 
 /**
  * Lightweight worker process for remote tool execution.
@@ -50,6 +51,7 @@ class WorkerCommand : CliktCommand(name = "worker") {
     private val workDir by option("-w", "--work-dir", help = "Working directory for tools").default("./data/workspace")
 
     private val json = Json { ignoreUnknownKeys = true }
+    private val koogSerializer = KotlinxSerializer(json)
 
     override fun run() = runBlocking {
         logger.info("Starting Fraggle worker on port $port")
@@ -118,7 +120,7 @@ class WorkerCommand : CliktCommand(name = "worker") {
                         @Suppress("UNCHECKED_CAST")
                         val simpleTool = tool as SimpleTool<Any>
                         val argsElement = json.parseToJsonElement(request.argsJson) as JsonObject
-                        val args = json.decodeFromJsonElement(simpleTool.argsSerializer, argsElement)
+                        val args = simpleTool.decodeArgs(argsElement.toKoogJSONObject(), koogSerializer)
                         val result = withContext(Dispatchers.Default) {
                             simpleTool.execute(args)
                         }

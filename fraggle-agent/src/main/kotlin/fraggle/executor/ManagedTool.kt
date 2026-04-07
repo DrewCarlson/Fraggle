@@ -1,6 +1,8 @@
 package fraggle.executor
 
 import ai.koog.agents.core.tools.SimpleTool
+import ai.koog.serialization.JSONSerializer
+import ai.koog.serialization.kotlinx.KotlinxSerializer
 import fraggle.agent.ToolExecutionContext
 import fraggle.executor.supervision.PermissionResult
 import fraggle.executor.supervision.ToolSupervisor
@@ -15,14 +17,15 @@ class ManagedTool<Args : Any>(
     private val delegate: SimpleTool<Args>,
     private val supervisor: ToolSupervisor,
     private val remoteClient: RemoteToolClient?,
+    private val serializer: JSONSerializer = KotlinxSerializer(),
 ) : SimpleTool<Args>(
-    argsSerializer = delegate.argsSerializer,
+    argsType = delegate.argsType,
     name = delegate.name,
     description = delegate.descriptor.description,
 ) {
 
     override suspend fun execute(args: Args): String {
-        val argsJson = json.encodeToString(delegate.argsSerializer, args)
+        val argsJson = delegate.encodeArgsToString(args, serializer)
         val chatId = ToolExecutionContext.current()?.chatId ?: "unknown"
 
         return when (val p = supervisor.checkPermission(name, argsJson, chatId)) {
