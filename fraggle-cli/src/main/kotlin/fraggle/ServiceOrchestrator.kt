@@ -217,12 +217,16 @@ class ServiceOrchestrator(
 
         // Update conversation history (using potentially compressed conversation)
         val responseText = result.response.contentOrError()
-        conversations[chatId] = result.conversation.copy(
-            messages = result.conversation.messages + listOf(
-                ConversationMessage(ConversationRole.USER, text),
-                ConversationMessage(ConversationRole.ASSISTANT, responseText),
-            )
-        )
+        val updatedMessages = result.conversation.messages +
+            ConversationMessage(ConversationRole.USER, text) +
+            // Don't persist LLM errors as assistant messages — they pollute the
+            // context and can cause cascading failures on subsequent requests.
+            if (result.response is AgentResponse.Success) {
+                listOf(ConversationMessage(ConversationRole.ASSISTANT, responseText))
+            } else {
+                emptyList()
+            }
+        conversations[chatId] = result.conversation.copy(messages = updatedMessages)
 
         return responseText
     }
@@ -452,13 +456,17 @@ class ServiceOrchestrator(
                 processingDuration = duration,
             ))
 
-            // Update conversation (using potentially compressed conversation)
-            conversations[chatId] = processResult.conversation.copy(
-                messages = processResult.conversation.messages + listOf(
-                    ConversationMessage(ConversationRole.USER, messageText),
-                    ConversationMessage(ConversationRole.ASSISTANT, finalText),
-                )
-            )
+            // Update conversation (using potentially compressed conversation).
+            // Don't persist LLM errors as assistant messages — they pollute the
+            // context and can cause cascading failures on subsequent requests.
+            val updatedMessages = processResult.conversation.messages +
+                ConversationMessage(ConversationRole.USER, messageText) +
+                if (response is AgentResponse.Success) {
+                    listOf(ConversationMessage(ConversationRole.ASSISTANT, finalText))
+                } else {
+                    emptyList()
+                }
+            conversations[chatId] = processResult.conversation.copy(messages = updatedMessages)
 
             logger.info("Response sent to $chatId")
         } catch (e: Exception) {
