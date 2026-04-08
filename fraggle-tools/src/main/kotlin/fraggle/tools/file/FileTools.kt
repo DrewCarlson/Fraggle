@@ -2,6 +2,7 @@ package fraggle.tools.file
 
 import ai.koog.agents.core.tools.SimpleTool
 import ai.koog.agents.core.tools.annotations.LLMDescription
+import ai.koog.serialization.typeToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
@@ -13,7 +14,7 @@ import java.nio.file.Path
 import kotlin.io.path.*
 
 class ReadFileTool(private val toolExecutor: ToolExecutor) : SimpleTool<ReadFileTool.Args>(
-    argsSerializer = Args.serializer(),
+    argsType = typeToken<Args>(),
     name = "read_file",
     description = "Read the contents of a file. Returns the file content as text.",
 ) {
@@ -49,7 +50,7 @@ class ReadFileTool(private val toolExecutor: ToolExecutor) : SimpleTool<ReadFile
 }
 
 class WriteFileTool(private val toolExecutor: ToolExecutor) : SimpleTool<WriteFileTool.Args>(
-    argsSerializer = Args.serializer(),
+    argsType = typeToken<Args>(),
     name = "write_file",
     description = "Write content to a file. Creates the file if it doesn't exist, overwrites if it does.",
 ) {
@@ -77,7 +78,7 @@ class WriteFileTool(private val toolExecutor: ToolExecutor) : SimpleTool<WriteFi
 }
 
 class AppendFileTool(private val toolExecutor: ToolExecutor) : SimpleTool<AppendFileTool.Args>(
-    argsSerializer = Args.serializer(),
+    argsType = typeToken<Args>(),
     name = "append_file",
     description = "Append content to a file. Creates the file if it doesn't exist.",
 ) {
@@ -105,7 +106,7 @@ class AppendFileTool(private val toolExecutor: ToolExecutor) : SimpleTool<Append
 }
 
 class ListFilesTool(private val toolExecutor: ToolExecutor) : SimpleTool<ListFilesTool.Args>(
-    argsSerializer = Args.serializer(),
+    argsType = typeToken<Args>(),
     name = "list_files",
     description = "List files and directories in a given path.",
 ) {
@@ -154,7 +155,7 @@ class ListFilesTool(private val toolExecutor: ToolExecutor) : SimpleTool<ListFil
 }
 
 class SearchFilesTool(private val toolExecutor: ToolExecutor) : SimpleTool<SearchFilesTool.Args>(
-    argsSerializer = Args.serializer(),
+    argsType = typeToken<Args>(),
     name = "search_files",
     description = "Search for files matching a pattern in a directory.",
 ) {
@@ -198,7 +199,7 @@ class SearchFilesTool(private val toolExecutor: ToolExecutor) : SimpleTool<Searc
 }
 
 class FileExistsTool(private val toolExecutor: ToolExecutor) : SimpleTool<FileExistsTool.Args>(
-    argsSerializer = Args.serializer(),
+    argsType = typeToken<Args>(),
     name = "file_exists",
     description = "Check if a file or directory exists at the given path.",
 ) {
@@ -224,7 +225,7 @@ class FileExistsTool(private val toolExecutor: ToolExecutor) : SimpleTool<FileEx
 }
 
 class DeleteFileTool(private val toolExecutor: ToolExecutor) : SimpleTool<DeleteFileTool.Args>(
-    argsSerializer = Args.serializer(),
+    argsType = typeToken<Args>(),
     name = "delete_file",
     description = "Delete a file at the given path.",
 ) {

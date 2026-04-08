@@ -2,6 +2,7 @@ package fraggle.tools.shell
 
 import ai.koog.agents.core.tools.SimpleTool
 import ai.koog.agents.core.tools.annotations.LLMDescription
+import ai.koog.serialization.typeToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.withContext
@@ -13,7 +14,7 @@ import fraggle.executor.supervision.ToolArgKind
 import kotlin.time.Duration.Companion.seconds
 
 class ExecuteCommandTool(private val toolExecutor: ToolExecutor) : SimpleTool<ExecuteCommandTool.Args>(
-    argsSerializer = Args.serializer(),
+    argsType = typeToken<Args>(),
     name = "execute_command",
     description = """Execute a shell command and return the output.
 The command runs in the workspace directory.

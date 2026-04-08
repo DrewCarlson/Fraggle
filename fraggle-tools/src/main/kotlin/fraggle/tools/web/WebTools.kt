@@ -2,6 +2,7 @@ package fraggle.tools.web
 
 import ai.koog.agents.core.tools.SimpleTool
 import ai.koog.agents.core.tools.annotations.LLMDescription
+import ai.koog.serialization.typeToken
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -15,7 +16,7 @@ class FetchWebpageTool(
     private val httpClient: HttpClient,
     private val playwrightFetcher: PlaywrightFetcher?,
 ) : SimpleTool<FetchWebpageTool.Args>(
-    argsSerializer = Args.serializer(),
+    argsType = typeToken<Args>(),
     name = "fetch_webpage",
     description = buildString {
         append("Fetch content from a webpage URL. ")
@@ -103,7 +104,7 @@ class FetchWebpageTool(
 class FetchApiTool(
     private val httpClient: HttpClient,
 ) : SimpleTool<FetchApiTool.Args>(
-    argsSerializer = Args.serializer(),
+    argsType = typeToken<Args>(),
     name = "fetch_api",
     description = """Fetch data from an API endpoint. Uses simple HTTP without browser rendering.
 
@@ -160,7 +161,7 @@ DO NOT USE FOR:
 class ScreenshotPageTool(
     private val playwrightFetcher: PlaywrightFetcher,
 ) : SimpleTool<ScreenshotPageTool.Args>(
-    argsSerializer = Args.serializer(),
+    argsType = typeToken<Args>(),
     name = "screenshot_page",
     description = """Take a screenshot of a web page and send it WITH your response.
 The page will be fully rendered with JavaScript before the screenshot is taken.

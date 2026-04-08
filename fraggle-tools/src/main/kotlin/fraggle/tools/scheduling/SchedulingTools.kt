@@ -1,8 +1,8 @@
 package fraggle.tools.scheduling
 
 import ai.koog.agents.core.tools.SimpleTool
-import ai.koog.agents.core.tools.ToolArgs
 import ai.koog.agents.core.tools.annotations.LLMDescription
+import ai.koog.serialization.typeToken
 import kotlinx.coroutines.*
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
@@ -11,7 +11,6 @@ import kotlinx.datetime.format.DateTimeFormat
 import kotlinx.datetime.format.char
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 import fraggle.agent.ToolExecutionContext
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
@@ -19,7 +18,7 @@ import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.*
 
 @Suppress("ObjectPropertyName")
-private val _fulleDateTimeFormat = LocalDateTime.Format {
+private val _fullDateTimeFormat = LocalDateTime.Format {
     year()
     char('-')
     monthNumber()
@@ -34,10 +33,10 @@ private val _fulleDateTimeFormat = LocalDateTime.Format {
 }
 @Suppress("UnusedReceiverParameter")
 val LocalDateTime.Formats.fullDataTime: DateTimeFormat<LocalDateTime>
-    get() = _fulleDateTimeFormat
+    get() = _fullDateTimeFormat
 
 class ScheduleTaskTool(private val scheduler: TaskScheduler) : SimpleTool<ScheduleTaskTool.Args>(
-    argsSerializer = Args.serializer(),
+    argsType = typeToken<Args>(),
     name = "schedule_task",
     description = """Schedule a task for later execution.
 You can schedule one-time tasks or recurring tasks.
@@ -90,12 +89,12 @@ Tasks will execute the specified action when triggered.""",
     }
 }
 
-class ListTasksTool(private val scheduler: TaskScheduler) : SimpleTool<ToolArgs.Empty>(
-    argsSerializer = ToolArgs.Empty.serializer(),
+class ListTasksTool(private val scheduler: TaskScheduler) : SimpleTool<Unit>(
+    argsType = typeToken<Unit>(),
     name = "list_tasks",
     description = "List all scheduled tasks.",
 ) {
-    override suspend fun execute(args: ToolArgs.Empty): String {
+    override suspend fun execute(args: Unit): String {
         val tasks = scheduler.listTasks()
 
         if (tasks.isEmpty()) {
@@ -124,7 +123,7 @@ class ListTasksTool(private val scheduler: TaskScheduler) : SimpleTool<ToolArgs.
 }
 
 class CancelTaskTool(private val scheduler: TaskScheduler) : SimpleTool<CancelTaskTool.Args>(
-    argsSerializer = Args.serializer(),
+    argsType = typeToken<Args>(),
     name = "cancel_task",
     description = "Cancel a scheduled task by its ID.",
 ) {
@@ -144,7 +143,7 @@ class CancelTaskTool(private val scheduler: TaskScheduler) : SimpleTool<CancelTa
 }
 
 class GetTaskTool(private val scheduler: TaskScheduler) : SimpleTool<GetTaskTool.Args>(
-    argsSerializer = Args.serializer(),
+    argsType = typeToken<Args>(),
     name = "get_task",
     description = "Get detailed information about a scheduled task.",
 ) {
@@ -191,7 +190,6 @@ class TaskScheduler(
     private val onTaskTriggered: suspend (ScheduledTask) -> Unit = {},
 ) {
     private val logger = LoggerFactory.getLogger(TaskScheduler::class.java)
-    private val json = Json { prettyPrint = true }
 
     private val tasks = ConcurrentHashMap<String, ScheduledTask>()
     private val jobs = ConcurrentHashMap<String, Job>()

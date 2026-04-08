@@ -2,27 +2,15 @@ package fraggle.tools.time
 
 import ai.koog.agents.core.tools.SimpleTool
 import ai.koog.agents.core.tools.annotations.LLMDescription
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
+import ai.koog.serialization.typeToken
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.format
-import kotlinx.datetime.format.DateTimeFormat
-import kotlinx.datetime.format.char
 import kotlinx.datetime.offsetIn
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
-
-@Suppress("ObjectPropertyName")
-private val _iso8601Format = LocalDateTime.Format {
-    year(); char('-'); monthNumber(); char('-'); day()
-    char('T')
-    hour(); char(':'); minute(); char(':'); second()
-}
-
-@Suppress("UnusedReceiverParameter")
-val LocalDateTime.Formats.iso8601NoOffset: DateTimeFormat<LocalDateTime>
-    get() = _iso8601Format
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 /**
  * Tool that returns the current date and time in a specified timezone.
@@ -30,7 +18,7 @@ val LocalDateTime.Formats.iso8601NoOffset: DateTimeFormat<LocalDateTime>
  * Supports all IANA timezone IDs (e.g., "America/New_York", "Europe/London", "Asia/Tokyo").
  */
 class GetCurrentTimeTool : SimpleTool<GetCurrentTimeTool.Args>(
-    argsSerializer = Args.serializer(),
+    argsType = typeToken<Args>(),
     name = "get_current_time",
     description = """Get the current date and time in any timezone.
 Use this to answer questions about what time it is in a specific location.
@@ -67,7 +55,7 @@ If no timezone is specified, returns the host server's local time.""",
         fun formatTimeResponse(instant: Instant, tz: TimeZone): String {
             val local = instant.toLocalDateTime(tz)
             val offset = instant.offsetIn(tz)
-            val formatted = local.format(LocalDateTime.Formats.iso8601NoOffset)
+            val formatted = local.format(LocalDateTime.Formats.ISO)
             val dayOfWeek = local.dayOfWeek.name.lowercase()
                 .replaceFirstChar { it.uppercase() }
             return "$formatted$offset ($dayOfWeek) [$tz]"
