@@ -1,6 +1,5 @@
 package fraggle.tools.scheduling
 
-import ai.koog.agents.core.tools.ToolArgs
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import fraggle.agent.ToolExecutionContext
@@ -102,7 +101,7 @@ class SchedulingToolsTest {
         @Test
         fun `list_tasks returns empty message when no tasks`() = runTest {
             val tool = ListTasksTool(scheduler)
-            val result = tool.execute(ToolArgs.Empty())
+            val result = tool.execute(Unit)
 
             assertTrue(result.contains("No tasks scheduled"))
         }
@@ -113,7 +112,7 @@ class SchedulingToolsTest {
             scheduler.schedule("Task B", "action", "chat", kotlin.time.Duration.parse("2m"))
 
             val tool = ListTasksTool(scheduler)
-            val result = tool.execute(ToolArgs.Empty())
+            val result = tool.execute(Unit)
 
             assertTrue(result.contains("Task A"))
             assertTrue(result.contains("Task B"))
@@ -131,7 +130,7 @@ class SchedulingToolsTest {
             )
 
             val tool = ListTasksTool(scheduler)
-            val result = tool.execute(ToolArgs.Empty())
+            val result = tool.execute(Unit)
 
             assertTrue(result.contains("recurring"))
         }
