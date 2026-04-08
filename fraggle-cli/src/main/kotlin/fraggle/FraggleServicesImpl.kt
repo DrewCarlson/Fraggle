@@ -16,7 +16,6 @@ import fraggle.db.ChatHistoryStore
 import fraggle.discord.DiscordBridge
 import fraggle.discord.DiscordOAuth
 import fraggle.events.EventBus
-import fraggle.executor.supervision.EventToolPermissionHandler
 import fraggle.memory.MemoryStore
 import fraggle.models.*
 import fraggle.signal.SignalBridge
@@ -365,15 +364,25 @@ class FraggleServicesImpl(
                             message = result.message,
                         ))
 
-                        // Also emit bridge status changed event to refresh UI
+                        activeSessions.remove(sessionId)
+
+                        // Auto-connect the bridge after successful initialization
+                        val connected = try {
+                            bridges.connect(session.bridgeName)
+                            logger.info("Bridge auto-connected after initialization: ${session.bridgeName}")
+                            true
+                        } catch (e: Exception) {
+                            logger.error("Failed to auto-connect bridge ${session.bridgeName}: ${e.message}", e)
+                            false
+                        }
+
                         emitEvent(FraggleEvent.BridgeStatusChanged(
-                            timestamp = now,
+                            timestamp = Clock.System.now(),
                             bridgeName = session.bridgeName,
-                            connected = false,
-                            error = null,
+                            connected = connected,
+                            error = if (!connected) "Auto-connect failed" else null,
                         ))
 
-                        activeSessions.remove(sessionId)
                         logger.info("Bridge initialization complete for ${session.bridgeName}")
                     }
                 }

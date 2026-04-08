@@ -63,11 +63,11 @@ fun Route.bridgeRoutes(services: FraggleServices) {
             val name = call.parameters["name"]
                 ?: return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse("Missing bridge name"))
 
-            val bridge = services.bridges.getBridge(name)
+            services.bridges.getBridge(name)
                 ?: return@post call.respond(HttpStatusCode.NotFound, ErrorResponse("Bridge not found"))
 
             try {
-                bridge.connect()
+                services.bridges.connect(name)
                 call.respond(HttpStatusCode.OK, mapOf("connected" to true))
             } catch (e: Exception) {
                 call.respond(HttpStatusCode.InternalServerError, ErrorResponse("Connection failed: ${e.message}"))
@@ -82,11 +82,11 @@ fun Route.bridgeRoutes(services: FraggleServices) {
             val name = call.parameters["name"]
                 ?: return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse("Missing bridge name"))
 
-            val bridge = services.bridges.getBridge(name)
+            services.bridges.getBridge(name)
                 ?: return@post call.respond(HttpStatusCode.NotFound, ErrorResponse("Bridge not found"))
 
             try {
-                bridge.disconnect()
+                services.bridges.disconnect(name)
                 call.respond(HttpStatusCode.OK, mapOf("disconnected" to true))
             } catch (e: Exception) {
                 call.respond(HttpStatusCode.InternalServerError, ErrorResponse("Disconnect failed: ${e.message}"))

@@ -10,6 +10,7 @@ import components.BridgeInitDialog
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import fraggle.models.BridgeInfo
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.web.css.*
 import org.jetbrains.compose.web.dom.*
 import rememberRefreshableDataLoader
@@ -17,6 +18,7 @@ import rememberRefreshableDataLoader
 @Composable
 fun BridgesScreen(wsService: WebSocketService) {
     var initializingBridge by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
 
     val (state, refresh) = rememberRefreshableDataLoader(
         wsService = wsService,
@@ -83,7 +85,15 @@ fun BridgesScreen(wsService: WebSocketService) {
                                 isInitialized = bridge.initialized,
                                 persistentActivation = bridge.persistentActivation,
                                 onSetup = { initializingBridge = bridge.name },
-                                onConnect = { /* TODO: implement connect via API */ },
+                                onConnect = {
+                                    scope.launch {
+                                        try {
+                                            apiClient.post("bridges/${bridge.name}/connect")
+                                        } catch (_: Exception) {
+                                        }
+                                        refresh()
+                                    }
+                                },
                             )
                         }
                     }
