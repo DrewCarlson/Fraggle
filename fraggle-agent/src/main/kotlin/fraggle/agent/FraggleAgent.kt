@@ -84,7 +84,7 @@ class FraggleAgent(
         llmModel = llmModel,
         strategy = singleRunStrategy(ToolCalls.PARALLEL),
         toolRegistry = toolRegistry,
-        systemPrompt = "",
+        systemPrompt = null,
         temperature = config.temperature,
         maxIterations = config.maxIterations,
     ) {
@@ -164,7 +164,7 @@ class FraggleAgent(
                 }
             }
 
-            val rawResult = withContext(ToolExecutionContext.asContextElement(executionContext)) {
+            val result = withContext(ToolExecutionContext.asContextElement(executionContext)) {
                 agentService.createAgentAndRun(
                     agentInput = userInput,
                     agentConfig = AIAgentConfig(
@@ -176,7 +176,6 @@ class FraggleAgent(
                     )
                 )
             }
-            val result = ReasoningContentFilter.strip(rawResult)
 
             if (config.autoMemory && result.isNotBlank()) {
                 extractMemoryViaLLM(message, result)
