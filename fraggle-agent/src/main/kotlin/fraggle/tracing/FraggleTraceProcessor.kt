@@ -327,11 +327,9 @@ class FraggleTraceProcessor(
                             }
                         }
                         val meta = msg.metaInfo
-                        if (meta is ai.koog.prompt.message.ResponseMetaInfo) {
-                            meta.totalTokensCount?.let { put("totalTokens", it) }
-                            meta.inputTokensCount?.let { put("inputTokens", it) }
-                            meta.outputTokensCount?.let { put("outputTokens", it) }
-                        }
+                        meta.totalTokensCount?.let { put("totalTokens", it) }
+                        meta.inputTokensCount?.let { put("inputTokens", it) }
+                        meta.outputTokensCount?.let { put("outputTokens", it) }
                     }
                 }
             }
