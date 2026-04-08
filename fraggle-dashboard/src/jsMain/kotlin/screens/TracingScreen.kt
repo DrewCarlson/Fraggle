@@ -805,7 +805,8 @@ private fun LlmResponseContent(json: JsonObject) {
                                     property("margin", "0")
                                 }
                             }) {
-                                Text(formatJsonString(toolArgs))
+                                val prettyToolArgs = remember(toolArgs) { formatJsonString(toolArgs) }
+                                Text(prettyToolArgs)
                             }
                         } else if (content.isNotBlank()) {
                             // Text content
@@ -988,10 +989,12 @@ private fun RoleBadge(role: String) {
     }
 }
 
+private val prettyJson = Json { prettyPrint = true }
+
 private fun formatJsonString(jsonStr: String): String {
     return try {
         val element = Json.parseToJsonElement(jsonStr)
-        Json { prettyPrint = true }.encodeToString(JsonElement.serializer(), element)
+        prettyJson.encodeToString(JsonElement.serializer(), element)
     } catch (_: Exception) {
         jsonStr
     }

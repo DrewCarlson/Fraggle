@@ -1,7 +1,7 @@
 [versions]
-kotlin = "2.3.10"
+kotlin = "2.3.20"
 ksp = "2.3.6"
-metro = "0.12.1"
+metro = "0.13.2"
 kotlinpoet = "2.2.0"
 ktor = "3.4.2"
 logback = "1.5.32"

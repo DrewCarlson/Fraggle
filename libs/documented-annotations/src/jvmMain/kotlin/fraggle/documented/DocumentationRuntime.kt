@@ -1,3 +1,5 @@
+@file:Suppress("NO_REFLECTION_IN_CLASS_PATH")
+
 package fraggle.documented
 
 import kotlin.reflect.KClass
