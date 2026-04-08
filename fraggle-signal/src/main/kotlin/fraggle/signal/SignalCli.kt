@@ -564,14 +564,16 @@ class SignalCli(
      * This sets the display name that recipients see instead of "Unknown".
      */
     suspend fun updateProfile(name: String) {
+        // signal-cli JSON-RPC uses camelCase for parameter names (matching other
+        // methods like send's groupId, textStyle, etc.)
         val params = buildJsonObject {
             put("givenName", name)
         }
         try {
-            rpcCall("updateProfile", params)
-            logger.info("Signal profile name set to: $name")
+            val result = rpcCall("updateProfile", params)
+            logger.info("Signal profile name set to '{}', response: {}", name, result)
         } catch (e: Exception) {
-            logger.warn("Failed to update Signal profile name: ${e.message}")
+            logger.error("Failed to update Signal profile name: ${e.message}", e)
         }
     }
 
@@ -583,6 +585,7 @@ class SignalCli(
             cli,
             "-a", config.phoneNumber,
             "--config", config.configDir,
+            "--trust-new-identities", "always",
             "jsonRpc"
         )
     }
