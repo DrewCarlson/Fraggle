@@ -559,6 +559,22 @@ class SignalCli(
         }
     }
 
+    /**
+     * Update the Signal account profile name.
+     * This sets the display name that recipients see instead of "Unknown".
+     */
+    suspend fun updateProfile(name: String) {
+        val params = buildJsonObject {
+            put("givenName", name)
+        }
+        try {
+            rpcCall("updateProfile", params)
+            logger.info("Signal profile name set to: $name")
+        } catch (e: Exception) {
+            logger.warn("Failed to update Signal profile name: ${e.message}")
+        }
+    }
+
     private var resolvedCliPath: String? = null
 
     private suspend fun buildCommand(): List<String> {

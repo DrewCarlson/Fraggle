@@ -32,6 +32,7 @@ interface SignalModule {
                 autoInstall = bridgeConfig.autoInstall,
                 signalCliVersion = bridgeConfig.signalCliVersion,
                 appsDir = FraggleEnvironment.dataDir.resolve("apps").toString(),
+                profileName = bridgeConfig.profileName,
                 respondToDirectMessages = bridgeConfig.respondToDirectMessages,
                 showTypingIndicator = bridgeConfig.showTypingIndicator,
                 registeredChats = chatsConfig.registered.map { it.toRegisteredChat() },

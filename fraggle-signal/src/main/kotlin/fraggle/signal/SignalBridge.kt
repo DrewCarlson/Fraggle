@@ -59,6 +59,11 @@ IMPORTANT LIMITATIONS:
         logger.info("Connecting to Signal...")
         signalCli.start()
         logger.info("Connected to Signal as ${config.phoneNumber}")
+
+        // Set the profile name so recipients see a name instead of "Unknown"
+        config.profileName?.let { name ->
+            signalCli.updateProfile(name)
+        }
     }
 
     override suspend fun disconnect() {

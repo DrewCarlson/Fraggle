@@ -337,6 +337,7 @@ class InitBridgeCommand : CliktCommand(name = "init-bridge") {
                     autoInstall = signalConfig.autoInstall,
                     signalCliVersion = signalConfig.signalCliVersion,
                     appsDir = FraggleEnvironment.dataDir.resolve("apps").toString(),
+                    profileName = signalConfig.profileName,
                 )
                 registry.register("signal", SignalBridgeInitializer(signalInitConfig))
             }

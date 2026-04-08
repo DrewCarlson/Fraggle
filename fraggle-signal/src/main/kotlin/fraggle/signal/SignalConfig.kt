@@ -48,6 +48,13 @@ data class SignalConfig(
     val appsDir: String? = null,
 
     /**
+     * Display name for the Signal account profile.
+     * Set this so recipients see a name instead of "Unknown".
+     * If null, the profile name is not updated.
+     */
+    val profileName: String? = null,
+
+    /**
      * Whether to respond to messages in direct chats without trigger.
      */
     val respondToDirectMessages: Boolean = true,

@@ -123,6 +123,10 @@ data class SignalBridgeConfig(
     @Documented(name = "Signal CLI Version", description = "Version of signal-cli to auto-install")
     val signalCliVersion: String = "0.14.2",
 
+    @SerialName("profile_name")
+    @Documented(name = "Profile Name", description = "Display name for the Signal account profile. Set this so recipients see a name instead of 'Unknown'")
+    val profileName: String = "Fraggle",
+
     @SerialName("respond_to_direct_messages")
     @Documented(name = "Respond to DMs", description = "Whether to respond to direct messages without a trigger")
     val respondToDirectMessages: Boolean = true,
