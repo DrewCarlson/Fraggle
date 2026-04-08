@@ -49,10 +49,9 @@ data class SignalConfig(
 
     /**
      * Display name for the Signal account profile.
-     * Set this so recipients see a name instead of "Unknown".
-     * If null, the profile name is not updated.
+     * This is set on every connect so recipients see a name instead of "Unknown".
      */
-    val profileName: String? = null,
+    val profileName: String = "Fraggle",
 
     /**
      * Whether to respond to messages in direct chats without trigger.

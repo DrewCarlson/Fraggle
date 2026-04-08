@@ -185,6 +185,15 @@ class SignalBridgeInitializer(
         return if (result.exitCode == 0) {
             state = State.COMPLETE
             logger.info("Signal registration completed successfully")
+
+            // Set the profile name immediately after registration so the account
+            // doesn't show as "Unknown" to recipients
+            logger.info("Setting Signal profile name to: ${config.profileName}")
+            val profileResult = runSignalCli("updateProfile", "--given-name", config.profileName)
+            if (profileResult.exitCode != 0) {
+                logger.warn("Failed to set profile name: ${profileResult.stderr}")
+            }
+
             InitStepResult.Complete(
                 "Signal account registered successfully! You can now use the Signal bridge."
             )
