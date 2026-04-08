@@ -37,9 +37,9 @@ brew install signal-cli
 Download the native binary for better performance:
 
 ```bash
-# Example for version 0.13.23
-wget https://github.com/AsamK/signal-cli/releases/download/v0.13.23/signal-cli-0.13.23-Linux-native.tar.gz
-tar xf signal-cli-0.13.23-Linux-native.tar.gz
+# Example for version 0.14.2
+wget https://github.com/AsamK/signal-cli/releases/download/v0.14.2/signal-cli-0.14.2-Linux-native.tar.gz
+tar xf signal-cli-0.14.2-Linux-native.tar.gz
 sudo mv signal-cli /usr/local/bin/signal-cli
 ```
 
@@ -48,10 +48,10 @@ sudo mv signal-cli /usr/local/bin/signal-cli
 If you prefer the Java-based version:
 
 ```bash
-# Example for version 0.13.23
-wget https://github.com/AsamK/signal-cli/releases/download/v0.13.23/signal-cli-0.13.23.tar.gz
-tar xf signal-cli-0.13.23.tar.gz
-sudo mv signal-cli-0.13.23 /opt/signal-cli
+# Example for version 0.14.2
+wget https://github.com/AsamK/signal-cli/releases/download/v0.14.2/signal-cli-0.14.2.tar.gz
+tar xf signal-cli-0.14.2.tar.gz
+sudo mv signal-cli-0.14.2 /opt/signal-cli
 sudo ln -s /opt/signal-cli/bin/signal-cli /usr/local/bin/signal-cli
 ```
 
@@ -103,7 +103,7 @@ fraggle:
       show_typing_indicator: true
       # Auto-installation settings (optional)
       auto_install: true              # Auto-download signal-cli if not found
-      signal_cli_version: "0.13.23"   # Version to download
+      signal_cli_version: "0.14.2"   # Version to download
 ```
 
 !!! tip "Automatic Installation"
@@ -119,7 +119,7 @@ fraggle:
 | `trigger`                     | Prefix to trigger bot in group chats           | `@fraggle`                 |
 | `signal_cli_path`             | Path to signal-cli (null = use PATH or auto-install) | `null`                |
 | `auto_install`                | Automatically download signal-cli if not found | `true`                     |
-| `signal_cli_version`          | Version of signal-cli to auto-install          | `0.13.23`                  |
+| `signal_cli_version`          | Version of signal-cli to auto-install          | `0.14.2`                  |
 | `respond_to_direct_messages`  | Respond to DMs without trigger                 | `true`                     |
 | `show_typing_indicator`       | Show typing indicator while processing         | `true`                     |
 

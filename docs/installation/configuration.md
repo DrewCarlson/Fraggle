@@ -43,7 +43,7 @@ fraggle:
       trigger: "@fraggle"             # Prefix to trigger bot in groups
       signal_cli_path: null           # Path to signal-cli (null = auto-detect)
       auto_install: true              # Auto-download signal-cli if not found
-      signal_cli_version: "0.13.23"   # Version to auto-install
+      signal_cli_version: "0.14.2"   # Version to auto-install
       respond_to_direct_messages: true
       show_typing_indicator: true
 
@@ -136,7 +136,7 @@ Chat platform integrations. Currently supports Signal.
 | `trigger`                    | Prefix to trigger bot in group chats    | `@fraggle`                 |
 | `signal_cli_path`            | Path to signal-cli (null = auto-detect) | `null`                     |
 | `auto_install`               | Auto-download signal-cli if not found   | `true`                     |
-| `signal_cli_version`         | Version of signal-cli to auto-install   | `0.13.23`                  |
+| `signal_cli_version`         | Version of signal-cli to auto-install   | `0.14.2`                  |
 | `respond_to_direct_messages` | Respond to DMs without trigger          | `true`                     |
 | `show_typing_indicator`      | Show typing indicator while processing  | `true`                     |
 

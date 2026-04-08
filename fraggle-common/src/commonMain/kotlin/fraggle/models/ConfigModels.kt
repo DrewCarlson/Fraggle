@@ -121,7 +121,7 @@ data class SignalBridgeConfig(
 
     @SerialName("signal_cli_version")
     @Documented(name = "Signal CLI Version", description = "Version of signal-cli to auto-install")
-    val signalCliVersion: String = "0.13.23",
+    val signalCliVersion: String = "0.14.2",
 
     @SerialName("respond_to_direct_messages")
     @Documented(name = "Respond to DMs", description = "Whether to respond to direct messages without a trigger")

@@ -39,7 +39,7 @@ data class SignalConfig(
     /**
      * Version of signal-cli to auto-install.
      */
-    val signalCliVersion: String = "0.13.23",
+    val signalCliVersion: String = "0.14.2",
 
     /**
      * Base directory for app installations (e.g., data/apps).

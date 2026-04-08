@@ -23,7 +23,7 @@ class SignalCliInstaller(
     private val logger = LoggerFactory.getLogger(SignalCliInstaller::class.java)
 
     companion object {
-        const val DEFAULT_VERSION = "0.13.23"
+        const val DEFAULT_VERSION = "0.14.2"
         private const val GITHUB_RELEASES_URL = "https://github.com/AsamK/signal-cli/releases/download"
 
         /**

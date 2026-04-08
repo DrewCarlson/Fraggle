@@ -20,7 +20,7 @@ class SignalCliInstallerTest {
 
     @BeforeEach
     fun setup() {
-        installer = SignalCliInstaller(tempDir, "0.13.23")
+        installer = SignalCliInstaller(tempDir, "0.14.2")
     }
 
     @Nested
@@ -30,14 +30,14 @@ class SignalCliInstallerTest {
         fun `installDir includes version in path`() {
             val installDir = installer.installDir
 
-            assertTrue(installDir.toString().contains("signal-cli-0.13.23"))
-            assertEquals(tempDir.resolve("signal-cli-0.13.23"), installDir)
+            assertTrue(installDir.toString().contains("signal-cli-0.14.2"))
+            assertEquals(tempDir.resolve("signal-cli-0.14.2"), installDir)
         }
 
         @Test
         fun `different versions have different install directories`() {
             val installer1 = SignalCliInstaller(tempDir, "0.13.22")
-            val installer2 = SignalCliInstaller(tempDir, "0.13.23")
+            val installer2 = SignalCliInstaller(tempDir, "0.14.2")
 
             assertTrue(installer1.installDir != installer2.installDir)
         }
@@ -101,7 +101,7 @@ class SignalCliInstallerTest {
 
             // Simulate an installed Java version
             val installDir = installer.installDir
-            val binDir = installDir.resolve("signal-cli-0.13.23").resolve("bin")
+            val binDir = installDir.resolve("signal-cli-0.14.2").resolve("bin")
             binDir.createDirectories()
             val scriptPath = binDir.resolve("signal-cli")
             scriptPath.writeText("#!/bin/sh\necho test")
@@ -157,7 +157,7 @@ class SignalCliInstallerTest {
 
         @Test
         fun `DEFAULT_VERSION is set`() {
-            assertEquals("0.13.23", SignalCliInstaller.DEFAULT_VERSION)
+            assertEquals("0.14.2", SignalCliInstaller.DEFAULT_VERSION)
         }
     }
 }
