@@ -325,6 +325,18 @@ enum class SupervisionMode {
 data class AgentConfig(
     @Documented(name = "Temperature", description = "Sampling temperature for LLM responses (0.0-2.0)")
     val temperature: Double = 0.7,
+    @SerialName("top_p")
+    @Documented(name = "Top P", description = "Nucleus sampling cutoff (0.0-1.0). Use instead of temperature, not both")
+    val topP: Double? = null,
+    @SerialName("top_k")
+    @Documented(name = "Top K", description = "Limits sampling to the top K most likely tokens")
+    val topK: Int? = null,
+    @SerialName("min_p")
+    @Documented(name = "Min P", description = "Minimum probability threshold for token sampling (0.0-1.0)")
+    val minP: Double? = null,
+    @SerialName("repeat_penalty")
+    @Documented(name = "Repeat Penalty", description = "Penalty for repeated tokens (1.0 = no penalty)")
+    val repeatPenalty: Double? = null,
     @SerialName("max_tokens")
     @Documented(name = "Max Tokens", description = "Maximum number of tokens in LLM responses")
     val maxTokens: Long = 4096,

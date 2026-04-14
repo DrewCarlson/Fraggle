@@ -29,6 +29,8 @@ import ai.koog.prompt.message.Message
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonPrimitive
 import fraggle.chat.ChatPlatform
 import fraggle.chat.IncomingMessage
 import fraggle.chat.MessageContent
@@ -78,6 +80,23 @@ class FraggleAgent(
         },
         contextLength = config.maxTokens,
     )
+
+    /**
+     * Build OpenAI-compatible chat params from config, using additionalProperties
+     * for LM Studio-specific sampling params (top_k, min_p, repeat_penalty).
+     */
+    private val chatParams: OpenAIChatParams by lazy {
+        val extraProps = buildMap<String, JsonElement> {
+            config.topK?.let { put("top_k", JsonPrimitive(it)) }
+            config.minP?.let { put("min_p", JsonPrimitive(it)) }
+            config.repeatPenalty?.let { put("repeat_penalty", JsonPrimitive(it)) }
+        }
+        OpenAIChatParams(
+            temperature = if (config.topP == null) config.temperature else null,
+            topP = config.topP,
+            additionalProperties = extraProps.ifEmpty { null },
+        )
+    }
 
     private val agentService = AIAgentService(
         promptExecutor = promptExecutor,
@@ -133,7 +152,7 @@ class FraggleAgent(
             )
             val imageAttachments = if (config.vision) message.imageAttachments else emptyList()
             val userInput = buildKoogInput(message)
-            val agentPrompt = prompt(message.id) {
+            val agentPrompt = prompt(message.id, chatParams) {
                 system(systemPrompt)
 
                 compressed.messages.forEach { contextMessage ->
@@ -635,6 +654,10 @@ private fun compressingSingleRunStrategy() = strategy<String, String>("compressi
 data class AgentConfig(
     val model: String = "",
     val temperature: Double = 0.7,
+    val topP: Double? = null,
+    val topK: Int? = null,
+    val minP: Double? = null,
+    val repeatPenalty: Double? = null,
     val maxTokens: Long = 4096,
     val maxIterations: Int = 10,
     val maxHistoryMessages: Int = 20,

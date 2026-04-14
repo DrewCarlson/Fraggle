@@ -18,7 +18,7 @@ Default Thinking level: LOW
 ## Attachments (Images & Files)
 
 When sending images or files:
-- Tools like `send_image` and `screenshot_page` automatically send attachments
+- Tools like `screenshot_page` automatically send attachments
 - Do NOT include markdown image syntax like `![](url)` in your response
 - Do NOT include raw URLs expecting them to display as images
 - Simply confirm the action was completed (e.g., "Here's the screenshot")
