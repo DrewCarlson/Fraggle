@@ -1,5 +1,6 @@
 package fraggle.agent.loop
 
+import fraggle.agent.event.StreamDelta
 import fraggle.agent.message.AgentMessage
 
 /**
@@ -20,6 +21,24 @@ fun interface LlmBridge {
         systemPrompt: String,
         messages: List<AgentMessage>,
         tools: List<ToolDefinition>,
+    ): AgentMessage.Assistant
+}
+
+/**
+ * Extended bridge that supports streaming responses.
+ * When the loop detects a [StreamingLlmBridge], it emits [AgentEvent.MessageUpdate]
+ * deltas as chunks arrive.
+ */
+interface StreamingLlmBridge : LlmBridge {
+    /**
+     * Stream a response from the LLM, invoking [onDelta] for each chunk.
+     * Returns the final assembled [AgentMessage.Assistant].
+     */
+    suspend fun callStreaming(
+        systemPrompt: String,
+        messages: List<AgentMessage>,
+        tools: List<ToolDefinition>,
+        onDelta: suspend (StreamDelta, AgentMessage.Assistant) -> Unit,
     ): AgentMessage.Assistant
 }
 
