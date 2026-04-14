@@ -41,6 +41,7 @@ dependencies {
 
     // Logging
     implementation(libs.logback.classic)
+    testImplementation(ktorLibs.client.logging)
 
     // Testing
     testImplementation(libs.kotlin.test.junit5)
