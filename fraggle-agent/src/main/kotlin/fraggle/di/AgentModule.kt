@@ -130,6 +130,10 @@ interface AgentModule {
             return RuntimeAgentConfig(
                 model = providerConfig.model,
                 temperature = agentConfig.temperature,
+                topP = agentConfig.topP,
+                topK = agentConfig.topK,
+                minP = agentConfig.minP,
+                repeatPenalty = agentConfig.repeatPenalty,
                 maxTokens = agentConfig.maxTokens,
                 maxIterations = agentConfig.maxIterations,
                 maxHistoryMessages = agentConfig.maxHistoryMessages,

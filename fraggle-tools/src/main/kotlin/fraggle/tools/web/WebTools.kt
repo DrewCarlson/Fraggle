@@ -21,8 +21,7 @@ class FetchWebpageTool(
     description = buildString {
         append("Fetch content from a webpage URL. ")
         if (playwrightFetcher != null) {
-            append("Uses a real browser to render JavaScript, making it ideal for modern websites ")
-            append("that use React, Vue, Angular, or other JavaScript frameworks. ")
+            append("Uses a real browser to render JavaScript, for interacting with dynamic web pages.")
         }
         append("Returns the page content as readable text.\n\n")
         append("USE THIS TOOL FOR:\n")
@@ -31,7 +30,7 @@ class FetchWebpageTool(
         append("- Any HTML webpage you need to read or extract information from\n\n")
         append("DO NOT USE FOR:\n")
         append("- JSON APIs (use fetch_api instead)\n")
-        append("- Downloading images (use send_image instead)\n")
+        append("- Downloading images\n")
         append("- Raw data files or non-HTML content")
     },
 ) {
@@ -41,6 +40,8 @@ class FetchWebpageTool(
     data class Args(
         @param:LLMDescription("The URL of the webpage to fetch")
         val url: String,
+        @param:LLMDescription("When true, extracts the text content, stripping HTML.")
+        val extractText: Boolean,
     )
 
     override suspend fun execute(args: Args): String {
@@ -57,7 +58,7 @@ class FetchWebpageTool(
 
                 val result = playwrightFetcher.fetch(
                     url = args.url,
-                    extractText = true,
+                    extractText = args.extractText,
                 )
 
                 val content = if (result.content.length > 50_000) {
@@ -118,7 +119,7 @@ USE THIS TOOL FOR:
 DO NOT USE FOR:
 - HTML webpages (use fetch_webpage instead)
 - Websites with JavaScript rendering
-- Downloading images (use send_image instead)""",
+- Downloading images""",
 ) {
     @Serializable
     data class Args(

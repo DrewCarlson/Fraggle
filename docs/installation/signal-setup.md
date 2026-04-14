@@ -168,7 +168,7 @@ Fraggle supports Signal's text formatting. The LLM can use markdown-like syntax 
 | `` `monospace` ``   | `Monospace`                   |
 
 !!! warning "Unsupported Formatting"
-    Markdown links (`[text](url)`) and images (`![alt](url)`) are NOT supported in Signal messages. Images must be sent as attachments using the `send_image` tool.
+    Markdown links (`[text](url)`) and images (`![alt](url)`) are NOT supported in Signal messages.
 
 ## Troubleshooting
 
