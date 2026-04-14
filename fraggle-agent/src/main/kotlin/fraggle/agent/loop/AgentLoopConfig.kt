@@ -1,5 +1,6 @@
 package fraggle.agent.loop
 
+import fraggle.agent.context.ContextTransform
 import fraggle.agent.message.AgentMessage
 
 /**
@@ -20,6 +21,9 @@ data class AgentLoopConfig(
 
     /** Optional hook called after each tool execution. */
     val afterToolCall: (suspend (AfterToolCallContext) -> AfterToolCallResult?)? = null,
+
+    /** Context transform applied to messages before each LLM call. */
+    val contextTransform: ContextTransform? = null,
 
     /** Supplier of steering messages (injected after current turn). */
     val getSteeringMessages: suspend () -> List<AgentMessage> = { emptyList() },

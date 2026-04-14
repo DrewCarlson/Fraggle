@@ -121,12 +121,11 @@ private suspend fun runLoop(
             // Get tool definitions
             val tools = config.toolExecutor?.getToolDefinitions() ?: emptyList()
 
-            // Call LLM
-            val assistantMsg = config.llmBridge.call(systemPrompt, messages.toList(), tools)
+            // Apply context transform and call LLM (streaming if available)
+            val llmMessages = config.contextTransform?.transform(messages.toList()) ?: messages.toList()
+            val assistantMsg = callLlm(config.llmBridge, systemPrompt, llmMessages, tools, emit)
             messages.add(assistantMsg)
             newMessages.add(assistantMsg)
-            emit(AgentEvent.MessageStart(assistantMsg))
-            emit(AgentEvent.MessageEnd(assistantMsg))
 
             if (assistantMsg.stopReason == StopReason.ERROR ||
                 assistantMsg.stopReason == StopReason.ABORTED
@@ -174,6 +173,37 @@ private suspend fun runLoop(
     }
 
     emit(AgentEvent.AgentEnd(newMessages.toList()))
+}
+
+/**
+ * Call the LLM, using streaming if the bridge supports it.
+ * Emits MessageStart/MessageUpdate/MessageEnd events appropriately.
+ */
+private suspend fun callLlm(
+    bridge: LlmBridge,
+    systemPrompt: String,
+    messages: List<AgentMessage>,
+    tools: List<ToolDefinition>,
+    emit: EventSink,
+): AgentMessage.Assistant {
+    return if (bridge is StreamingLlmBridge) {
+        // Streaming path: emit updates as deltas arrive
+        val emptyAssistant = AgentMessage.Assistant()
+        emit(AgentEvent.MessageStart(emptyAssistant))
+
+        val finalMsg = bridge.callStreaming(systemPrompt, messages, tools) { delta, partial ->
+            emit(AgentEvent.MessageUpdate(partial, delta))
+        }
+
+        emit(AgentEvent.MessageEnd(finalMsg))
+        finalMsg
+    } else {
+        // Non-streaming path: emit start/end around the full response
+        val assistantMsg = bridge.call(systemPrompt, messages, tools)
+        emit(AgentEvent.MessageStart(assistantMsg))
+        emit(AgentEvent.MessageEnd(assistantMsg))
+        assistantMsg
+    }
 }
 
 private suspend fun executeToolCalls(
