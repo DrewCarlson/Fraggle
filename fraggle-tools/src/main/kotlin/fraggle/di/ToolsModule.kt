@@ -11,39 +11,41 @@ import fraggle.chat.OutgoingMessage
 import fraggle.executor.ToolExecutor
 import fraggle.executor.supervision.ToolArgTypes
 import fraggle.tools.DefaultTools
+import fraggle.tools.scheduling.ScheduledTask
 import fraggle.tools.scheduling.TaskScheduler
 import fraggle.tools.web.PlaywrightFetcher
 import org.slf4j.LoggerFactory
 import fraggle.models.PlaywrightConfig as ModelsPlaywrightConfig
 import fraggle.tools.web.PlaywrightConfig as RuntimePlaywrightConfig
 
+private val logger = LoggerFactory.getLogger(ToolsModule::class.java)
+
 /**
  * Provides tool-related services.
  */
 @ContributesTo(AppScope::class)
 interface ToolsModule {
-    companion object {
-        private val logger = LoggerFactory.getLogger(ToolsModule::class.java)
 
-        @Provides
-        @SingleIn(AppScope::class)
-        fun providePlaywrightFetcher(config: ModelsPlaywrightConfig?): PlaywrightFetcher? {
-            if (config == null) return null
-            val fetcher = PlaywrightFetcher(
-                RuntimePlaywrightConfig(
-                    wsEndpoint = config.wsEndpoint,
-                    navigationTimeout = config.navigationTimeout,
-                    waitAfterLoad = config.waitAfterLoad,
-                    viewportWidth = config.viewportWidth,
-                    viewportHeight = config.viewportHeight,
-                    userAgent = config.userAgent,
-                )
+    @Provides
+    @SingleIn(AppScope::class)
+    fun providePlaywrightFetcher(config: ModelsPlaywrightConfig?): PlaywrightFetcher? {
+        if (config == null) return null
+        val fetcher = PlaywrightFetcher(
+            RuntimePlaywrightConfig(
+                wsEndpoint = config.wsEndpoint,
+                navigationTimeout = config.navigationTimeout,
+                waitAfterLoad = config.waitAfterLoad,
+                viewportWidth = config.viewportWidth,
+                viewportHeight = config.viewportHeight,
+                userAgent = config.userAgent,
             )
-            logger.info("Playwright fetcher configured: ${config.wsEndpoint}")
-            return fetcher
-        }
+        )
+        logger.info("Playwright fetcher configured: ${config.wsEndpoint}")
+        return fetcher
+    }
 
-        private fun createTaskCallback(bridgeManager: ChatBridgeManager): suspend (fraggle.tools.scheduling.ScheduledTask) -> Unit = { task ->
+    private fun createTaskCallback(bridgeManager: ChatBridgeManager): suspend (ScheduledTask) -> Unit =
+        { task ->
             logger.info("Task triggered: ${task.name} - ${task.action}")
             if (bridgeManager.hasConnectedBridge()) {
                 try {
@@ -57,29 +59,28 @@ interface ToolsModule {
             }
         }
 
-        @Provides
-        @SingleIn(AppScope::class)
-        fun provideTaskScheduler(
-            scope: CoroutineScope,
-            bridgeManager: ChatBridgeManager,
-        ): TaskScheduler = TaskScheduler(scope, createTaskCallback(bridgeManager))
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideTaskScheduler(
+        scope: CoroutineScope,
+        bridgeManager: ChatBridgeManager,
+    ): TaskScheduler = TaskScheduler(scope, createTaskCallback(bridgeManager))
 
-        @Provides
-        @SingleIn(AppScope::class)
-        fun provideToolArgTypes(): ToolArgTypes = DefaultTools.extractArgTypes()
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideToolArgTypes(): ToolArgTypes = DefaultTools.extractArgTypes()
 
-        @Provides
-        @SingleIn(AppScope::class)
-        fun provideFraggleToolRegistry(
-            toolExecutor: ToolExecutor,
-            @DefaultHttpClient httpClient: HttpClient,
-            taskScheduler: TaskScheduler,
-            playwrightFetcher: PlaywrightFetcher?,
-        ): FraggleToolRegistry = DefaultTools.createToolRegistry(
-            toolExecutor = toolExecutor,
-            httpClient = httpClient,
-            taskScheduler = taskScheduler,
-            playwrightFetcher = playwrightFetcher,
-        )
-    }
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideFraggleToolRegistry(
+        toolExecutor: ToolExecutor,
+        @DefaultHttpClient httpClient: HttpClient,
+        taskScheduler: TaskScheduler,
+        playwrightFetcher: PlaywrightFetcher?,
+    ): FraggleToolRegistry = DefaultTools.createToolRegistry(
+        toolExecutor = toolExecutor,
+        httpClient = httpClient,
+        taskScheduler = taskScheduler,
+        playwrightFetcher = playwrightFetcher,
+    )
 }

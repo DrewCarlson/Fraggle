@@ -28,48 +28,46 @@ import java.nio.file.Path
  */
 @ContributesTo(AppScope::class)
 interface ApiModule {
-    companion object {
-        @Provides
-        @SingleIn(AppScope::class)
-        fun provideFraggleServices(
-            memory: MemoryStore,
-            toolRegistry: FraggleToolRegistry,
-            bridges: ChatBridgeManager,
-            taskScheduler: TaskScheduler,
-            config: FraggleConfig,
-            configPath: Path,
-            initializerRegistry: BridgeInitializerRegistry,
-            scope: CoroutineScope,
-            @DefaultHttpClient httpClient: HttpClient,
-            chatHistoryStore: ChatHistoryStore,
-            discordBridge: DiscordBridge?,
-            eventBus: EventBus,
-            traceStore: TraceStore?,
-        ): FraggleServicesImpl = FraggleServicesImpl(
-            memory = memory,
-            toolRegistry = toolRegistry,
-            bridges = bridges,
-            taskScheduler = taskScheduler,
-            fraggleConfig = config,
-            configPath = configPath,
-            initializerRegistry = initializerRegistry,
-            scope = scope,
-            httpClient = httpClient,
-            chatHistoryStore = chatHistoryStore,
-            discordBridge = discordBridge,
-            eventBus = eventBus,
-            traceStore = traceStore,
-        )
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideFraggleServices(
+        memory: MemoryStore,
+        toolRegistry: FraggleToolRegistry,
+        bridges: ChatBridgeManager,
+        taskScheduler: TaskScheduler,
+        config: FraggleConfig,
+        configPath: Path,
+        initializerRegistry: BridgeInitializerRegistry,
+        scope: CoroutineScope,
+        @DefaultHttpClient httpClient: HttpClient,
+        chatHistoryStore: ChatHistoryStore,
+        discordBridge: DiscordBridge?,
+        eventBus: EventBus,
+        traceStore: TraceStore?,
+    ): FraggleServicesImpl = FraggleServicesImpl(
+        memory = memory,
+        toolRegistry = toolRegistry,
+        bridges = bridges,
+        taskScheduler = taskScheduler,
+        fraggleConfig = config,
+        configPath = configPath,
+        initializerRegistry = initializerRegistry,
+        scope = scope,
+        httpClient = httpClient,
+        chatHistoryStore = chatHistoryStore,
+        discordBridge = discordBridge,
+        eventBus = eventBus,
+        traceStore = traceStore,
+    )
 
-        @Provides
-        @SingleIn(AppScope::class)
-        fun provideApiServer(
-            apiConfig: ApiConfig,
-            dashboardConfig: DashboardConfig,
-            services: FraggleServicesImpl,
-        ): EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration>? {
-            if (!apiConfig.enabled) return null
-            return createApiServer(services, apiConfig, dashboardConfig)
-        }
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideApiServer(
+        apiConfig: ApiConfig,
+        dashboardConfig: DashboardConfig,
+        services: FraggleServicesImpl,
+    ): EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration>? {
+        if (!apiConfig.enabled) return null
+        return createApiServer(services, apiConfig, dashboardConfig)
     }
 }
