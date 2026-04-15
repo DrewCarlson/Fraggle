@@ -1,13 +1,15 @@
 # Architecture Overview
 
-Fraggle is built as a modular Kotlin application with clear separation of concerns. The agent loop and tool system are implemented directly in `fraggle-agent`, with `LMStudioProvider` handling OpenAI-compatible LLM traffic.
+Fraggle is built as a modular Kotlin application with clear separation of concerns. The generic agent loop and tool system live in `fraggle-agent-core`, the messenger assistant that drives them lives in `fraggle-assistant`, and `fraggle-llm` hosts `LMStudioProvider` for OpenAI-compatible LLM traffic.
 
 ## Module Structure
 
 ```
 Fraggle/
 ├── fraggle-cli/            # CLI application and entry point
-├── fraggle-agent/          # Core framework
+├── fraggle-assistant/      # Messenger assistant (FraggleAgent, memory, chat bridges, db)
+├── fraggle-agent-core/     # Generic agent runtime (loop, tools, executor, tracing)
+├── fraggle-llm/            # LLM provider (LMStudioProvider, ChatRequest/Response)
 ├── fraggle-signal/         # Signal messenger bridge
 ├── fraggle-discord/        # Discord bot bridge
 ├── fraggle-tools/          # Built-in tool implementations

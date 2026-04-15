@@ -57,7 +57,9 @@ Full documentation available at **[drewcarlson.github.io/Fraggle](https://drewca
 ```
 Fraggle/
 ├── fraggle-cli/            # CLI application
-├── fraggle-agent/          # Core agent framework (agent loop, tools, memory)
+├── fraggle-assistant/      # Messenger assistant (FraggleAgent, memory, chat bridges, db)
+├── fraggle-agent-core/     # Generic agent runtime (loop, tools, executor, tracing)
+├── fraggle-llm/            # LLM provider (LMStudioProvider, ChatRequest/Response)
 ├── fraggle-signal/         # Signal messenger bridge
 ├── fraggle-discord/        # Discord bot bridge
 ├── fraggle-tools/          # Built-in tool implementations

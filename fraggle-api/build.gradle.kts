@@ -14,7 +14,7 @@ dependencies {
     api(project(":fraggle-common"))
 
     // Fraggle agent module
-    implementation(project(":fraggle-agent"))
+    implementation(project(":fraggle-assistant"))
 
     // Ktor Server - expose core and netty via api for app module
     api(ktorLibs.server.core)

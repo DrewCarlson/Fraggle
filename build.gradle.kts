@@ -10,7 +10,7 @@ plugins {
 
 dependencies {
     kover(project(":fraggle-cli"))
-    kover(project(":fraggle-agent"))
+    kover(project(":fraggle-assistant"))
     kover(project(":fraggle-signal"))
     kover(project(":fraggle-discord"))
     kover(project(":fraggle-tools"))

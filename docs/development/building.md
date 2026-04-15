@@ -30,7 +30,7 @@ This compiles all modules and runs tests.
 
 ```bash
 # Core framework
-./gradlew :fraggle-agent:build
+./gradlew :fraggle-assistant:build
 
 # Signal integration
 ./gradlew :fraggle-signal:build

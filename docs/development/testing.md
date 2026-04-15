@@ -13,7 +13,7 @@ This guide covers running and writing tests for Fraggle.
 ### Specific Module
 
 ```bash
-./gradlew :fraggle-agent:test
+./gradlew :fraggle-assistant:test
 ./gradlew :fraggle-tools:test
 ./gradlew :fraggle-signal:test
 ```
@@ -21,14 +21,14 @@ This guide covers running and writing tests for Fraggle.
 ### Specific Test Class
 
 ```bash
-./gradlew :fraggle-agent:test --tests="*FileMemoryStoreTest"
+./gradlew :fraggle-assistant:test --tests="*FileMemoryStoreTest"
 ./gradlew :fraggle-tools:test --tests="*ToolsTest"
 ```
 
 ### Specific Test Method
 
 ```bash
-./gradlew :fraggle-agent:test --tests="*FileMemoryStoreTest.UpdateFactTests*"
+./gradlew :fraggle-assistant:test --tests="*FileMemoryStoreTest.UpdateFactTests*"
 ```
 
 ### With Detailed Output

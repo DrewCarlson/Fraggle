@@ -37,7 +37,7 @@ import fraggle.models.AgentConfig as ModelsAgentConfig
  * ToolSupervisor, LMStudioProvider, TraceStore) live in [AgentCoreModule].
  */
 @ContributesTo(AppScope::class)
-interface AgentModule {
+interface AssistantModule {
     @Provides
     @SingleIn(AppScope::class)
     fun provideMemoryStore(config: MemoryConfig): MemoryStore {

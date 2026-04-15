@@ -48,7 +48,9 @@ See the [Getting Started](installation/getting-started.md) guide for full setup 
 ```
 Fraggle/
 ├── fraggle-cli/            # CLI application entry point
-├── fraggle-agent/          # Core agent framework (agent loop, tools, memory)
+├── fraggle-assistant/      # Messenger assistant (FraggleAgent, memory, chat bridges, db)
+├── fraggle-agent-core/     # Generic agent runtime (loop, tools, executor, tracing)
+├── fraggle-llm/            # LLM provider (LMStudioProvider, ChatRequest/Response)
 ├── fraggle-signal/         # Signal messaging bridge
 ├── fraggle-discord/        # Discord bot bridge
 ├── fraggle-tools/          # Built-in tool implementations
