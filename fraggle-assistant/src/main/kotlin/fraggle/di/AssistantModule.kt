@@ -6,6 +6,7 @@ import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
 import fraggle.FraggleEnvironment
 import fraggle.agent.FraggleAgent
+import fraggle.agent.skill.SkillRegistry
 import fraggle.agent.loop.LlmBridge
 import fraggle.agent.loop.ProviderLlmBridge
 import fraggle.agent.loop.ToolCallExecutor
@@ -143,6 +144,7 @@ interface AssistantModule {
         memory: MemoryStore,
         config: RuntimeAgentConfig,
         promptManager: PromptManager,
+        skillRegistry: SkillRegistry,
         traceStore: TraceStore?,
         eventBus: EventBus,
     ): FraggleAgent = FraggleAgent(
@@ -152,6 +154,7 @@ interface AssistantModule {
         memory = memory,
         config = config,
         promptManager = promptManager,
+        skillRegistry = skillRegistry,
         traceStore = traceStore,
         eventBus = eventBus,
     )
