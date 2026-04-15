@@ -21,6 +21,7 @@ fun runCodingApp(
     agent: CodingAgent,
     options: CodingAgentOptions,
     header: HeaderInfo,
+    supervisionLabel: String,
     onExitRequest: () -> Unit,
     permissionHandler: TuiToolPermissionHandler? = null,
 ) {
@@ -29,6 +30,7 @@ fun runCodingApp(
             agent = agent,
             options = options,
             header = header,
+            supervisionLabel = supervisionLabel,
             onExitRequest = onExitRequest,
             permissionHandler = permissionHandler,
         )

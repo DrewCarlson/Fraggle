@@ -47,6 +47,7 @@ fun CodingApp(
     agent: CodingAgent,
     options: CodingAgentOptions,
     header: HeaderInfo,
+    supervisionLabel: String,
     onExitRequest: () -> Unit,
     permissionHandler: TuiToolPermissionHandler? = null,
 ) {
@@ -213,12 +214,17 @@ fun CodingApp(
         Header(header)
         MessageList(messages = messages.toList(), streamingMessage = streamingMessage)
 
+        pendingApproval?.let { approval ->
+            ApprovalOverlay(approval)
+        }
+
+        Editor(state = editor, enabled = !busy && pendingApproval == null)
+
         errorMessage?.let { msg ->
             Row {
                 Text("  ! error: ", color = Theme.error)
                 Text(msg, color = Theme.error)
             }
-            Text("", color = Theme.foreground)
         }
 
         notice?.let { lines ->
@@ -226,22 +232,15 @@ fun CodingApp(
                 for (line in lines) {
                     Row { Text("  $line", color = Theme.accent) }
                 }
-                Text("", color = Theme.foreground)
             }
         }
 
         if (confirmExit) {
             Row {
-                Text("  ⚠ press Esc again or Ctrl+C to exit", color = Theme.warning)
+                Text("  ⚠ press Esc or Ctrl+C again to exit", color = Theme.warning)
             }
-            Text("", color = Theme.foreground)
         }
 
-        pendingApproval?.let { approval ->
-            ApprovalOverlay(approval)
-        }
-
-        Editor(state = editor, enabled = !busy && pendingApproval == null)
         Footer(
             FooterInfo(
                 cwd = options.workDir,
@@ -249,6 +248,7 @@ fun CodingApp(
                 usedTokens = usage.usedTokens,
                 contextRatio = usage.ratio,
                 status = status,
+                supervisionLabel = supervisionLabel,
             ),
         )
     }
@@ -281,27 +281,32 @@ private fun handleKey(
     onApprove: () -> Unit,
     onDeny: () -> Unit,
 ): Boolean {
-    // 1. Approval overlay intercepts everything — user must answer Y/N or escape.
+    // 1. Approval overlay intercepts everything — user must answer Y/N,
+    //    Escape, or Ctrl+C (all three cancel the pending tool call).
     if (pending != null) {
         return when (event) {
             KeyEvent("y"), KeyEvent("Y") -> { onApprove(); true }
             KeyEvent("n"), KeyEvent("N") -> { onDeny(); true }
-            KeyEvent("Escape") -> { onDeny(); true }
+            KeyEvent("Escape"), KeyEvent("c", ctrl = true) -> { onDeny(); true }
             else -> true // eat the key so it doesn't bleed into the editor
         }
     }
 
-    // 2. Exit handling: Ctrl+C exits immediately; Escape is layered.
+    // 2. Exit handling: both Ctrl+C and Escape are layered — they abort a
+    //    running turn first, and otherwise require a double-press to quit.
     when (event) {
         KeyEvent("c", ctrl = true) -> {
-            onExit()
-            return true
+            when {
+                busy -> { onAbort(); return true }
+                !editor.isEmpty -> { onEditorChange(EditorState()); return true }
+                confirmExit -> { onExit(); return true }
+                else -> { onRequestExitConfirm(); return true }
+            }
         }
         KeyEvent("Escape") -> {
             when {
                 busy -> { onAbort(); return true }
                 confirmExit -> { onExit(); return true }
-                !editor.isEmpty -> { onEditorChange(EditorState()); return true }
                 else -> { onRequestExitConfirm(); return true }
             }
         }
@@ -352,8 +357,8 @@ private val HotkeysHelp: List<String> = listOf(
     "keys:",
     "  Enter         send message / run slash command",
     "  Shift+Enter   newline in editor",
-    "  Esc           abort running turn, clear editor, or confirm exit",
-    "  Ctrl+C        exit immediately",
+    "  Esc           abort running turn or confirm exit",
+    "  Ctrl+C        abort running turn, clear editor, deny pending tool call, or confirm exit",
     "  ←/→/↑/↓       move cursor   •   Home/End   line start/end",
     "  Backspace/Delete  edit buffer",
     "  Y / N         approve / deny pending tool call",

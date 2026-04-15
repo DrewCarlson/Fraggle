@@ -294,8 +294,8 @@ class CodeCommand : CliktCommand(name = "code") {
         val header = HeaderInfo(
             model = effectiveModel,
             contextFileCount = contextFiles.size,
-            supervisionLabel = effectiveSupervision.name.lowercase(),
         )
+        val supervisionLabel = effectiveSupervision.name.lowercase()
 
         // 13. Run the TUI. runCodingApp blocks until the composition exits.
         Runtime.getRuntime().addShutdownHook(
@@ -308,6 +308,7 @@ class CodeCommand : CliktCommand(name = "code") {
                 agent = agent,
                 options = options,
                 header = header,
+                supervisionLabel = supervisionLabel,
                 onExitRequest = {
                     // Blunt but reliable: Mosaic offers no composition-level
                     // exit handle, and throwing CancellationException from the

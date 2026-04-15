@@ -1,23 +1,32 @@
 package fraggle.coding.tui
 
 import androidx.compose.runtime.Composable
+import com.jakewharton.mosaic.LocalTerminalState
+import com.jakewharton.mosaic.layout.fillMaxWidth
+import com.jakewharton.mosaic.modifier.Modifier
+import com.jakewharton.mosaic.ui.Color
 import com.jakewharton.mosaic.ui.Column
 import com.jakewharton.mosaic.ui.Row
+import com.jakewharton.mosaic.ui.Spacer
 import com.jakewharton.mosaic.ui.Text
 import java.nio.file.Path
 
 /**
- * Bottom-of-screen status bar. Shows cwd, session id, token usage, and
- * status (idle/busy/error). Single line plus an optional spacer above.
+ * Bottom-of-screen status bar.
+ *
+ * Row 1 (full width): cwd on the left, session id / tokens / context ratio /
+ * status pushed to the right edge.
+ * Row 2 (left only): supervision mode.
  */
 @Composable
 fun Footer(info: FooterInfo) {
+    val terminalColumns = LocalTerminalState.current.size.columns.coerceAtLeast(10)
     Column {
-        Text("─────────────────────────────────────────────────────────", color = Theme.divider)
-        Row {
+        Text("─".repeat(terminalColumns), color = Theme.divider)
+        Row(modifier = Modifier.fillMaxWidth()) {
             Text(" ", color = Theme.dim)
             Text(shortPath(info.cwd), color = Theme.dim)
-            Text("  ", color = Theme.veryDim)
+            Spacer(modifier = Modifier.weight(1f))
             Text(info.sessionId.take(8), color = Theme.dim)
             Text("  ", color = Theme.veryDim)
             Text("${info.usedTokens} tok", color = Theme.dim)
@@ -33,6 +42,13 @@ fun Footer(info: FooterInfo) {
             }
             Text("  ", color = Theme.veryDim)
             Text(info.status.label, color = info.status.color)
+            Text(" ", color = Theme.dim)
+        }
+        if (info.supervisionLabel.isNotBlank()) {
+            Row {
+                Text(" supervision: ", color = Theme.veryDim)
+                Text(info.supervisionLabel, color = Theme.dim)
+            }
         }
     }
 }
@@ -44,9 +60,10 @@ data class FooterInfo(
     /** Fraction of the context window in use; 0.0 when unknown. */
     val contextRatio: Double,
     val status: FooterStatus,
+    val supervisionLabel: String = "",
 )
 
-enum class FooterStatus(val label: String, val color: com.jakewharton.mosaic.ui.Color) {
+enum class FooterStatus(val label: String, val color: Color) {
     IDLE("idle", Theme.dim),
     BUSY("thinking...", Theme.accent),
     COMPACTING("compacting...", Theme.warning),

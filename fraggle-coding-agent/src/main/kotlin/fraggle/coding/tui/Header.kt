@@ -25,10 +25,6 @@ fun Header(info: HeaderInfo) {
                 Text("  •  ", color = Theme.veryDim)
                 Text(info.model, color = Theme.dim)
             }
-            if (info.supervisionLabel.isNotBlank()) {
-                Text("  •  ", color = Theme.veryDim)
-                Text("supervision: ${info.supervisionLabel}", color = Theme.dim)
-            }
         }
         Text("", color = Theme.foreground) // spacer
     }
@@ -41,5 +37,4 @@ fun Header(info: HeaderInfo) {
 data class HeaderInfo(
     val model: String,
     val contextFileCount: Int,
-    val supervisionLabel: String,
 )

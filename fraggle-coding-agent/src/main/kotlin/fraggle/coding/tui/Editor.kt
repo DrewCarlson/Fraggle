@@ -40,7 +40,7 @@ fun Editor(
     val innerWidth = (terminalColumns - 3).coerceAtLeast(1)
 
     Column {
-        Text("─".repeat(terminalColumns.coerceAtMost(80)), color = Theme.divider)
+        Text("─".repeat(terminalColumns), color = Theme.divider)
         if (state.isEmpty) {
             Row {
                 Text("> ", color = promptColor)
