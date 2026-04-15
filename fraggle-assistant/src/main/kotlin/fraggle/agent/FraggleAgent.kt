@@ -3,6 +3,8 @@ package fraggle.agent
 import fraggle.agent.loop.AgentOptions
 import fraggle.agent.message.AgentMessage
 import fraggle.agent.message.ContentPart.Text
+import fraggle.agent.skill.SkillPromptFormatter
+import fraggle.agent.skill.SkillRegistry
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -33,6 +35,7 @@ class FraggleAgent(
     private val memory: MemoryStore,
     private val config: AgentConfig,
     private val promptManager: PromptManager,
+    private val skillRegistry: SkillRegistry,
     private val traceStore: fraggle.tracing.TraceStore?,
     private val eventBus: fraggle.events.EventBus?,
 ) : Closeable {
@@ -224,6 +227,12 @@ class FraggleAgent(
     ): String = buildString {
         appendLine(promptManager.buildFullPrompt())
         appendLine()
+
+        val skillsBlock = SkillPromptFormatter.format(skillRegistry.visibleToModel())
+        if (skillsBlock.isNotEmpty()) {
+            appendLine(skillsBlock)
+            appendLine()
+        }
 
         // Inject current host timestamp so the agent always knows the current date/time
         val now = Clock.System.now()
