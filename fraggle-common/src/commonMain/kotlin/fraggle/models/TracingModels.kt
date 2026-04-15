@@ -1,6 +1,7 @@
 package fraggle.models
 
 import kotlinx.serialization.Serializable
+import kotlin.time.Duration
 import kotlin.time.Instant
 
 @Serializable
@@ -27,6 +28,6 @@ data class TraceEventRecord(
     val eventType: String,
     val phase: String,
     val data: Map<String, String> = emptyMap(),
-    val durationMs: Long? = null,
+    val duration: Duration? = null,
     val detail: String? = null,
 )

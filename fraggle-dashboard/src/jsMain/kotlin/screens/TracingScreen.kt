@@ -183,9 +183,9 @@ private fun SessionDetailView(
         apiClient.get("tracing/sessions/$sessionId").body<TraceSessionDetail>()
     }
 
-    // LLM Detail Dialog
+    // Detail dialog — dispatches by event type
     detailEvent?.let { event ->
-        LlmDetailDialog(event = event, onClose = { detailEvent = null })
+        EventDetailDialog(event = event, onClose = { detailEvent = null })
     }
 
     Section({
@@ -280,7 +280,7 @@ private fun SessionDetailView(
                                         Th({ classes(DashboardStyles.tableHeader) }) { Text("Type") }
                                         Th({ classes(DashboardStyles.tableHeader) }) { Text("Phase") }
                                         Th({ classes(DashboardStyles.tableHeader) }) { Text("Details") }
-                                        Th({ classes(DashboardStyles.tableHeader) }) { Text("Time") }
+                                        Th({ classes(DashboardStyles.tableHeader) }) { Text("Duration") }
                                         Th({ classes(DashboardStyles.tableHeader) }) { Text("Actions") }
                                     }
                                 }
@@ -299,10 +299,10 @@ private fun SessionDetailView(
                                                 EventDataSummary(event)
                                             }
                                             Td({ classes(DashboardStyles.tableCell) }) {
-                                                Text(formatTraceInstant(event.timestamp))
+                                                DurationCell(event)
                                             }
                                             Td({ classes(DashboardStyles.tableCell) }) {
-                                                if (event.eventType == "llm_call" && event.detail != null) {
+                                                if (event.detail != null || event.data.isNotEmpty()) {
                                                     Button({
                                                         classes(DashboardStyles.button, DashboardStyles.buttonSmall, DashboardStyles.buttonOutline)
                                                         onClick { detailEvent = event }
@@ -355,8 +355,10 @@ private fun SessionStatusBadge(status: String) {
 private fun EventTypeBadge(eventType: String) {
     val (icon, color) = when (eventType) {
         "agent" -> "bi-robot" to "#6366f1"
+        "turn" -> "bi-arrow-repeat" to "#06b6d4"
+        "message" -> "bi-chat-left-text" to "#8b5cf6"
+        "tool", "tool_call" -> "bi-tools" to "#f59e0b"
         "llm_call" -> "bi-cpu" to "#8b5cf6"
-        "tool_call" -> "bi-tools" to "#f59e0b"
         "node" -> "bi-diagram-3" to "#71717a"
         "strategy" -> "bi-signpost-split" to "#06b6d4"
         "llm_streaming" -> "bi-broadcast" to "#8b5cf6"
@@ -388,8 +390,8 @@ private fun EventTypeBadge(eventType: String) {
 @Composable
 private fun PhaseBadge(phase: String) {
     val color = when (phase) {
-        "starting" -> "#06b6d4"
-        "finished" -> "#22c55e"
+        "start", "starting" -> "#06b6d4"
+        "end", "finished" -> "#22c55e"
         "error", "validation_error" -> "#ef4444"
         "closing" -> "#71717a"
         else -> "#71717a"
@@ -527,11 +529,22 @@ private fun TraceStatBox(label: String, value: String, icon: String) {
 }
 
 @Composable
-private fun LlmDetailDialog(event: TraceEventRecord, onClose: () -> Unit) {
-    val json = try {
-        Json.parseToJsonElement(event.detail!!).jsonObject
-    } catch (_: Exception) {
-        null
+private fun EventDetailDialog(event: TraceEventRecord, onClose: () -> Unit) {
+    val json = event.detail?.let {
+        try {
+            Json.parseToJsonElement(it).jsonObject
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    val title = when (event.eventType) {
+        "agent" -> "Agent"
+        "turn" -> "Turn"
+        "message" -> "Message"
+        "tool", "tool_call" -> "Tool"
+        "llm_call" -> if (event.phase == "starting") "LLM Request" else "LLM Response"
+        else -> event.eventType.replace("_", " ").replaceFirstChar { it.uppercase() }
     }
 
     Div({
@@ -565,8 +578,9 @@ private fun LlmDetailDialog(event: TraceEventRecord, onClose: () -> Unit) {
                     }
                 }) {
                     H3({ classes(DashboardStyles.modalTitle) }) {
-                        Text(if (event.phase == "starting") "LLM Request" else "LLM Response")
+                        Text(title)
                     }
+                    EventTypeBadge(event.eventType)
                     PhaseBadge(event.phase)
                 }
                 Button({
@@ -586,24 +600,290 @@ private fun LlmDetailDialog(event: TraceEventRecord, onClose: () -> Unit) {
                     property("min-height", "0")
                 }
             }) {
-                if (json == null) {
-                    Span({
-                        style {
-                            color(Color("#71717a"))
-                            fontSize(13.px)
-                        }
-                    }) {
-                        Text("Unable to parse detail data.")
+                when {
+                    event.eventType == "tool" || event.eventType == "tool_call" -> ToolEventContent(event, json)
+                    event.eventType == "message" -> MessageEventContent(event, json)
+                    event.eventType == "turn" -> TurnEventContent(event, json)
+                    event.eventType == "agent" -> AgentEventContent(event, json)
+                    event.eventType == "llm_call" && json != null -> {
+                        if (event.phase == "starting") LlmRequestContent(json) else LlmResponseContent(json)
                     }
-                } else if (event.phase == "starting") {
-                    LlmRequestContent(json)
-                } else {
-                    LlmResponseContent(json)
+                    json != null -> RawJsonContent(json)
+                    else -> DataMapContent(event.data)
                 }
             }
         }
     }
 }
+
+@Composable
+private fun ToolEventContent(event: TraceEventRecord, json: JsonObject?) {
+    val isEnd = event.phase == "end" || event.phase == "finished"
+    DetailSection("Tool", "bi-tools") {
+        DetailGrid {
+            val toolName = json?.get("tool_name")?.jsonPrimitive?.contentOrNull
+                ?: event.data["tool_name"] ?: "-"
+            DetailGridItem("Name", toolName)
+            val callId = json?.get("tool_call_id")?.jsonPrimitive?.contentOrNull
+                ?: event.data["tool_call_id"] ?: "-"
+            DetailGridItem("Call ID", callId)
+            if (isEnd) {
+                val isError = json?.get("is_error")?.jsonPrimitive?.booleanOrNull
+                    ?: event.data["is_error"]?.toBooleanStrictOrNull()
+                    ?: false
+                DetailGridItem("Error", if (isError) "yes" else "no")
+            }
+        }
+    }
+
+    json?.get("arguments")?.let { args ->
+        DetailSection("Arguments", "bi-sliders") {
+            JsonBlock(args)
+        }
+    }
+
+    json?.get("result")?.let { result ->
+        DetailSection("Result", "bi-reply") {
+            JsonBlock(result)
+        }
+    }
+}
+
+@Composable
+private fun MessageEventContent(event: TraceEventRecord, json: JsonObject?) {
+    val role = json?.get("type")?.jsonPrimitive?.contentOrNull
+        ?: event.data["type"] ?: "unknown"
+
+    DetailSection("Message", "bi-chat-left-text") {
+        DetailGrid {
+            DetailGridItem("Type", role)
+            json?.get("tool_call_id")?.jsonPrimitive?.contentOrNull?.let {
+                DetailGridItem("Tool Call ID", it)
+            }
+            json?.get("is_error")?.jsonPrimitive?.booleanOrNull?.let {
+                DetailGridItem("Error", if (it) "yes" else "no")
+            }
+        }
+    }
+
+    json?.get("usage")?.jsonObject?.let { usage ->
+        DetailSection("Token Usage", "bi-speedometer2") {
+            DetailGrid {
+                usage["prompt_tokens"]?.jsonPrimitive?.intOrNull?.let {
+                    DetailGridItem("Prompt", it.toString())
+                }
+                usage["completion_tokens"]?.jsonPrimitive?.intOrNull?.let {
+                    DetailGridItem("Completion", it.toString())
+                }
+                usage["total_tokens"]?.jsonPrimitive?.intOrNull?.let {
+                    DetailGridItem("Total", it.toString())
+                }
+            }
+        }
+    }
+
+    val content = json?.get("content")?.jsonPrimitive?.contentOrNull
+    if (!content.isNullOrBlank()) {
+        DetailSection("Content", "bi-file-text") {
+            Pre({
+                style {
+                    backgroundColor(Color("#0f0f1a"))
+                    padding(12.px)
+                    borderRadius(8.px)
+                    fontSize(12.px)
+                    color(Color("#e4e4e7"))
+                    property("white-space", "pre-wrap")
+                    property("word-break", "break-word")
+                    property("max-height", "400px")
+                    property("overflow-y", "auto")
+                    property("margin", "0")
+                }
+            }) {
+                Text(content)
+            }
+        }
+    }
+
+    json?.get("tool_calls")?.jsonArray?.let { calls ->
+        if (calls.isNotEmpty()) {
+            DetailSection("Tool Calls (${calls.size})", "bi-tools") {
+                Div({
+                    style {
+                        display(DisplayStyle.Flex)
+                        flexDirection(FlexDirection.Column)
+                        gap(8.px)
+                    }
+                }) {
+                    calls.forEach { call ->
+                        val obj = call.jsonObject
+                        val name = obj["name"]?.jsonPrimitive?.contentOrNull ?: "unknown"
+                        val callId = obj["id"]?.jsonPrimitive?.contentOrNull
+                        Div({
+                            style {
+                                backgroundColor(Color("#0f0f1a"))
+                                borderRadius(8.px)
+                                padding(12.px)
+                            }
+                        }) {
+                            Div({
+                                style {
+                                    display(DisplayStyle.Flex)
+                                    alignItems(AlignItems.Center)
+                                    gap(8.px)
+                                    marginBottom(8.px)
+                                }
+                            }) {
+                                Span({
+                                    style {
+                                        fontSize(12.px)
+                                        fontWeight("600")
+                                        color(Color("#f59e0b"))
+                                    }
+                                }) {
+                                    Text(name)
+                                }
+                                callId?.let {
+                                    Span({
+                                        style {
+                                            fontSize(11.px)
+                                            color(Color("#71717a"))
+                                        }
+                                    }) {
+                                        Text(it)
+                                    }
+                                }
+                            }
+                            obj["arguments"]?.let { args -> JsonBlock(args) }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (json == null) {
+        DataMapContent(event.data)
+    }
+}
+
+@Composable
+private fun TurnEventContent(event: TraceEventRecord, json: JsonObject?) {
+    DetailSection("Turn", "bi-arrow-repeat") {
+        DetailGrid {
+            val turn = json?.get("turn")?.jsonPrimitive?.intOrNull?.toString()
+                ?: event.data["turn"] ?: "-"
+            DetailGridItem("Number", turn)
+            val msgType = json?.get("message_type")?.jsonPrimitive?.contentOrNull
+                ?: event.data["type"]
+            if (msgType != null) DetailGridItem("Message Type", msgType)
+            val toolResults = json?.get("tool_results_count")?.jsonPrimitive?.intOrNull?.toString()
+                ?: event.data["tool_results"]
+            if (toolResults != null) DetailGridItem("Tool Results", toolResults)
+        }
+    }
+
+    json?.get("message")?.jsonObject?.let { msg ->
+        DetailSection("Final Message", "bi-chat-left-text") {
+            val content = msg["content"]?.jsonPrimitive?.contentOrNull
+            if (!content.isNullOrBlank()) {
+                Pre({
+                    style {
+                        backgroundColor(Color("#0f0f1a"))
+                        padding(12.px)
+                        borderRadius(8.px)
+                        fontSize(12.px)
+                        color(Color("#e4e4e7"))
+                        property("white-space", "pre-wrap")
+                        property("word-break", "break-word")
+                        property("max-height", "400px")
+                        property("overflow-y", "auto")
+                        property("margin", "0")
+                    }
+                }) {
+                    Text(content)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AgentEventContent(event: TraceEventRecord, json: JsonObject?) {
+    DetailSection("Agent", "bi-robot") {
+        if (event.data.isNotEmpty()) {
+            DetailGrid {
+                for ((k, v) in event.data) DetailGridItem(prettyKey(k), v)
+            }
+        } else {
+            Span({
+                style {
+                    fontSize(12.px)
+                    color(Color("#71717a"))
+                }
+            }) {
+                Text("No additional data for this event.")
+            }
+        }
+    }
+    if (json != null) {
+        DetailSection("Raw", "bi-code") {
+            JsonBlock(json)
+        }
+    }
+}
+
+@Composable
+private fun RawJsonContent(json: JsonObject) {
+    DetailSection("Detail", "bi-code") {
+        JsonBlock(json)
+    }
+}
+
+@Composable
+private fun DataMapContent(data: Map<String, String>) {
+    if (data.isEmpty()) {
+        Span({
+            style {
+                fontSize(13.px)
+                color(Color("#71717a"))
+            }
+        }) {
+            Text("No data captured for this event.")
+        }
+        return
+    }
+    DetailSection("Data", "bi-list-task") {
+        DetailGrid {
+            for ((k, v) in data) DetailGridItem(prettyKey(k), v)
+        }
+    }
+}
+
+@Composable
+private fun JsonBlock(element: JsonElement) {
+    val pretty = remember(element) { prettyJson.encodeToString(JsonElement.serializer(), element) }
+    Pre({
+        style {
+            backgroundColor(Color("#0f0f1a"))
+            padding(12.px)
+            borderRadius(8.px)
+            fontSize(12.px)
+            color(Color("#e4e4e7"))
+            property("white-space", "pre-wrap")
+            property("word-break", "break-word")
+            property("max-height", "400px")
+            property("overflow-y", "auto")
+            property("margin", "0")
+        }
+    }) {
+        Text(pretty)
+    }
+}
+
+private fun prettyKey(key: String): String =
+    key.replace("_", " ").split(" ").joinToString(" ") { word ->
+        word.replaceFirstChar { it.uppercase() }
+    }
 
 @Composable
 private fun LlmRequestContent(json: JsonObject) {
@@ -1005,6 +1285,33 @@ private fun statusIcon(status: String): String = when (status) {
     "completed" -> "bi-check-circle"
     "error" -> "bi-x-circle"
     else -> "bi-question-circle"
+}
+
+@Composable
+private fun DurationCell(event: TraceEventRecord) {
+    val duration = event.durationMs
+    val text = when {
+        duration != null -> formatDurationMs(duration)
+        event.phase == "start" || event.phase == "starting" -> "—"
+        else -> "—"
+    }
+    val color = when {
+        duration == null -> "#71717a"
+        duration < 100 -> "#22c55e"
+        duration < 1_000 -> "#06b6d4"
+        duration < 10_000 -> "#f59e0b"
+        else -> "#ef4444"
+    }
+    Span({
+        style {
+            fontSize(12.px)
+            fontWeight("500")
+            property("font-variant-numeric", "tabular-nums")
+            color(Color(color))
+        }
+    }) {
+        Text(text)
+    }
 }
 
 private fun formatTraceInstant(instant: Instant): String {
