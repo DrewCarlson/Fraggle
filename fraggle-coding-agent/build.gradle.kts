@@ -4,15 +4,10 @@ plugins {
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.kover)
     alias(libs.plugins.shadow)
-    application
 }
 
 kotlin {
     jvmToolchain(21)
-}
-
-application {
-    mainClass = "fraggle.coding.spike.MosaicSpikeKt"
 }
 
 dependencies {
