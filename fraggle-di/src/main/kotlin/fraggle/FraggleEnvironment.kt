@@ -36,6 +36,28 @@ object FraggleEnvironment {
     val logsDir: Path get() = root.resolve("logs")
 
     /**
+     * Coding-agent directory: {FRAGGLE_ROOT}/coding
+     *
+     * Holds settings.json, AGENTS.md (global), SYSTEM.md override, prompt
+     * templates, and `sessions/<project-hash>/<uuid>.jsonl` session files.
+     * The directory is created on demand by whichever coding-agent
+     * component first needs it.
+     */
+    val codingDir: Path get() = root.resolve("coding")
+
+    /** Global coding-agent settings file: {FRAGGLE_ROOT}/coding/settings.json */
+    val codingSettingsFile: Path get() = codingDir.resolve("settings.json")
+
+    /** Global coding-agent AGENTS.md file: {FRAGGLE_ROOT}/coding/AGENTS.md */
+    val codingGlobalAgentsFile: Path get() = codingDir.resolve("AGENTS.md")
+
+    /** Global coding-agent session storage: {FRAGGLE_ROOT}/coding/sessions */
+    val codingSessionsDir: Path get() = codingDir.resolve("sessions")
+
+    /** Global coding-agent prompt templates: {FRAGGLE_ROOT}/coding/prompts */
+    val codingPromptsDir: Path get() = codingDir.resolve("prompts")
+
+    /**
      * Default config file path.
      */
     val defaultConfigPath: Path get() = configDir.resolve("fraggle.yaml")
