@@ -32,7 +32,7 @@ class Agent(private val options: AgentOptions) {
         AgentState(
             systemPrompt = options.systemPrompt,
             model = options.model,
-            messages = emptyList(),
+            messages = options.initialMessages.toList(),
         )
     )
     private val listeners = mutableListOf<suspend (AgentEvent) -> Unit>()

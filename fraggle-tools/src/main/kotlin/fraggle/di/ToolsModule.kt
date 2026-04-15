@@ -1,17 +1,15 @@
 package fraggle.di
 
-import ai.koog.agents.core.tools.ToolRegistry
 import dev.zacsweers.metro.ContributesTo
 import dev.zacsweers.metro.Provides
 import dev.zacsweers.metro.SingleIn
 import io.ktor.client.*
 import kotlinx.coroutines.CoroutineScope
+import fraggle.agent.tool.FraggleToolRegistry
 import fraggle.chat.ChatBridgeManager
 import fraggle.chat.OutgoingMessage
-import fraggle.executor.RemoteToolClient
 import fraggle.executor.ToolExecutor
 import fraggle.executor.supervision.ToolArgTypes
-import fraggle.executor.supervision.ToolSupervisor
 import fraggle.tools.DefaultTools
 import fraggle.tools.scheduling.TaskScheduler
 import fraggle.tools.web.PlaywrightFetcher
@@ -72,19 +70,15 @@ interface ToolsModule {
 
         @Provides
         @SingleIn(AppScope::class)
-        fun provideToolRegistry(
+        fun provideFraggleToolRegistry(
             toolExecutor: ToolExecutor,
             @DefaultHttpClient httpClient: HttpClient,
             taskScheduler: TaskScheduler,
-            supervisor: ToolSupervisor,
-            remoteClient: RemoteToolClient?,
             playwrightFetcher: PlaywrightFetcher?,
-        ): ToolRegistry = DefaultTools.createToolRegistry(
+        ): FraggleToolRegistry = DefaultTools.createToolRegistry(
             toolExecutor = toolExecutor,
             httpClient = httpClient,
             taskScheduler = taskScheduler,
-            supervisor = supervisor,
-            remoteClient = remoteClient,
             playwrightFetcher = playwrightFetcher,
         )
     }

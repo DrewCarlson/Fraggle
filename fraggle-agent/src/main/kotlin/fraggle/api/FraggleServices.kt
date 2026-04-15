@@ -1,7 +1,7 @@
 package fraggle.api
 
-import ai.koog.agents.core.tools.ToolRegistry
 import kotlinx.coroutines.flow.SharedFlow
+import fraggle.agent.tool.FraggleToolRegistry
 import fraggle.chat.ChatBridgeManager
 import fraggle.memory.MemoryStore
 import fraggle.models.*
@@ -19,9 +19,9 @@ interface FraggleServices {
     val memory: MemoryStore
 
     /**
-     * Access to the Koog tool registry.
+     * Access to the Fraggle tool registry.
      */
-    val toolRegistry: ToolRegistry
+    val toolRegistry: FraggleToolRegistry
 
     /**
      * Access to chat bridge management.

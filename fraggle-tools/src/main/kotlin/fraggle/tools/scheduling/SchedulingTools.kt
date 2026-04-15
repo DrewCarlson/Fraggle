@@ -1,8 +1,7 @@
 package fraggle.tools.scheduling
 
-import ai.koog.agents.core.tools.SimpleTool
-import ai.koog.agents.core.tools.annotations.LLMDescription
-import ai.koog.serialization.typeToken
+import fraggle.agent.tool.AgentToolDef
+import fraggle.agent.tool.LLMDescription
 import kotlinx.coroutines.*
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
@@ -35,12 +34,12 @@ private val _fullDateTimeFormat = LocalDateTime.Format {
 val LocalDateTime.Formats.fullDataTime: DateTimeFormat<LocalDateTime>
     get() = _fullDateTimeFormat
 
-class ScheduleTaskTool(private val scheduler: TaskScheduler) : SimpleTool<ScheduleTaskTool.Args>(
-    argsType = typeToken<Args>(),
+class ScheduleTaskTool(private val scheduler: TaskScheduler) : AgentToolDef<ScheduleTaskTool.Args>(
     name = "schedule_task",
     description = """Schedule a task for later execution.
 You can schedule one-time tasks or recurring tasks.
 Tasks will execute the specified action when triggered.""",
+    argsSerializer = Args.serializer(),
 ) {
     @Serializable
     data class Args(
@@ -89,12 +88,15 @@ Tasks will execute the specified action when triggered.""",
     }
 }
 
-class ListTasksTool(private val scheduler: TaskScheduler) : SimpleTool<Unit>(
-    argsType = typeToken<Unit>(),
+class ListTasksTool(private val scheduler: TaskScheduler) : AgentToolDef<ListTasksTool.Args>(
     name = "list_tasks",
     description = "List all scheduled tasks.",
+    argsSerializer = Args.serializer(),
 ) {
-    override suspend fun execute(args: Unit): String {
+    @Serializable
+    class Args
+
+    override suspend fun execute(args: Args): String {
         val tasks = scheduler.listTasks()
 
         if (tasks.isEmpty()) {
@@ -122,10 +124,10 @@ class ListTasksTool(private val scheduler: TaskScheduler) : SimpleTool<Unit>(
     }
 }
 
-class CancelTaskTool(private val scheduler: TaskScheduler) : SimpleTool<CancelTaskTool.Args>(
-    argsType = typeToken<Args>(),
+class CancelTaskTool(private val scheduler: TaskScheduler) : AgentToolDef<CancelTaskTool.Args>(
     name = "cancel_task",
     description = "Cancel a scheduled task by its ID.",
+    argsSerializer = Args.serializer(),
 ) {
     @Serializable
     data class Args(
@@ -142,10 +144,10 @@ class CancelTaskTool(private val scheduler: TaskScheduler) : SimpleTool<CancelTa
     }
 }
 
-class GetTaskTool(private val scheduler: TaskScheduler) : SimpleTool<GetTaskTool.Args>(
-    argsType = typeToken<Args>(),
+class GetTaskTool(private val scheduler: TaskScheduler) : AgentToolDef<GetTaskTool.Args>(
     name = "get_task",
     description = "Get detailed information about a scheduled task.",
+    argsSerializer = Args.serializer(),
 ) {
     @Serializable
     data class Args(

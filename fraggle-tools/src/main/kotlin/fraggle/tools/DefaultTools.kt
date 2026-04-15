@@ -1,16 +1,14 @@
 package fraggle.tools
 
-import ai.koog.agents.core.tools.ToolRegistry
 import io.ktor.client.*
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.SerialDescriptor
-import fraggle.executor.RemoteToolClient
+import fraggle.agent.tool.AgentToolDef
+import fraggle.agent.tool.FraggleToolRegistry
 import fraggle.executor.ToolExecutor
-import fraggle.executor.managed
 import fraggle.executor.supervision.ToolArg
 import fraggle.executor.supervision.ToolArgKind
 import fraggle.executor.supervision.ToolArgTypes
-import fraggle.executor.supervision.ToolSupervisor
 import fraggle.tools.file.*
 import fraggle.tools.scheduling.*
 import fraggle.tools.shell.ExecuteCommandTool
@@ -21,12 +19,15 @@ import fraggle.tools.web.PlaywrightFetcher
 import fraggle.tools.web.ScreenshotPageTool
 
 /**
- * Factory for creating the default Koog ToolRegistry with all built-in tools.
+ * Factory for building the default [FraggleToolRegistry] with all built-in tools.
+ *
+ * Supervision and remote forwarding are handled by the loop-level
+ * `SupervisedToolCallExecutor` — tools themselves do not wrap anymore.
  */
 object DefaultTools {
 
     /**
-     * All managed tool names paired with their Args serializers.
+     * All built-in tool names paired with their Args serializers.
      * Used by [extractArgTypes] to inspect `@ToolArg` annotations.
      */
     private val toolSerializers: List<Pair<String, KSerializer<*>>> = listOf(
@@ -68,44 +69,43 @@ object DefaultTools {
     }
 
     /**
-     * Create a tool registry with all built-in tools.
-     * File, shell, and web tools are wrapped with [ManagedTool] for supervision
-     * and optional remote forwarding. Scheduling tools are NOT wrapped.
+     * Create a [FraggleToolRegistry] with all built-in tools.
      */
     fun createToolRegistry(
         toolExecutor: ToolExecutor,
         httpClient: HttpClient,
         taskScheduler: TaskScheduler,
-        supervisor: ToolSupervisor,
-        remoteClient: RemoteToolClient? = null,
         playwrightFetcher: PlaywrightFetcher? = null,
-    ): ToolRegistry = ToolRegistry {
-        // File tools (managed)
-        tool(ReadFileTool(toolExecutor).managed(supervisor, remoteClient))
-        tool(WriteFileTool(toolExecutor).managed(supervisor, remoteClient))
-        tool(AppendFileTool(toolExecutor).managed(supervisor, remoteClient))
-        tool(ListFilesTool(toolExecutor).managed(supervisor, remoteClient))
-        tool(SearchFilesTool(toolExecutor).managed(supervisor, remoteClient))
-        tool(FileExistsTool(toolExecutor).managed(supervisor, remoteClient))
-        tool(DeleteFileTool(toolExecutor).managed(supervisor, remoteClient))
+    ): FraggleToolRegistry {
+        val tools = buildList<AgentToolDef<*>> {
+            // File tools
+            add(ReadFileTool(toolExecutor))
+            add(WriteFileTool(toolExecutor))
+            add(AppendFileTool(toolExecutor))
+            add(ListFilesTool(toolExecutor))
+            add(SearchFilesTool(toolExecutor))
+            add(FileExistsTool(toolExecutor))
+            add(DeleteFileTool(toolExecutor))
 
-        // Web tools (managed)
-        tool(FetchWebpageTool(httpClient, playwrightFetcher).managed(supervisor, remoteClient))
-        tool(FetchApiTool(httpClient).managed(supervisor, remoteClient))
-        if (playwrightFetcher != null) {
-            tool(ScreenshotPageTool(playwrightFetcher).managed(supervisor, remoteClient))
+            // Web tools
+            add(FetchWebpageTool(httpClient, playwrightFetcher))
+            add(FetchApiTool(httpClient))
+            if (playwrightFetcher != null) {
+                add(ScreenshotPageTool(playwrightFetcher))
+            }
+
+            // Shell
+            add(ExecuteCommandTool(toolExecutor))
+
+            // Time
+            add(GetCurrentTimeTool())
+
+            // Scheduling
+            add(ScheduleTaskTool(taskScheduler))
+            add(ListTasksTool(taskScheduler))
+            add(CancelTaskTool(taskScheduler))
+            add(GetTaskTool(taskScheduler))
         }
-
-        // Shell tools (managed)
-        tool(ExecuteCommandTool(toolExecutor).managed(supervisor, remoteClient))
-
-        // Time tools (NOT managed — no supervision needed)
-        tool(GetCurrentTimeTool())
-
-        // Scheduling tools (NOT managed — no supervision needed)
-        tool(ScheduleTaskTool(taskScheduler))
-        tool(ListTasksTool(taskScheduler))
-        tool(CancelTaskTool(taskScheduler))
-        tool(GetTaskTool(taskScheduler))
+        return FraggleToolRegistry(tools)
     }
 }

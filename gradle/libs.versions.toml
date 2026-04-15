@@ -21,7 +21,6 @@ routing-compose = "0.5.0"
 kord = "0.18.1"
 exposed = "1.1.1"
 sqlite-jdbc = "3.51.3.0"
-koog = "0.7.3"
 
 [libraries]
 # Kotlin
@@ -61,11 +60,6 @@ exposed-jdbc = { module = "org.jetbrains.exposed:exposed-jdbc", version.ref = "e
 exposed-migration-core = { module = "org.jetbrains.exposed:exposed-migration-core", version.ref = "exposed" }
 exposed-migration-jdbc = { module = "org.jetbrains.exposed:exposed-migration-jdbc", version.ref = "exposed" }
 sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqlite-jdbc" }
-
-# Koog AI Agent Framework
-koog-agents = { module = "ai.koog:koog-agents", version.ref = "koog" }
-koog-agents-memory = { module = "ai.koog:agents-features-memory", version.ref = "koog" }
-koog-agents-trace = { module = "ai.koog:agents-features-trace", version.ref = "koog" }
 
 # Discord
 kord-core = { module = "dev.kord:kord-core-jvm", version.ref = "kord" }

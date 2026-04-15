@@ -1,39 +1,11 @@
 package fraggle.agent
 
-import ai.koog.agents.core.agent.AIAgentService
-import ai.koog.agents.core.agent.ToolCalls
-import ai.koog.agents.core.agent.config.AIAgentConfig
-import ai.koog.agents.core.agent.singleRunStrategy
-import ai.koog.agents.core.dsl.builder.strategy
-import ai.koog.agents.core.dsl.extension.HistoryCompressionStrategy
-import ai.koog.agents.core.dsl.extension.nodeLLMCompressHistory
-import ai.koog.agents.core.dsl.extension.nodeLLMRequestMultiple
-import ai.koog.agents.core.dsl.extension.nodeLLMSendMultipleToolResults
-import ai.koog.agents.core.dsl.extension.nodeExecuteMultipleTools
-import ai.koog.agents.core.dsl.extension.onMultipleAssistantMessages
-import ai.koog.agents.core.dsl.extension.onMultipleToolCalls
-import ai.koog.agents.core.environment.ReceivedToolResult
-import ai.koog.agents.core.tools.ToolRegistry
-import ai.koog.agents.features.tracing.feature.Tracing
-import ai.koog.agents.memory.feature.AgentMemory
-import ai.koog.agents.memory.providers.AgentMemoryProvider
-import ai.koog.prompt.dsl.prompt
-import ai.koog.prompt.executor.model.PromptExecutor
-import ai.koog.prompt.llm.LLMCapability
-import ai.koog.prompt.llm.LLModel
-import ai.koog.prompt.executor.clients.openai.OpenAIChatParams
-import ai.koog.prompt.executor.clients.openai.base.models.ReasoningEffort
-import ai.koog.prompt.message.AttachmentContent
-import ai.koog.prompt.message.ContentPart
-import ai.koog.prompt.message.Message
 import fraggle.agent.loop.AgentOptions
 import fraggle.agent.message.AgentMessage
 import fraggle.agent.message.ContentPart.Text
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonPrimitive
 import fraggle.chat.ChatPlatform
 import fraggle.chat.IncomingMessage
 import fraggle.chat.MessageContent
@@ -43,7 +15,6 @@ import fraggle.memory.MemoryScope
 import fraggle.memory.MemoryStore
 import fraggle.prompt.PromptManager
 import fraggle.provider.Usage
-import fraggle.tracing.FraggleTraceProcessor
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.offsetIn
 import kotlinx.datetime.toLocalDateTime
@@ -51,76 +22,25 @@ import org.slf4j.LoggerFactory
 import java.io.Closeable
 import kotlin.time.Clock
 import kotlin.time.Instant
-import ai.koog.prompt.llm.LLMProvider as KoogLLMProvider
 
 /**
  * Main agent orchestration class.
  * Uses Koog AIAgent framework for LLM interaction with native tool support.
  */
 class FraggleAgent(
-    private val promptExecutor: PromptExecutor,
-    private val toolRegistry: ToolRegistry,
+    private val lmStudioProvider: fraggle.provider.LMStudioProvider,
+    private val llmBridge: fraggle.agent.loop.LlmBridge,
+    private val toolCallExecutor: fraggle.agent.loop.ToolCallExecutor,
     private val memory: MemoryStore,
-    private val memoryProvider: AgentMemoryProvider,
     private val config: AgentConfig,
     private val promptManager: PromptManager,
-    private val traceProcessor: FraggleTraceProcessor?,
+    private val traceStore: fraggle.tracing.TraceStore?,
+    private val eventBus: fraggle.events.EventBus?,
 ) : Closeable {
     private val logger = LoggerFactory.getLogger(FraggleAgent::class.java)
 
     private val agentTemplate by lazy { promptManager.getTemplate(PromptManager.AGENT_FILE) }
     private val memoryTemplate by lazy { promptManager.getTemplate(PromptManager.MEMORY_FILE) }
-
-    private val llmModel = LLModel(
-        provider = KoogLLMProvider.OpenAI,
-        id = config.model,
-        capabilities = buildList {
-            add(LLMCapability.Temperature)
-            add(LLMCapability.Tools)
-            add(LLMCapability.Completion)
-            add(LLMCapability.OpenAIEndpoint.Completions)
-            if (config.vision) add(LLMCapability.Vision.Image)
-        },
-        contextLength = config.maxTokens,
-    )
-
-    /**
-     * Build OpenAI-compatible chat params from config, using additionalProperties
-     * for LM Studio-specific sampling params (top_k, min_p, repeat_penalty).
-     */
-    private val chatParams: OpenAIChatParams by lazy {
-        val extraProps = buildMap<String, JsonElement> {
-            config.topK?.let { put("top_k", JsonPrimitive(it)) }
-            config.minP?.let { put("min_p", JsonPrimitive(it)) }
-            config.repeatPenalty?.let { put("repeat_penalty", JsonPrimitive(it)) }
-        }
-        OpenAIChatParams(
-            temperature = if (config.topP == null) config.temperature else null,
-            topP = config.topP,
-            additionalProperties = extraProps.ifEmpty { null },
-        )
-    }
-
-    private val agentService = AIAgentService(
-        promptExecutor = promptExecutor,
-        llmModel = llmModel,
-        strategy = singleRunStrategy(ToolCalls.PARALLEL),
-        toolRegistry = toolRegistry,
-        systemPrompt = null,
-        temperature = config.temperature,
-        maxIterations = config.maxIterations,
-    ) {
-        install(AgentMemory) {
-            this.memoryProvider = this@FraggleAgent.memoryProvider
-            agentName = "fraggle"
-            productName = "fraggle"
-        }
-        if (traceProcessor != null) {
-            install(Tracing) {
-                addMessageProcessor(traceProcessor)
-            }
-        }
-    }
 
     private val memoryExtractionJson = Json { ignoreUnknownKeys = true }
 
@@ -136,10 +56,8 @@ class FraggleAgent(
     ): ProcessResult {
         logger.info("Processing message from ${message.sender.id} in chat ${message.chatId}")
 
-        // Pre-compress conversation if it exceeds the history limit
         val compressed = compressIfNeeded(conversation)
 
-        // Create per-request execution context for tools
         val executionContext = ToolExecutionContext(
             chatId = message.chatId,
             userId = message.sender.id,
@@ -153,110 +71,24 @@ class FraggleAgent(
                 senderId = message.sender.id,
                 historySummary = compressed.historySummary,
             )
-            val imageAttachments = if (config.vision) message.imageAttachments else emptyList()
-            val userInput = buildKoogInput(message)
-            val agentPrompt = prompt(message.id, chatParams) {
-                system(systemPrompt)
 
-                compressed.messages.forEach { contextMessage ->
-                    if (contextMessage.role == ConversationRole.USER) {
-                        user(contextMessage.content)
-                    } else {
-                        assistant(contextMessage.content)
-                    }
-                }
-
-                // Include image attachments with the user's text in a single multipart message.
-                // The text will also be appended by Koog as agentInput, but combining them here
-                // ensures the LLM sees images associated with the user's text in one message.
-                if (imageAttachments.isNotEmpty()) {
-                    user {
-                        text(userInput)
-                        for (attachment in imageAttachments) {
-                            image(
-                                ContentPart.Image(
-                                    content = AttachmentContent.Binary.Bytes(attachment.data),
-                                    format = attachment.mimeType.substringAfter("/", "jpeg"),
-                                    mimeType = attachment.mimeType,
-                                    fileName = attachment.filename,
-                                )
-                            )
-                        }
-                    }
-                }
-            }
-
-            val result = withContext(ToolExecutionContext.asContextElement(executionContext)) {
-                agentService.createAgentAndRun(
-                    agentInput = userInput,
-                    agentConfig = AIAgentConfig(
-                        prompt = agentPrompt,
-                        model = llmModel,
-                        maxAgentIterations = agentService.agentConfig.maxAgentIterations,
-                        missingToolsConversionStrategy = agentService.agentConfig.missingToolsConversionStrategy,
-                        responseProcessor = agentService.agentConfig.responseProcessor,
-                    )
+            // TODO: image attachments currently dropped — LMStudioProvider.Message doesn't
+            // yet support multi-part content. Vision path needs follow-up. Warn if requested.
+            if (config.vision && message.imageAttachments.isNotEmpty()) {
+                logger.warn(
+                    "Vision enabled with {} image attachments but multi-part content not yet supported by ProviderLlmBridge — images dropped",
+                    message.imageAttachments.size,
                 )
             }
 
-            if (config.autoMemory && result.isNotBlank()) {
-                extractMemoryViaLLM(message, result)
-            }
+            val userInput = buildUserInput(message)
 
-            AgentResponse.Success(
-                content = result,
-                attachments = executionContext.attachments.toList(),
-            )
-        } catch (e: Exception) {
-            logger.error("Koog agent error: ${e.message}", e)
-            AgentResponse.Error("Failed to get response from LLM: ${e.message}")
-        }
-
-        return ProcessResult(response = response, conversation = compressed)
-    }
-
-    /**
-     * Process an incoming message using the new Fraggle-owned agent loop.
-     * This delegates to [Agent] instead of Koog's AIAgentService.
-     *
-     * Uses the same system prompt building, memory extraction, and compression
-     * as [process], but the core agent loop is Fraggle-owned.
-     */
-    suspend fun processWithAgent(
-        conversation: Conversation,
-        message: IncomingMessage,
-        platform: ChatPlatform? = null,
-        llmBridge: fraggle.agent.loop.LlmBridge,
-        toolCallExecutor: fraggle.agent.loop.ToolCallExecutor? = null,
-    ): ProcessResult {
-        logger.info("Processing message (new loop) from ${message.sender.id} in chat ${message.chatId}")
-
-        val compressed = compressIfNeeded(conversation)
-
-        val executionContext = ToolExecutionContext(
-            chatId = message.chatId,
-            userId = message.sender.id,
-        )
-
-        val response = try {
-            val systemPrompt = buildBaseSystemPrompt(
-                promptManager = promptManager,
-                platform = platform,
-                chatId = message.chatId,
-                senderId = message.sender.id,
-                historySummary = compressed.historySummary,
-            )
-
-            val userInput = buildKoogInput(message)
-
-            // Convert existing conversation messages to AgentMessages
-            val historyMessages = compressed.messages.map { contextMessage ->
-                if (contextMessage.role == ConversationRole.USER) {
-                    AgentMessage.User(contextMessage.content)
+            // Convert existing conversation history to AgentMessages
+            val historyMessages: List<AgentMessage> = compressed.messages.map { cm ->
+                if (cm.role == ConversationRole.USER) {
+                    AgentMessage.User(cm.content)
                 } else {
-                    AgentMessage.Assistant(
-                        content = listOf(Text(contextMessage.content)),
-                    )
+                    AgentMessage.Assistant(content = listOf(Text(cm.content)))
                 }
             }
 
@@ -268,14 +100,20 @@ class FraggleAgent(
                     toolExecutor = toolCallExecutor,
                     maxIterations = config.maxIterations,
                     chatId = message.chatId,
+                    initialMessages = historyMessages,
                 )
             )
 
-            // Inject history and prompt
+            // Wire tracing if enabled
+            val tracer = traceStore?.let {
+                fraggle.agent.tracing.AgentEventTracer(it, eventBus, message.chatId)
+            }
+            if (tracer != null) {
+                agent.subscribe(tracer::processEvent)
+            }
+
             withContext(ToolExecutionContext.asContextElement(executionContext)) {
-                agent.prompt(
-                    listOf(AgentMessage.User(userInput)),
-                )
+                agent.prompt(listOf(AgentMessage.User(userInput)))
             }
 
             val lastAssistant = agent.state.messages
@@ -300,7 +138,7 @@ class FraggleAgent(
     }
 
     override fun close() {
-        promptExecutor.close()
+        // Nothing owned — lmStudioProvider + llmBridge lifecycle managed by DI.
     }
 
     /**
@@ -346,13 +184,15 @@ class FraggleAgent(
         }
 
         return try {
-            val compressionPrompt = prompt("history-compression", OpenAIChatParams(temperature = 0.1, reasoningEffort = ReasoningEffort.NONE)) {
-                system("You are a conversation summarizer. Produce a concise but comprehensive summary of the conversation history provided. Preserve all important context, decisions, and facts. Output only the summary, no preamble.")
-                user(compressionInput)
-            }
-
-            val responses = promptExecutor.execute(prompt = compressionPrompt, model = llmModel)
-            val summary = responses.filterIsInstance<Message.Assistant>().firstOrNull()?.content
+            val response = lmStudioProvider.chat(fraggle.provider.ChatRequest(
+                model = config.model,
+                messages = listOf(
+                    fraggle.provider.Message.system("You are a conversation summarizer. Produce a concise but comprehensive summary of the conversation history provided. Preserve all important context, decisions, and facts. Output only the summary, no preamble."),
+                    fraggle.provider.Message.user(compressionInput),
+                ),
+                temperature = 0.1,
+            ))
+            val summary = response.choices.firstOrNull()?.message?.content
                 ?.let { ReasoningContentFilter.strip(it) }
                 ?.takeIf { it.isNotBlank() }
 
@@ -477,7 +317,7 @@ class FraggleAgent(
         }
     }
 
-    private fun buildKoogInput(
+    private fun buildUserInput(
         message: IncomingMessage,
     ): String = buildString {
         val userContent = when (val content = message.content) {
@@ -500,7 +340,7 @@ class FraggleAgent(
     }
 
     private suspend fun extractMemoryViaLLM(message: IncomingMessage, response: String) {
-        val userText = buildKoogInput(message)
+        val userText = buildUserInput(message)
 
         try {
             val userScope = MemoryScope.User(message.sender.id)
@@ -621,13 +461,15 @@ class FraggleAgent(
             return emptyList()
         }
 
-        val extractionPrompt = prompt("memory-extraction", OpenAIChatParams(temperature = 0.1, reasoningEffort = ReasoningEffort.NONE)) {
-            system(systemText)
-            user(inputText)
-        }
-
-        val responses = promptExecutor.execute(prompt = extractionPrompt, model = llmModel)
-        val result = responses.filterIsInstance<Message.Assistant>().firstOrNull()?.content
+        val extractionResponse = lmStudioProvider.chat(fraggle.provider.ChatRequest(
+            model = config.model,
+            messages = listOf(
+                fraggle.provider.Message.system(systemText),
+                fraggle.provider.Message.user(inputText),
+            ),
+            temperature = 0.1,
+        ))
+        val result = extractionResponse.choices.firstOrNull()?.message?.content
             ?.let { ReasoningContentFilter.strip(it) }
             ?: return emptyList()
 
@@ -671,13 +513,15 @@ class FraggleAgent(
             return fallback()
         }
 
-        val reconcilePrompt = prompt("memory-reconciliation", OpenAIChatParams(temperature = 0.1, reasoningEffort = ReasoningEffort.NONE)) {
-            system(systemText)
-            user(inputText)
-        }
-
-        val responses = promptExecutor.execute(prompt = reconcilePrompt, model = llmModel)
-        val result = responses.filterIsInstance<Message.Assistant>().firstOrNull()?.content
+        val reconcileResponse = lmStudioProvider.chat(fraggle.provider.ChatRequest(
+            model = config.model,
+            messages = listOf(
+                fraggle.provider.Message.system(systemText),
+                fraggle.provider.Message.user(inputText),
+            ),
+            temperature = 0.1,
+        ))
+        val result = reconcileResponse.choices.firstOrNull()?.message?.content
             ?.let { ReasoningContentFilter.strip(it) }
             ?: return fallback()
 
@@ -701,39 +545,6 @@ private data class ReconciledFact(
     val fact: String,
     val status: String,
 )
-
-/**
- * Custom strategy that mirrors [singleRunStrategy] (sequential tool calls)
- * but adds a conditional [nodeLLMCompressHistory] node to handle cases where
- * tool-heavy runs accumulate many messages during a single agent execution.
- */
-private fun compressingSingleRunStrategy() = strategy<String, String>("compressing_single_run") {
-    val nodeCallLLM by nodeLLMRequestMultiple()
-    val nodeExecuteTool by nodeExecuteMultipleTools(parallelTools = false)
-    val nodeSendToolResult by nodeLLMSendMultipleToolResults()
-    val nodeCompressHistory by nodeLLMCompressHistory<List<ReceivedToolResult>>(
-        strategy = HistoryCompressionStrategy.WholeHistory,
-        preserveMemory = false,
-    )
-
-    edge(nodeStart forwardTo nodeCallLLM)
-    edge(nodeCallLLM forwardTo nodeExecuteTool onMultipleToolCalls { true })
-    edge(
-        nodeCallLLM forwardTo nodeFinish
-            onMultipleAssistantMessages { true }
-            transformed { ReasoningContentFilter.strip(it.joinToString("\n") { message -> message.content }) }
-    )
-
-    edge(nodeExecuteTool forwardTo nodeCompressHistory)
-    edge(nodeCompressHistory forwardTo nodeSendToolResult)
-
-    edge(nodeSendToolResult forwardTo nodeExecuteTool onMultipleToolCalls { true })
-    edge(
-        nodeSendToolResult forwardTo nodeFinish
-            onMultipleAssistantMessages { true }
-            transformed { ReasoningContentFilter.strip(it.joinToString("\n") { message -> message.content }) }
-    )
-}
 
 /**
  * Agent configuration.

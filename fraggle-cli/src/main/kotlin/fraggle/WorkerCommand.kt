@@ -1,8 +1,5 @@
 package fraggle
 
-import ai.koog.agents.core.tools.SimpleTool
-import ai.koog.serialization.kotlinx.KotlinxSerializer
-import ai.koog.serialization.kotlinx.toKoogJSONObject
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
@@ -26,12 +23,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
+import fraggle.agent.tool.AgentToolDef
 import fraggle.executor.LocalToolExecutor
 import fraggle.executor.RemoteToolRequest
 import fraggle.executor.RemoteToolResponse
-import fraggle.executor.supervision.NoOpToolSupervisor
 import fraggle.tools.DefaultTools
 import fraggle.tools.scheduling.TaskScheduler
 import org.slf4j.LoggerFactory
@@ -51,7 +48,6 @@ class WorkerCommand : CliktCommand(name = "worker") {
     private val workDir by option("-w", "--work-dir", help = "Working directory for tools").default("./data/workspace")
 
     private val json = Json { ignoreUnknownKeys = true }
-    private val koogSerializer = KotlinxSerializer(json)
 
     override fun run() = runBlocking {
         logger.info("Starting Fraggle worker on port $port")
@@ -63,16 +59,13 @@ class WorkerCommand : CliktCommand(name = "worker") {
 
         val taskScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         val toolExecutor = LocalToolExecutor(workDirPath)
-        val supervisor = NoOpToolSupervisor()
         val taskScheduler = TaskScheduler(taskScope, {})
 
-        // Create tool registry without remote client (we ARE the remote)
+        // Create tool registry (worker is the remote endpoint — no forwarding)
         val toolRegistry = DefaultTools.createToolRegistry(
             toolExecutor = toolExecutor,
             httpClient = HttpClient(),
             taskScheduler = taskScheduler,
-            supervisor = supervisor,
-            remoteClient = null,
             playwrightFetcher = null,
         )
         val toolKeys = toolRegistry.tools.map { it.name }
@@ -106,7 +99,7 @@ class WorkerCommand : CliktCommand(name = "worker") {
                 post("/api/v1/tools/execute") {
                     try {
                         val request = call.receive<RemoteToolRequest>()
-                        val tool = toolRegistry.getToolOrNull(request.toolName)
+                        val tool = toolRegistry.findTool(request.toolName)
                         if (tool == null) {
                             val response = RemoteToolResponse(error = "Unknown tool: ${request.toolName}")
                             call.respond(
@@ -116,13 +109,14 @@ class WorkerCommand : CliktCommand(name = "worker") {
                             return@post
                         }
 
-                        // Deserialize args using the tool's serializer and execute
                         @Suppress("UNCHECKED_CAST")
-                        val simpleTool = tool as SimpleTool<Any>
-                        val argsElement = json.parseToJsonElement(request.argsJson) as JsonObject
-                        val args = simpleTool.decodeArgs(argsElement.toKoogJSONObject(), koogSerializer)
+                        val args = json.decodeFromString(
+                            tool.argsSerializer as KSerializer<Any>,
+                            request.argsJson,
+                        )
+                        @Suppress("UNCHECKED_CAST")
                         val result = withContext(Dispatchers.Default) {
-                            simpleTool.execute(args)
+                            (tool as AgentToolDef<Any>).execute(args)
                         }
 
                         val response = RemoteToolResponse(result = result)

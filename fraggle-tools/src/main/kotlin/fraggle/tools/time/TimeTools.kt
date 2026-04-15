@@ -1,8 +1,7 @@
 package fraggle.tools.time
 
-import ai.koog.agents.core.tools.SimpleTool
-import ai.koog.agents.core.tools.annotations.LLMDescription
-import ai.koog.serialization.typeToken
+import fraggle.agent.tool.AgentToolDef
+import fraggle.agent.tool.LLMDescription
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.format
@@ -17,13 +16,13 @@ import kotlin.time.Instant
  * If no timezone is provided, returns the host system's local time.
  * Supports all IANA timezone IDs (e.g., "America/New_York", "Europe/London", "Asia/Tokyo").
  */
-class GetCurrentTimeTool : SimpleTool<GetCurrentTimeTool.Args>(
-    argsType = typeToken<Args>(),
+class GetCurrentTimeTool : AgentToolDef<GetCurrentTimeTool.Args>(
     name = "get_current_time",
     description = """Get the current date and time in any timezone.
 Use this to answer questions about what time it is in a specific location.
 Accepts IANA timezone IDs like "America/New_York", "Europe/London", "Asia/Tokyo", etc.
 If no timezone is specified, returns the host server's local time.""",
+    argsSerializer = Args.serializer(),
 ) {
     @Serializable
     data class Args(
