@@ -2,11 +2,12 @@
 
 [![codecov](https://codecov.io/gh/DrewCarlson/Fraggle/graph/badge.svg?token=W77U2C9HUB)](https://codecov.io/gh/DrewCarlson/Fraggle)
 
-An AI-powered assistant framework that connects LLMs to messaging platforms with extensible tool capabilities.
+An AI-powered assistant framework that connects LLMs to messaging platforms with extensible tool capabilities — plus a terminal coding agent (`fraggle code`) that shares the same provider, tool, and agent-loop infrastructure.
 
 ## Highlights
 
 - **Chat Bridge Integration** - Connect to messaging platforms like Signal
+- **Terminal Coding Agent** - `fraggle code` is a Mosaic-based TUI for pair-programming with an LLM: JSONL session branching, `AGENTS.md` context files, Claude-Code-style `edit_file` semantics, interactive tool approval
 - **Local LLM Support** - Works with LM Studio for fully local, private AI
 - **Cloud Providers** - Also supports OpenAI and Anthropic APIs
 - **Built-in Tools** - File operations, web fetching, shell execution, task scheduling, time/timezone
@@ -33,6 +34,9 @@ cd fraggle
 # Run with chat bridges enabled
 ./bin/fraggle run
 
+# Launch the terminal coding agent in the current directory
+./bin/fraggle code
+
 # Start a remote tool worker
 ./bin/fraggle worker
 ```
@@ -50,6 +54,7 @@ Full documentation available at **[drewcarlson.github.io/Fraggle](https://drewca
 - [Getting Started](https://drewcarlson.github.io/Fraggle/installation/getting-started/)
 - [Configuration](https://drewcarlson.github.io/Fraggle/installation/configuration/)
 - [Signal Setup](https://drewcarlson.github.io/Fraggle/installation/signal-setup/)
+- [Coding Agent](https://drewcarlson.github.io/Fraggle/coding-agent/)
 - [Architecture](https://drewcarlson.github.io/Fraggle/architecture/overview/)
 - [Tools Reference](https://drewcarlson.github.io/Fraggle/architecture/tools/)
 - [Agent Skills](https://drewcarlson.github.io/Fraggle/architecture/skills/)
@@ -58,9 +63,10 @@ Full documentation available at **[drewcarlson.github.io/Fraggle](https://drewca
 
 ```
 Fraggle/
-├── fraggle-cli/            # CLI application
+├── fraggle-cli/            # CLI application (run / chat / code / configure / worker)
 ├── fraggle-assistant/      # Messenger assistant (FraggleAgent, memory, chat bridges, db)
-├── fraggle-agent-core/     # Generic agent runtime (loop, tools, executor, tracing)
+├── fraggle-coding-agent/   # Terminal coding agent (TUI, sessions, coding tools)
+├── fraggle-agent-core/     # Generic agent runtime (loop, tools, executor, tracing, compaction)
 ├── fraggle-llm/            # LLM provider (LMStudioProvider, ChatRequest/Response)
 ├── fraggle-signal/         # Signal messenger bridge
 ├── fraggle-discord/        # Discord bot bridge
