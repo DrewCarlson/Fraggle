@@ -34,6 +34,7 @@ include(":libs:documented-processor")
 
 include(":fraggle-di")
 include(":fraggle-common")
+include(":fraggle-llm")
 include(":fraggle-agent")
 include(":fraggle-signal")
 include(":fraggle-discord")
