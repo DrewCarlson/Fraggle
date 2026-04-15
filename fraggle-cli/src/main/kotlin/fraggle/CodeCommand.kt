@@ -26,6 +26,7 @@ import fraggle.coding.settings.SettingsStore
 import fraggle.coding.tools.CodingToolRegistry
 import fraggle.coding.tui.HeaderInfo
 import fraggle.coding.tui.TuiToolPermissionHandler
+import fraggle.coding.tui.runCodingApp
 import fraggle.executor.LocalToolExecutor
 import fraggle.executor.supervision.InteractiveToolSupervisor
 import fraggle.executor.supervision.NoOpToolSupervisor
@@ -42,6 +43,8 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import java.nio.file.Path
 import kotlin.io.path.Path
@@ -65,7 +68,7 @@ import kotlin.time.Duration.Companion.seconds
  *  - Tool registry via [CodingToolRegistry] (filesystem/shell/web base + edit_file)
  *  - Supervision: [SupervisionMode.NONE] → [NoOpToolSupervisor]; [SupervisionMode.ASK] → [InteractiveToolSupervisor] + [TuiToolPermissionHandler]
  *  - LM Studio via [LMStudioProvider] + [ProviderLlmBridge]
- *  - Runs the TUI via [fraggle.coding.tui.runCodingApp]
+ *  - Runs the TUI via [runCodingApp]
  *
  * Flag precedence (last wins): defaults → global settings → project settings → command-line flag.
  */
@@ -304,7 +307,7 @@ class CodeCommand : CliktCommand(name = "code") {
             },
         )
         try {
-            fraggle.coding.tui.runCodingApp(
+            runCodingApp(
                 agent = agent,
                 options = options,
                 header = header,
@@ -319,7 +322,7 @@ class CodeCommand : CliktCommand(name = "code") {
                 },
                 permissionHandler = permissionHandler,
             )
-        } catch (_: kotlinx.coroutines.CancellationException) {
+        } catch (_: CancellationException) {
             // Normal exit path.
         }
 
