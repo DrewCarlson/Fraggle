@@ -15,3 +15,12 @@ annotation class DefaultHttpClient
  */
 @Qualifier
 annotation class LlmHttpClient
+
+/**
+ * Qualifier for the base tool registry containing only the generic tools
+ * (filesystem, shell, web, time) provided by `fraggle-tools`. App-specific
+ * modules (like the messenger assistant) compose their final registry by
+ * decorating this one with additional app-flavored tools.
+ */
+@Qualifier
+annotation class BaseFraggleToolRegistry

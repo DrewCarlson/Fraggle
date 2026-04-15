@@ -27,7 +27,7 @@ import fraggle.models.FraggleConfig
 import fraggle.signal.MessageRouter
 import fraggle.signal.SignalBridge
 import fraggle.signal.SignalBridgeInitializer
-import fraggle.tools.scheduling.TaskScheduler
+import fraggle.scheduling.TaskScheduler
 import fraggle.tools.web.PlaywrightFetcher
 import fraggle.tracing.TraceStore
 import java.nio.file.Path

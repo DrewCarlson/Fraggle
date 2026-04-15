@@ -19,7 +19,7 @@ import fraggle.models.FraggleEvent
 import fraggle.signal.MessageRouter
 import fraggle.signal.SignalBridge
 import fraggle.signal.SignalBridgeInitializer
-import fraggle.tools.scheduling.TaskScheduler
+import fraggle.scheduling.TaskScheduler
 import fraggle.tools.web.PlaywrightFetcher
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap

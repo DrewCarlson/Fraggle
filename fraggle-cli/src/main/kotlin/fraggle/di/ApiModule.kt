@@ -19,7 +19,7 @@ import fraggle.memory.MemoryStore
 import fraggle.models.ApiConfig
 import fraggle.models.DashboardConfig
 import fraggle.models.FraggleConfig
-import fraggle.tools.scheduling.TaskScheduler
+import fraggle.scheduling.TaskScheduler
 import fraggle.tracing.TraceStore
 import java.nio.file.Path
 

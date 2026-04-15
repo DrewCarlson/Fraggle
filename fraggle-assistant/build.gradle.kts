@@ -20,6 +20,11 @@ dependencies {
     // Transitively brings fraggle-llm.
     api(project(":fraggle-agent-core"))
 
+    // Built-in tools (filesystem, shell, web, time) + the assistant-specific
+    // scheduling tools that live in this module are composed with the base
+    // registry from ToolsModule.
+    api(project(":fraggle-tools"))
+
     // Ktor Client for LLM API calls (from fraggle-di)
     implementation(ktorLibs.client.core)
     implementation(ktorLibs.client.cio)
