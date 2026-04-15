@@ -68,8 +68,10 @@ data class ProviderConfig(
 enum class ProviderType {
     @SerialName("lmstudio")
     LMSTUDIO,
+
     @SerialName("openai")
     OPENAI,
+
     @SerialName("anthropic")
     ANTHROPIC,
 }
@@ -110,15 +112,24 @@ data class SignalBridgeConfig(
     @Documented(name = "Config Directory", description = "Directory where Signal configuration is stored")
     val configDir: String = "./config/app/signal",
 
-    @Documented(name = "Trigger", description = "Trigger prefix for group messages (e.g., '@fraggle'). Set to null to respond to all messages")
+    @Documented(
+        name = "Trigger",
+        description = "Trigger prefix for group messages (e.g., '@fraggle'). Set to null to respond to all messages"
+    )
     val trigger: String? = "@fraggle",
 
     @SerialName("signal_cli_path")
-    @Documented(name = "Signal CLI Path", description = "Path to signal-cli executable. If null, uses system PATH or auto-installed version")
+    @Documented(
+        name = "Signal CLI Path",
+        description = "Path to signal-cli executable. If null, uses system PATH or auto-installed version"
+    )
     val signalCliPath: String? = null,
 
     @SerialName("auto_install")
-    @Documented(name = "Auto Install", description = "Whether to automatically download and install signal-cli if not found in PATH")
+    @Documented(
+        name = "Auto Install",
+        description = "Whether to automatically download and install signal-cli if not found in PATH"
+    )
     val autoInstall: Boolean = true,
 
     @SerialName("signal_cli_version")
@@ -126,7 +137,10 @@ data class SignalBridgeConfig(
     val signalCliVersion: String = "0.14.2",
 
     @SerialName("profile_name")
-    @Documented(name = "Profile Name", description = "Display name for the Signal account profile. Set this so recipients see a name instead of 'Unknown'")
+    @Documented(
+        name = "Profile Name",
+        description = "Display name for the Signal account profile. Set this so recipients see a name instead of 'Unknown'"
+    )
     val profileName: String = "Fraggle",
 
     @SerialName("respond_to_direct_messages")
@@ -155,18 +169,31 @@ data class DiscordBridgeConfig(
     val enabled: Boolean = token.isNotBlank(),
 
     @SerialName("client_id")
-    @Documented(name = "Client ID", description = "Application client ID for OAuth2 (optional, extracted from token if not set)")
+    @Documented(
+        name = "Client ID",
+        description = "Application client ID for OAuth2 (optional, extracted from token if not set)"
+    )
     val clientId: String? = null,
 
     @SerialName("client_secret")
-    @Documented(name = "Client Secret", description = "Application client secret for OAuth2 user installation flow", secret = true)
+    @Documented(
+        name = "Client Secret",
+        description = "Application client secret for OAuth2 user installation flow",
+        secret = true
+    )
     val clientSecret: String? = null,
 
     @SerialName("oauth_redirect_uri")
-    @Documented(name = "OAuth Redirect URI", description = "OAuth2 callback URL (must match Discord Developer Portal settings)")
+    @Documented(
+        name = "OAuth Redirect URI",
+        description = "OAuth2 callback URL (must match Discord Developer Portal settings)"
+    )
     val oauthRedirectUri: String? = null,
 
-    @Documented(name = "Trigger", description = "Trigger prefix for guild messages (e.g., '!fraggle'). Set to null to respond to all messages")
+    @Documented(
+        name = "Trigger",
+        description = "Trigger prefix for guild messages (e.g., '!fraggle'). Set to null to respond to all messages"
+    )
     val trigger: String? = "!fraggle",
 
     @SerialName("respond_to_direct_messages")
@@ -178,11 +205,17 @@ data class DiscordBridgeConfig(
     val showTypingIndicator: Boolean = true,
 
     @SerialName("max_images_per_message")
-    @Documented(name = "Max Images", description = "Maximum number of images to attach per message (Discord allows up to 10)")
+    @Documented(
+        name = "Max Images",
+        description = "Maximum number of images to attach per message (Discord allows up to 10)"
+    )
     val maxImagesPerMessage: Int = 10,
 
     @SerialName("max_file_size_mb")
-    @Documented(name = "Max File Size (MB)", description = "Maximum file size in MB (10 free, 50 Nitro Basic, 500 Nitro)")
+    @Documented(
+        name = "Max File Size (MB)",
+        description = "Maximum file size in MB (10 free, 50 Nitro Basic, 500 Nitro)"
+    )
     val maxFileSizeMb: Int = 10,
 
     @SerialName("allowed_guild_ids")
@@ -190,7 +223,10 @@ data class DiscordBridgeConfig(
     val allowedGuildIds: List<String> = emptyList(),
 
     @SerialName("allowed_channel_ids")
-    @Documented(name = "Allowed Channels", description = "List of channel IDs the bot can respond in (empty = all channels)")
+    @Documented(
+        name = "Allowed Channels",
+        description = "List of channel IDs the bot can respond in (empty = all channels)"
+    )
     val allowedChannelIds: List<String> = emptyList(),
 )
 
@@ -213,8 +249,10 @@ data class MemoryConfig(
 enum class ApprovalPolicy {
     @SerialName("allow")
     ALLOW,
+
     @SerialName("ask")
     ASK,
+
     @SerialName("deny")
     DENY,
 }
@@ -296,16 +334,23 @@ data class ExecutorConfig(
     @Documented(name = "Supervision", description = "Tool supervision mode (none, supervised)")
     val supervision: SupervisionMode = SupervisionMode.NONE,
     @SerialName("tool_policies")
-    @Documented(name = "Tool Policies", description = "Policy-based rules for tool approval (supports allow, deny, ask policies with argument matchers)")
+    @Documented(
+        name = "Tool Policies",
+        description = "Policy-based rules for tool approval (supports allow, deny, ask policies with argument matchers)"
+    )
     val toolPolicies: List<ToolPolicy> = emptyList(),
     @SerialName("bridge_approval")
-    @Documented(name = "Bridge Approval", description = "Whether to forward tool permission requests to chat bridges for approval (always available in chat mode and dashboard)")
+    @Documented(
+        name = "Bridge Approval",
+        description = "Whether to forward tool permission requests to chat bridges for approval (always available in chat mode and dashboard)"
+    )
     val bridgeApproval: Boolean = true,
 )
 
 enum class ExecutorType {
     @SerialName("local")
     LOCAL,
+
     @SerialName("remote")
     REMOTE,
 }
@@ -314,6 +359,7 @@ enum class ExecutorType {
 enum class SupervisionMode {
     @SerialName("none")
     NONE,
+
     @SerialName("supervised")
     SUPERVISED,
 }
@@ -342,13 +388,22 @@ data class AgentConfig(
     @SerialName("max_tokens")
     @Documented(name = "Max Tokens", description = "Maximum number of tokens in LLM responses")
     val maxTokens: Long = 4096,
+    @SerialName("context_length")
+    @Documented(
+        name = "Context Length",
+        description = "Model context window in tokens. Drives usage reporting and ratio-based compaction. 0 = unknown.",
+    )
+    val contextLength: Int = 0,
     @SerialName("max_iterations")
     @Documented(name = "Max Iterations", description = "Maximum number of tool-use iterations per request")
     val maxIterations: Int = 10,
     @SerialName("max_history_messages")
     @Documented(name = "Max History", description = "Maximum number of messages to include in conversation history")
     val maxHistoryMessages: Int = 20,
-    @Documented(name = "Vision", description = "Whether to pass images from chat messages to the LLM for vision analysis (requires a vision-capable model)")
+    @Documented(
+        name = "Vision",
+        description = "Whether to pass images from chat messages to the LLM for vision analysis (requires a vision-capable model)"
+    )
     val vision: Boolean = false,
 )
 
@@ -360,7 +415,10 @@ data class AgentConfig(
 )
 data class PromptsConfig(
     @SerialName("prompts_dir")
-    @Documented(name = "Prompts Directory", description = "Directory where prompt files (SYSTEM.md, IDENTITY.md, USER.md) are stored")
+    @Documented(
+        name = "Prompts Directory",
+        description = "Directory where prompt files (SYSTEM.md, IDENTITY.md, USER.md) are stored"
+    )
     val promptsDir: String = "./config/prompts",
 
     @SerialName("max_file_chars")
@@ -420,7 +478,10 @@ data class WebConfig(
 )
 data class PlaywrightConfig(
     @SerialName("ws_endpoint")
-    @Documented(name = "WebSocket Endpoint", description = "WebSocket URL for connecting to a Playwright browser server")
+    @Documented(
+        name = "WebSocket Endpoint",
+        description = "WebSocket URL for connecting to a Playwright browser server"
+    )
     val wsEndpoint: String,
 
     @SerialName("navigation_timeout")
@@ -521,8 +582,10 @@ data class DatabaseConfig(
 enum class TracingLevel {
     @SerialName("off")
     OFF,
+
     @SerialName("metadata")
     METADATA,
+
     @SerialName("full")
     FULL,
 }
@@ -545,11 +608,17 @@ data class SkillsConfig(
     val skillsDir: String = "./config/skills",
 
     @SerialName("global_dir")
-    @Documented(name = "Global Directory", description = "Global skills directory shared across projects (null to disable)")
+    @Documented(
+        name = "Global Directory",
+        description = "Global skills directory shared across projects (null to disable)"
+    )
     val globalDir: String? = "~/.fraggle/skills",
 
     @SerialName("extra_paths")
-    @Documented(name = "Extra Paths", description = "Additional files or directories to load skills from (EXPLICIT precedence)")
+    @Documented(
+        name = "Extra Paths",
+        description = "Additional files or directories to load skills from (EXPLICIT precedence)"
+    )
     val extraPaths: List<String> = emptyList(),
 
     @SerialName("enable_slash_commands")
@@ -564,6 +633,9 @@ data class SkillsConfig(
     extras = ["icon=bi-activity"],
 )
 data class TracingConfig(
-    @Documented(name = "Level", description = "Tracing level: off (disabled), metadata (events without LLM content), full (everything)")
+    @Documented(
+        name = "Level",
+        description = "Tracing level: off (disabled), metadata (events without LLM content), full (everything)"
+    )
     val level: TracingLevel = TracingLevel.OFF,
 )

@@ -208,7 +208,7 @@ class FraggleAgent(
 
         val result = compactor.compact(
             messages = asAgentMessages,
-            usage = ContextUsage.fromMessages(asAgentMessages, maxTokens = 0),
+            usage = ContextUsage.fromMessages(asAgentMessages, maxTokens = config.contextLength),
             previousSummary = conversation.historySummary,
         )
 
@@ -593,6 +593,7 @@ data class AgentConfig(
     val maxTokens: Long = 4096,
     val maxIterations: Int = 10,
     val maxHistoryMessages: Int = 20,
+    val contextLength: Int = 0,
     val autoMemory: Boolean = true,
     val vision: Boolean = false,
 )

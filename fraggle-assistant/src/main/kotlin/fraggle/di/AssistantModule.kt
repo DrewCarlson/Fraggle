@@ -113,6 +113,7 @@ interface AssistantModule {
             maxTokens = agentConfig.maxTokens,
             maxIterations = agentConfig.maxIterations,
             maxHistoryMessages = agentConfig.maxHistoryMessages,
+            contextLength = agentConfig.contextLength,
             vision = agentConfig.vision,
         )
     }
