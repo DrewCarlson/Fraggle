@@ -22,11 +22,10 @@ data class Skill(
 
 /**
  * Origin of a skill. Used for collision precedence when the same name appears in
- * multiple locations — [PROJECT] wins over [GLOBAL] wins over [PACKAGE]. [EXPLICIT]
+ * multiple locations — [PROJECT] wins over [GLOBAL]. [EXPLICIT]
  * entries (CLI `--skill` flag or config `extra_paths`) override everything.
  */
 enum class SkillSource {
-    PACKAGE,
     GLOBAL,
     PROJECT,
     EXPLICIT,
