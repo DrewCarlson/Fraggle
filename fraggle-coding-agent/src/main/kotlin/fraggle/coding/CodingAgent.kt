@@ -12,6 +12,7 @@ import fraggle.agent.message.StopReason
 import fraggle.coding.session.Session
 import fraggle.coding.session.SessionEntry
 import org.slf4j.LoggerFactory
+import java.nio.file.Path
 import java.util.UUID
 
 /**
@@ -81,6 +82,12 @@ class CodingAgent(private val options: CodingAgentOptions, private val session: 
 
     /** Read-only view of the current in-memory agent state. */
     val state get() = agent.state
+
+    /** On-disk path of the session file backing this agent. */
+    val sessionFile: Path get() = session.file.path
+
+    /** Stable identifier of the session backing this agent. */
+    val sessionId: String get() = session.id
 
     /**
      * Send a user message and run the agent loop to completion.
@@ -223,6 +230,7 @@ class CodingAgent(private val options: CodingAgentOptions, private val session: 
                     )
                     tipId = session.record(entry)
                 }
+
                 is AgentMessage.Assistant -> recordAssistantEntry(msg)
                 is AgentMessage.ToolResult -> recordToolResultEntry(msg)
                 is AgentMessage.Platform -> {
@@ -251,6 +259,7 @@ class CodingAgent(private val options: CodingAgentOptions, private val session: 
             is CompactionResult.Failed -> {
                 logger.warn("Compaction failed, keeping uncompacted state: ${result.reason}")
             }
+
             is CompactionResult.Compacted -> {
                 logger.info(
                     "Compaction fired: elided {} messages, kept {} recent, summary {} chars",

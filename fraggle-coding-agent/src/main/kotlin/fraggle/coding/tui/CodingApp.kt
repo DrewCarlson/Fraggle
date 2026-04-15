@@ -68,6 +68,29 @@ fun CodingApp(
     // Pending tool-call approval, projected from the handler's state flow.
     var pendingApproval by remember { mutableStateOf<fraggle.coding.tui.PendingApproval?>(null) }
 
+    // Multi-line informational notice (e.g. /hotkeys, /session output). Shown
+    // above the editor, cleared on the next Enter submit.
+    var notice by remember { mutableStateOf<List<String>?>(null) }
+
+    val slashCommands = remember(agent) {
+        SlashCommandRegistry.builtIn(
+            onNewSession = {
+                notice = listOf(
+                    "/new: not available from inside a running session.",
+                    "Exit (Esc Esc / Ctrl+C) and relaunch `fraggle code` for a new session.",
+                )
+            },
+            onQuit = { onExitRequest() },
+            onHotkeys = { notice = HotkeysHelp },
+            onSessionInfo = {
+                notice = listOf(
+                    "session id: ${agent.sessionId}",
+                    "file:       ${agent.sessionFile}",
+                )
+            },
+        )
+    }
+
     // Subscribe to agent events once. The lambda runs on whichever coroutine
     // the agent loop is dispatching from; Compose state writes from other
     // threads are safe via Snapshot.
@@ -129,26 +152,43 @@ fun CodingApp(
                 pending = pendingApproval,
                 confirmExit = confirmExit,
                 onEditorChange = { editor = it },
-                onSubmit = {
+                onSubmit = submit@{
                     val text = editor.text
-                    if (text.isNotBlank()) {
-                        editor = EditorState()
-                        errorMessage = null
-                        confirmExit = false
-                        scope.launch {
-                            busy = true
-                            try {
-                                agent.prompt(text)
-                            } catch (e: kotlinx.coroutines.CancellationException) {
-                                // User hit escape — treat as a normal early
-                                // return, not an error. Swallow silently; the
-                                // partial session was already persisted by
-                                // CodingAgent.prompt's finally block.
-                            } catch (e: Exception) {
-                                errorMessage = e.message ?: e::class.simpleName ?: "error"
-                            } finally {
-                                busy = false
-                            }
+                    if (text.isBlank()) return@submit
+                    when (val parsed = slashCommands.parse(text)) {
+                        is SlashCommandParse.Matched -> {
+                            editor = EditorState()
+                            errorMessage = null
+                            confirmExit = false
+                            parsed.command.handler(parsed.args)
+                            return@submit
+                        }
+                        is SlashCommandParse.Unknown -> {
+                            editor = EditorState()
+                            confirmExit = false
+                            notice = null
+                            errorMessage = "unknown slash command: /${parsed.name}"
+                            return@submit
+                        }
+                        null -> Unit
+                    }
+                    editor = EditorState()
+                    errorMessage = null
+                    notice = null
+                    confirmExit = false
+                    scope.launch {
+                        busy = true
+                        try {
+                            agent.prompt(text)
+                        } catch (_: kotlinx.coroutines.CancellationException) {
+                            // User hit escape — treat as a normal early
+                            // return, not an error. Swallow silently; the
+                            // partial session was already persisted by
+                            // CodingAgent.prompt's finally block.
+                        } catch (e: Exception) {
+                            errorMessage = e.message ?: e::class.simpleName ?: "error"
+                        } finally {
+                            busy = false
                         }
                     }
                 },
@@ -179,6 +219,15 @@ fun CodingApp(
                 Text(msg, color = Theme.error)
             }
             Text("", color = Theme.foreground)
+        }
+
+        notice?.let { lines ->
+            Column {
+                for (line in lines) {
+                    Row { Text("  $line", color = Theme.accent) }
+                }
+                Text("", color = Theme.foreground)
+            }
         }
 
         if (confirmExit) {
@@ -298,3 +347,16 @@ private fun handleKey(
         }
     }
 }
+
+private val HotkeysHelp: List<String> = listOf(
+    "keys:",
+    "  Enter         send message / run slash command",
+    "  Shift+Enter   newline in editor",
+    "  Esc           abort running turn, clear editor, or confirm exit",
+    "  Ctrl+C        exit immediately",
+    "  ←/→/↑/↓       move cursor   •   Home/End   line start/end",
+    "  Backspace/Delete  edit buffer",
+    "  Y / N         approve / deny pending tool call",
+    "",
+    "slash commands:  /hotkeys  /session  /new  /quit",
+)
