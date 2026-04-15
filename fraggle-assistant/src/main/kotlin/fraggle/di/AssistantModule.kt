@@ -13,9 +13,11 @@ import fraggle.agent.loop.ToolCallExecutor
 import fraggle.agent.tool.FraggleToolRegistry
 import fraggle.agent.tool.SupervisedToolCallExecutor
 import fraggle.provider.LMStudioProvider
+import fraggle.agent.tool.AgentToolDef
 import fraggle.chat.BridgeInitializerRegistry
 import fraggle.chat.ChatBridgeManager
 import fraggle.chat.ChatCommandProcessor
+import fraggle.chat.OutgoingMessage
 import fraggle.db.ChatHistoryStore
 import fraggle.db.ExposedChatHistoryStore
 import fraggle.db.FraggleDatabase
@@ -27,10 +29,19 @@ import fraggle.memory.MemoryStore
 import fraggle.models.*
 import fraggle.prompt.PromptConfig
 import fraggle.prompt.PromptManager
+import fraggle.scheduling.CancelTaskTool
+import fraggle.scheduling.GetTaskTool
+import fraggle.scheduling.ListTasksTool
+import fraggle.scheduling.ScheduleTaskTool
+import fraggle.scheduling.ScheduledTask
+import fraggle.scheduling.TaskScheduler
 import fraggle.tracing.TraceStore
+import org.slf4j.LoggerFactory
 import kotlin.io.path.createDirectories
 import fraggle.agent.AgentConfig as RuntimeAgentConfig
 import fraggle.models.AgentConfig as ModelsAgentConfig
+
+private val assistantModuleLogger = LoggerFactory.getLogger("fraggle.di.AssistantModule")
 
 /**
  * Provides assistant-specific services (memory, prompts, chat bridges, database,
@@ -109,6 +120,48 @@ interface AssistantModule {
     @SingleIn(AppScope::class)
     fun provideChatBridgeManager(scope: CoroutineScope): ChatBridgeManager =
         ChatBridgeManager(scope)
+
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideTaskScheduler(
+        scope: CoroutineScope,
+        bridgeManager: ChatBridgeManager,
+    ): TaskScheduler = TaskScheduler(
+        scope = scope,
+        onTaskTriggered = { task: ScheduledTask ->
+            assistantModuleLogger.info("Task triggered: ${task.name} - ${task.action}")
+            if (bridgeManager.hasConnectedBridge()) {
+                try {
+                    bridgeManager.send(task.chatId, OutgoingMessage.Text(task.action))
+                    assistantModuleLogger.info("Task message sent to ${task.chatId}: ${task.action}")
+                } catch (e: Exception) {
+                    assistantModuleLogger.error("Failed to send task message: ${e.message}", e)
+                }
+            } else {
+                assistantModuleLogger.warn("Cannot send task message: No chat bridge connected")
+            }
+        },
+    )
+
+    /**
+     * Final [FraggleToolRegistry] for the messenger assistant — the base registry
+     * (filesystem/shell/web/time from [ToolsModule]) plus scheduling tools that
+     * require [TaskScheduler] + [ChatBridgeManager].
+     */
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideAssistantFraggleToolRegistry(
+        @BaseFraggleToolRegistry baseRegistry: FraggleToolRegistry,
+        taskScheduler: TaskScheduler,
+    ): FraggleToolRegistry {
+        val schedulingTools: List<AgentToolDef<*>> = listOf(
+            ScheduleTaskTool(taskScheduler),
+            ListTasksTool(taskScheduler),
+            CancelTaskTool(taskScheduler),
+            GetTaskTool(taskScheduler),
+        )
+        return FraggleToolRegistry(baseRegistry.tools + schedulingTools)
+    }
 
     @Provides
     @SingleIn(AppScope::class)

@@ -1,4 +1,4 @@
-package fraggle.tools.scheduling
+package fraggle.scheduling
 
 import fraggle.agent.tool.AgentToolDef
 import fraggle.agent.tool.LLMDescription

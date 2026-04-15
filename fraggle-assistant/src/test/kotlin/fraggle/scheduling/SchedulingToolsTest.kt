@@ -1,4 +1,4 @@
-package fraggle.tools.scheduling
+package fraggle.scheduling
 
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext

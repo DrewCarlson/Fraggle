@@ -4,15 +4,10 @@ import dev.zacsweers.metro.ContributesTo
 import dev.zacsweers.metro.Provides
 import dev.zacsweers.metro.SingleIn
 import io.ktor.client.*
-import kotlinx.coroutines.CoroutineScope
 import fraggle.agent.tool.FraggleToolRegistry
-import fraggle.chat.ChatBridgeManager
-import fraggle.chat.OutgoingMessage
 import fraggle.executor.ToolExecutor
 import fraggle.executor.supervision.ToolArgTypes
 import fraggle.tools.DefaultTools
-import fraggle.tools.scheduling.ScheduledTask
-import fraggle.tools.scheduling.TaskScheduler
 import fraggle.tools.web.PlaywrightFetcher
 import org.slf4j.LoggerFactory
 import fraggle.models.PlaywrightConfig as ModelsPlaywrightConfig
@@ -21,7 +16,14 @@ import fraggle.tools.web.PlaywrightConfig as RuntimePlaywrightConfig
 private val logger = LoggerFactory.getLogger(ToolsModule::class.java)
 
 /**
- * Provides tool-related services.
+ * Provides generic tool bindings (filesystem, shell, web, time) that any agent
+ * application can use.
+ *
+ * The [FraggleToolRegistry] provided here is qualified with [BaseFraggleToolRegistry]
+ * so app-specific modules can decorate it with their own tools before exposing an
+ * unqualified registry. For example, `fraggle-assistant` appends scheduling tools
+ * (which need `ChatBridgeManager`); a future coding-agent app would skip the
+ * assistant's decoration entirely and build its own registry.
  */
 @ContributesTo(AppScope::class)
 interface ToolsModule {
@@ -44,43 +46,20 @@ interface ToolsModule {
         return fetcher
     }
 
-    private fun createTaskCallback(bridgeManager: ChatBridgeManager): suspend (ScheduledTask) -> Unit =
-        { task ->
-            logger.info("Task triggered: ${task.name} - ${task.action}")
-            if (bridgeManager.hasConnectedBridge()) {
-                try {
-                    bridgeManager.send(task.chatId, OutgoingMessage.Text(task.action))
-                    logger.info("Task message sent to ${task.chatId}: ${task.action}")
-                } catch (e: Exception) {
-                    logger.error("Failed to send task message: ${e.message}", e)
-                }
-            } else {
-                logger.warn("Cannot send task message: No chat bridge connected")
-            }
-        }
-
-    @Provides
-    @SingleIn(AppScope::class)
-    fun provideTaskScheduler(
-        scope: CoroutineScope,
-        bridgeManager: ChatBridgeManager,
-    ): TaskScheduler = TaskScheduler(scope, createTaskCallback(bridgeManager))
-
     @Provides
     @SingleIn(AppScope::class)
     fun provideToolArgTypes(): ToolArgTypes = DefaultTools.extractArgTypes()
 
     @Provides
     @SingleIn(AppScope::class)
-    fun provideFraggleToolRegistry(
+    @BaseFraggleToolRegistry
+    fun provideBaseFraggleToolRegistry(
         toolExecutor: ToolExecutor,
         @DefaultHttpClient httpClient: HttpClient,
-        taskScheduler: TaskScheduler,
         playwrightFetcher: PlaywrightFetcher?,
     ): FraggleToolRegistry = DefaultTools.createToolRegistry(
         toolExecutor = toolExecutor,
         httpClient = httpClient,
-        taskScheduler = taskScheduler,
         playwrightFetcher = playwrightFetcher,
     )
 }

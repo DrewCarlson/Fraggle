@@ -10,7 +10,6 @@ import fraggle.executor.supervision.ToolArg
 import fraggle.executor.supervision.ToolArgKind
 import fraggle.executor.supervision.ToolArgTypes
 import fraggle.tools.file.*
-import fraggle.tools.scheduling.*
 import fraggle.tools.shell.ExecuteCommandTool
 import fraggle.tools.time.GetCurrentTimeTool
 import fraggle.tools.web.FetchApiTool
@@ -69,12 +68,14 @@ object DefaultTools {
     }
 
     /**
-     * Create a [FraggleToolRegistry] with all built-in tools.
+     * Create a [FraggleToolRegistry] with all generic built-in tools
+     * (filesystem, shell, web, time). App-specific tools (like the messenger
+     * assistant's scheduling tools) are added on top of this base registry
+     * by the app's own DI module.
      */
     fun createToolRegistry(
         toolExecutor: ToolExecutor,
         httpClient: HttpClient,
-        taskScheduler: TaskScheduler,
         playwrightFetcher: PlaywrightFetcher? = null,
     ): FraggleToolRegistry {
         val tools = buildList<AgentToolDef<*>> {
@@ -99,12 +100,6 @@ object DefaultTools {
 
             // Time
             add(GetCurrentTimeTool())
-
-            // Scheduling
-            add(ScheduleTaskTool(taskScheduler))
-            add(ListTasksTool(taskScheduler))
-            add(CancelTaskTool(taskScheduler))
-            add(GetTaskTool(taskScheduler))
         }
         return FraggleToolRegistry(tools)
     }

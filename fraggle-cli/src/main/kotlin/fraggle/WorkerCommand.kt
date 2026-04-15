@@ -18,9 +18,7 @@ import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
@@ -30,7 +28,6 @@ import fraggle.executor.LocalToolExecutor
 import fraggle.executor.RemoteToolRequest
 import fraggle.executor.RemoteToolResponse
 import fraggle.tools.DefaultTools
-import fraggle.tools.scheduling.TaskScheduler
 import org.slf4j.LoggerFactory
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
@@ -57,15 +54,14 @@ class WorkerCommand : CliktCommand(name = "worker") {
             workDirPath.createDirectories()
         }
 
-        val taskScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         val toolExecutor = LocalToolExecutor(workDirPath)
-        val taskScheduler = TaskScheduler(taskScope, {})
 
-        // Create tool registry (worker is the remote endpoint — no forwarding)
+        // Create tool registry (worker is the remote endpoint — no forwarding).
+        // Scheduling tools live in fraggle-assistant and are not exposed by the
+        // worker; the remote endpoint serves only the generic file/shell/web tools.
         val toolRegistry = DefaultTools.createToolRegistry(
             toolExecutor = toolExecutor,
             httpClient = HttpClient(),
-            taskScheduler = taskScheduler,
             playwrightFetcher = null,
         )
         val toolKeys = toolRegistry.tools.map { it.name }
