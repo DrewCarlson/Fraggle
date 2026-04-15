@@ -6,9 +6,7 @@ import fraggle.agent.skill.SkillLoader
 import fraggle.agent.skill.SkillSource
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
@@ -128,7 +126,29 @@ class SkillInstaller(
         val installed = mutableListOf<Installed>()
         val skipped = mutableListOf<Skipped>()
 
-        for (skill in loadResult.skills) {
+        // Dedupe same-name skills that a single source surfaces more than once.
+        //
+        // Some repos ship the same SKILL.md under several layouts for different
+        // agent conventions — e.g. a root copy, a `plugins/<agent>/skills/`
+        // copy, and a canonical `skills/` copy (JuliusBrussee/caveman does all
+        // three). Without this, the walker installs one copy and then emits a
+        // spurious "destination already exists" skipped entry for every other
+        // copy of the same name from the same install batch.
+        //
+        // Priority (lowest wins, so lower number beats higher number):
+        //   1. path contains a `/skills/` segment  (canonical agentskills layout)
+        //   2. everything else
+        // Ties break on shortest relative path to keep root-level dirs above
+        // nested plugin/ wrappers, and finally on lexicographic order for full
+        // determinism. `loadResult.skills` order becomes irrelevant — the
+        // selected copy is a pure function of the on-disk paths.
+        val relativeRoot = if (source.isDirectory()) source else source.parent ?: source
+        val uniqueSkills = loadResult.skills
+            .groupBy { it.name }
+            .map { (_, group) -> group.minWith(dedupePriority(relativeRoot)) }
+            .sortedBy { it.name }
+
+        for (skill in uniqueSkills) {
             val destination = targetDir.resolve(skill.name)
             if (destination.exists()) {
                 if (!force) {
@@ -199,6 +219,26 @@ class SkillInstaller(
         } catch (e: Exception) {
             UninstallResult.Failed(name, e.message ?: e::class.simpleName.orEmpty())
         }
+    }
+
+    /**
+     * Comparator that ranks duplicate skill copies so the same source on the
+     * same filesystem always picks the same winner. Lower result = higher
+     * priority.
+     *
+     * 1. Prefer paths containing a `/skills/` segment (agentskills.io canonical).
+     * 2. Prefer shorter relative paths (root-level dirs beat nested copies).
+     * 3. Fall back to lexicographic order on the full path.
+     */
+    private fun dedupePriority(root: Path): Comparator<Skill> {
+        fun rel(skill: Skill): String =
+            runCatching { root.relativize(skill.filePath).toString().replace('\\', '/') }
+                .getOrDefault(skill.filePath.toString())
+        return compareBy(
+            { skill -> if ("/skills/" in ("/" + rel(skill))) 0 else 1 },
+            { skill -> rel(skill).count { it == '/' } },
+            { skill -> rel(skill) },
+        )
     }
 
     private fun copyDirectory(src: Path, dst: Path) {
