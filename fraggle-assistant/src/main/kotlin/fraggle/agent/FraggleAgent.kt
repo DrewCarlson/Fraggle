@@ -9,6 +9,9 @@ import fraggle.agent.message.AgentMessage
 import fraggle.agent.message.ContentPart.Text
 import fraggle.agent.skill.SkillPromptFormatter
 import fraggle.agent.skill.SkillRegistry
+import fraggle.agent.tracing.AgentEventTracer
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -130,20 +133,26 @@ class FraggleAgent(
 
             // Wire tracing if enabled
             val tracer = traceStore?.let {
-                fraggle.agent.tracing.AgentEventTracer(it, eventBus, message.chatId)
-            }
-            if (tracer != null) {
-                agent.subscribe(tracer::processEvent)
+                AgentEventTracer(it, eventBus, message.chatId)
             }
 
             withContext(ToolExecutionContext.asContextElement(executionContext)) {
-                agent.prompt(listOf(AgentMessage.User(userInput)))
+                coroutineScope {
+                    val tracerJob = tracer?.let {
+                        launch { agent.events().collect(it::processEvent) }
+                    }
+                    try {
+                        agent.prompt(listOf(AgentMessage.User(userInput)))
+                    } finally {
+                        tracerJob?.cancel()
+                    }
+                }
             }
 
             val lastAssistant = agent.state.messages
                 .filterIsInstance<AgentMessage.Assistant>()
                 .lastOrNull()
-            val content = lastAssistant?.textContent ?: ""
+            val content = lastAssistant?.textContent.orEmpty()
 
             if (config.autoMemory && content.isNotBlank()) {
                 extractMemoryViaLLM(message, content)
@@ -209,6 +218,7 @@ class FraggleAgent(
                 logger.warn("History compaction failed, keeping original conversation: ${result.reason}")
                 conversation
             }
+
             is CompactionResult.Compacted -> {
                 // Map the kept tail back to ConversationMessage. The tail is
                 // equal by object identity to the original entries' agent-message
@@ -481,14 +491,16 @@ class FraggleAgent(
             return emptyList()
         }
 
-        val extractionResponse = lmStudioProvider.chat(fraggle.provider.ChatRequest(
-            model = config.model,
-            messages = listOf(
-                fraggle.provider.Message.system(systemText),
-                fraggle.provider.Message.user(inputText),
-            ),
-            temperature = 0.1,
-        ))
+        val extractionResponse = lmStudioProvider.chat(
+            fraggle.provider.ChatRequest(
+                model = config.model,
+                messages = listOf(
+                    fraggle.provider.Message.system(systemText),
+                    fraggle.provider.Message.user(inputText),
+                ),
+                temperature = 0.1,
+            )
+        )
         val result = extractionResponse.choices.firstOrNull()?.message?.content
             ?.let { ReasoningContentFilter.strip(it) }
             ?: return emptyList()
@@ -533,14 +545,16 @@ class FraggleAgent(
             return fallback()
         }
 
-        val reconcileResponse = lmStudioProvider.chat(fraggle.provider.ChatRequest(
-            model = config.model,
-            messages = listOf(
-                fraggle.provider.Message.system(systemText),
-                fraggle.provider.Message.user(inputText),
-            ),
-            temperature = 0.1,
-        ))
+        val reconcileResponse = lmStudioProvider.chat(
+            fraggle.provider.ChatRequest(
+                model = config.model,
+                messages = listOf(
+                    fraggle.provider.Message.system(systemText),
+                    fraggle.provider.Message.user(inputText),
+                ),
+                temperature = 0.1,
+            )
+        )
         val result = reconcileResponse.choices.firstOrNull()?.message?.content
             ?.let { ReasoningContentFilter.strip(it) }
             ?: return fallback()

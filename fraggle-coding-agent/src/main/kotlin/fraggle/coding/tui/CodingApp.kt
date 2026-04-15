@@ -110,7 +110,7 @@ fun CodingApp(
         messages.clear()
         messages.addAll(agent.state.messages)
 
-        agent.subscribe { event ->
+        agent.events().collect { event ->
             when (event) {
                 is AgentEvent.MessageStart -> {
                     (event.message as? AgentMessage.Assistant)?.let {

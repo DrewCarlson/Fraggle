@@ -15,7 +15,7 @@ import java.util.UUID
  * Usage:
  * ```
  * val tracer = AgentEventTracer(traceStore, eventBus, chatId)
- * agent.subscribe(tracer::processEvent)
+ * scope.launch { agent.events().collect(tracer::processEvent) }
  * ```
  */
 class AgentEventTracer(

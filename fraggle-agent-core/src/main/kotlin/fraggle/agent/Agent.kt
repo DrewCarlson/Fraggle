@@ -12,7 +12,10 @@ import fraggle.agent.state.MutableAgentState
 import fraggle.agent.state.PendingMessageQueue
 import fraggle.agent.state.QueueMode
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
 
 /**
@@ -21,7 +24,7 @@ import kotlinx.coroutines.launch
  * Usage:
  * ```
  * val agent = Agent(options)
- * agent.subscribe { event -> /* handle */ }
+ * scope.launch { agent.events().collect { event -> /* handle */ } }
  * agent.prompt("Hello!")
  * agent.waitForIdle()
  * println(agent.state.messages)
@@ -43,17 +46,22 @@ class Agent(private val options: AgentOptions) {
     /** Read-only snapshot of current state. */
     val state: AgentState get() = _state.snapshot()
 
-    /** Subscribe to lifecycle events. Returns unsubscribe handle. */
-    fun subscribe(listener: suspend (AgentEvent) -> Unit): () -> Unit {
-        listeners.add(listener)
-        return { listeners.remove(listener) }
+    /** Cold flow of lifecycle events. Each collector receives every event after subscription. */
+    fun events(): Flow<AgentEvent> {
+        return callbackFlow {
+            val listener = ::send
+            listeners.add(listener)
+            awaitClose {
+                listeners.remove(listener)
+            }
+        }
     }
 
     /** Start a new prompt. Throws if already running. */
     suspend fun prompt(messages: List<AgentMessage>) {
         check(activeJob == null) { "Agent is already processing" }
         runWithLifecycle {
-            val newMessages = runAgentLoop(
+            runAgentLoop(
                 prompts = messages,
                 systemPrompt = _state.systemPrompt,
                 messages = _state.messages,
@@ -112,7 +120,7 @@ class Agent(private val options: AgentOptions) {
      * notably compaction, where older messages are replaced with a summary
      * while recent messages are kept verbatim.
      *
-     * Preserves [systemPrompt], [subscribe] listeners, and pending
+     * Preserves [systemPrompt], [events] listeners, and pending
      * steering/follow-up queues. Throws if the agent is currently running;
      * replacing messages mid-turn would race with [processEvent].
      *

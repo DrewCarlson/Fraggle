@@ -10,7 +10,11 @@ import fraggle.agent.message.AgentMessage
 import fraggle.agent.message.ContentPart
 import fraggle.agent.message.StopReason
 import fraggle.agent.message.ToolCall
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.yield
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
@@ -40,14 +44,16 @@ class AgentTest {
         toolExecutor: ToolCallExecutor? = null,
         maxIterations: Int = 10,
         chatId: String = "test-chat",
-    ) = Agent(AgentOptions(
-        systemPrompt = "You are helpful.",
-        model = "test-model",
-        llmBridge = llmBridge,
-        toolExecutor = toolExecutor,
-        maxIterations = maxIterations,
-        chatId = chatId,
-    ))
+    ) = Agent(
+        AgentOptions(
+            systemPrompt = "You are helpful.",
+            model = "test-model",
+            llmBridge = llmBridge,
+            toolExecutor = toolExecutor,
+            maxIterations = maxIterations,
+            chatId = chatId,
+        )
+    )
 
     @Nested
     inner class BasicPrompt {
@@ -137,7 +143,8 @@ class AgentTest {
         fun `subscriber receives all events`() = runTest {
             val events = mutableListOf<AgentEvent>()
             val agent = simpleAgent()
-            agent.subscribe { events.add(it) }
+            backgroundScope.launch { agent.events().collect { events.add(it) } }
+            yield()
 
             agent.prompt("Hi")
 
@@ -153,12 +160,13 @@ class AgentTest {
         fun `unsubscribe stops receiving events`() = runTest {
             val events = mutableListOf<AgentEvent>()
             val agent = simpleAgent()
-            val unsub = agent.subscribe { events.add(it) }
+            agent.events()
+                .onEach { events.add(it) }
+                .launchIn(backgroundScope)
 
             agent.prompt("First")
             val countAfterFirst = events.size
 
-            unsub()
             agent.prompt("Second")
 
             assertEquals(countAfterFirst, events.size)
@@ -169,8 +177,9 @@ class AgentTest {
             val events1 = mutableListOf<AgentEvent>()
             val events2 = mutableListOf<AgentEvent>()
             val agent = simpleAgent()
-            agent.subscribe { events1.add(it) }
-            agent.subscribe { events2.add(it) }
+            backgroundScope.launch { agent.events().collect { events1.add(it) } }
+            backgroundScope.launch { agent.events().collect { events2.add(it) } }
+            yield()
 
             agent.prompt("Hi")
 
@@ -196,6 +205,7 @@ class AgentTest {
                 override suspend fun execute(toolCall: ToolCall, chatId: String): ToolCallResult {
                     return ToolCallResult("result")
                 }
+
                 override fun getToolDefinitions() = emptyList<ToolDefinition>()
             }
 
@@ -204,13 +214,15 @@ class AgentTest {
                 toolExecutor = executor,
             )
 
-            agent.subscribe { event ->
-                if (event is AgentEvent.ToolExecutionStart) {
-                    // Can't snapshot state during event processing easily,
-                    // but we can verify the event itself
-                    toolCallIds.add(setOf(event.toolCallId))
+            agent.events()
+                .onEach { event ->
+                    if (event is AgentEvent.ToolExecutionStart) {
+                        // Can't snapshot state during event processing easily,
+                        // but we can verify the event itself
+                        toolCallIds.add(setOf(event.toolCallId))
+                    }
                 }
-            }
+                .launchIn(backgroundScope)
 
             agent.prompt("go")
 
@@ -276,6 +288,7 @@ class AgentTest {
                 override suspend fun execute(toolCall: ToolCall, chatId: String): ToolCallResult {
                     return ToolCallResult("ok")
                 }
+
                 override fun getToolDefinitions() = emptyList<ToolDefinition>()
             }
 
@@ -344,6 +357,7 @@ class AgentTest {
             val executor = object : ToolCallExecutor {
                 override suspend fun execute(toolCall: ToolCall, chatId: String) =
                     ToolCallResult("ok")
+
                 override fun getToolDefinitions() = emptyList<ToolDefinition>()
             }
 
@@ -373,6 +387,7 @@ class AgentTest {
                             ToolCall("tc-1", "get_weather", """{"city":"Tokyo"}"""),
                         ),
                     )
+
                     else -> AgentMessage.Assistant(
                         content = listOf(ContentPart.Text("The weather in Tokyo is sunny and 22C.")),
                     )
@@ -384,6 +399,7 @@ class AgentTest {
                     assertEquals("get_weather", toolCall.name)
                     return ToolCallResult("""{"temp": 22, "condition": "sunny"}""")
                 }
+
                 override fun getToolDefinitions() = listOf(
                     ToolDefinition("get_weather", "Get weather", """{"type":"object"}""")
                 )
@@ -391,7 +407,9 @@ class AgentTest {
 
             val events = mutableListOf<AgentEvent>()
             val agent = simpleAgent(llmBridge = bridge, toolExecutor = executor)
-            agent.subscribe { events.add(it) }
+            agent.events()
+                .onEach { events.add(it) }
+                .launchIn(backgroundScope)
 
             agent.prompt("What's the weather in Tokyo?")
 

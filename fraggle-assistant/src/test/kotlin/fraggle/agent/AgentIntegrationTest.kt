@@ -5,13 +5,10 @@ import fraggle.agent.event.StreamDelta
 import fraggle.agent.loop.AgentOptions
 import fraggle.agent.loop.LlmBridge
 import fraggle.agent.loop.ProviderLlmBridge
-import fraggle.agent.loop.StreamingLlmBridge
 import fraggle.agent.loop.ToolCallExecutor
 import fraggle.agent.loop.ToolCallResult
 import fraggle.agent.loop.ToolDefinition
-import fraggle.agent.loop.ToolExecutionMode
 import fraggle.agent.message.AgentMessage
-import fraggle.agent.message.ContentPart
 import fraggle.agent.message.StopReason
 import fraggle.agent.message.ToolCall
 import fraggle.agent.tool.AgentToolDef
@@ -20,6 +17,8 @@ import fraggle.agent.tool.SupervisedToolCallExecutor
 import fraggle.executor.supervision.NoOpToolSupervisor
 import fraggle.provider.LMStudioProvider
 import io.ktor.client.HttpClient
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.Serializable
 import org.junit.jupiter.api.Nested
@@ -93,11 +92,13 @@ class AgentIntegrationTest {
     inner class BasicAgentFlow {
         @Test
         fun `simple prompt and response`() = runTest(timeout = 2.minutes) {
-            val agent = Agent(AgentOptions(
-                systemPrompt = "You are a helpful assistant. Be very brief.",
-                model = model(),
-                llmBridge = bridge(),
-            ))
+            val agent = Agent(
+                AgentOptions(
+                    systemPrompt = "You are a helpful assistant. Be very brief.",
+                    model = model(),
+                    llmBridge = bridge(),
+                )
+            )
 
             agent.prompt("What is 2+2? Reply with just the number.")
 
@@ -112,11 +113,13 @@ class AgentIntegrationTest {
 
         @Test
         fun `multi-turn conversation`() = runTest(timeout = 2.minutes) {
-            val agent = Agent(AgentOptions(
-                systemPrompt = "Be very brief.",
-                model = model(),
-                llmBridge = bridge(),
-            ))
+            val agent = Agent(
+                AgentOptions(
+                    systemPrompt = "Be very brief.",
+                    model = model(),
+                    llmBridge = bridge(),
+                )
+            )
 
             agent.prompt("My name is IntegrationTestAgent.")
             agent.prompt("What is my name? Reply with just the name.")
@@ -144,12 +147,14 @@ class AgentIntegrationTest {
             val registry = FraggleToolRegistry(listOf(AddTool()))
             val executor = SupervisedToolCallExecutor(registry, NoOpToolSupervisor())
 
-            val agent = Agent(AgentOptions(
-                systemPrompt = "You must use the add_numbers tool when asked to add numbers. After getting the result, state the answer clearly.",
-                model = model(),
-                llmBridge = bridge(),
-                toolExecutor = executor,
-            ))
+            val agent = Agent(
+                AgentOptions(
+                    systemPrompt = "You must use the add_numbers tool when asked to add numbers. After getting the result, state the answer clearly.",
+                    model = model(),
+                    llmBridge = bridge(),
+                    toolExecutor = executor,
+                )
+            )
 
             agent.prompt("What is 17 + 25?")
 
@@ -175,14 +180,16 @@ class AgentIntegrationTest {
             val registry = FraggleToolRegistry(listOf(GetInfoTool()))
             val executor = SupervisedToolCallExecutor(registry, NoOpToolSupervisor())
 
-            val agent = Agent(AgentOptions(
-                systemPrompt = "You MUST use the get_info tool to answer questions. " +
-                    "After receiving the tool result, restate the information clearly in your own words.",
-                model = model(),
-                llmBridge = bridge(),
-                toolExecutor = executor,
-                maxIterations = 5,
-            ))
+            val agent = Agent(
+                AgentOptions(
+                    systemPrompt = "You MUST use the get_info tool to answer questions. " +
+                            "After receiving the tool result, restate the information clearly in your own words.",
+                    model = model(),
+                    llmBridge = bridge(),
+                    toolExecutor = executor,
+                    maxIterations = 5,
+                )
+            )
 
             agent.prompt("Tell me about Paris using the get_info tool.")
 
@@ -210,12 +217,16 @@ class AgentIntegrationTest {
         fun `receives all lifecycle events`() = runTest(timeout = 2.minutes) {
             val events = mutableListOf<AgentEvent>()
 
-            val agent = Agent(AgentOptions(
-                systemPrompt = "Be very brief.",
-                model = model(),
-                llmBridge = bridge(),
-            ))
-            agent.subscribe { events.add(it) }
+            val agent = Agent(
+                AgentOptions(
+                    systemPrompt = "Be very brief.",
+                    model = model(),
+                    llmBridge = bridge(),
+                )
+            )
+            agent.events()
+                .onEach { events.add(it) }
+                .launchIn(backgroundScope)
 
             agent.prompt("Say hello")
 
@@ -231,16 +242,20 @@ class AgentIntegrationTest {
         fun `streaming bridge emits MessageUpdate deltas`() = runTest(timeout = 2.minutes) {
             // ProviderLlmBridge always implements StreamingLlmBridge by construction.
             val deltas = mutableListOf<StreamDelta>()
-            val agent = Agent(AgentOptions(
-                systemPrompt = "Be very brief.",
-                model = model(),
-                llmBridge = bridge(),
-            ))
-            agent.subscribe { event ->
-                if (event is AgentEvent.MessageUpdate) {
-                    deltas.add(event.delta)
+            val agent = Agent(
+                AgentOptions(
+                    systemPrompt = "Be very brief.",
+                    model = model(),
+                    llmBridge = bridge(),
+                )
+            )
+            agent.events()
+                .onEach { event ->
+                    if (event is AgentEvent.MessageUpdate) {
+                        deltas.add(event.delta)
+                    }
                 }
-            }
+                .launchIn(backgroundScope)
 
             agent.prompt("Count from 1 to 5, separated by commas.")
 
@@ -255,17 +270,21 @@ class AgentIntegrationTest {
             val executor = SupervisedToolCallExecutor(registry, NoOpToolSupervisor())
             val toolEvents = mutableListOf<AgentEvent>()
 
-            val agent = Agent(AgentOptions(
-                systemPrompt = "You must use the add_numbers tool to add numbers.",
-                model = model(),
-                llmBridge = bridge(),
-                toolExecutor = executor,
-            ))
-            agent.subscribe { event ->
-                if (event is AgentEvent.ToolExecutionStart || event is AgentEvent.ToolExecutionEnd) {
-                    toolEvents.add(event)
+            val agent = Agent(
+                AgentOptions(
+                    systemPrompt = "You must use the add_numbers tool to add numbers.",
+                    model = model(),
+                    llmBridge = bridge(),
+                    toolExecutor = executor,
+                )
+            )
+            agent.events()
+                .onEach { event ->
+                    if (event is AgentEvent.ToolExecutionStart || event is AgentEvent.ToolExecutionEnd) {
+                        toolEvents.add(event)
+                    }
                 }
-            }
+                .launchIn(backgroundScope)
 
             agent.prompt("Add 5 and 3 using the tool.")
 
@@ -288,11 +307,13 @@ class AgentIntegrationTest {
     inner class StateManagement {
         @Test
         fun `state is clean after completion`() = runTest(timeout = 2.minutes) {
-            val agent = Agent(AgentOptions(
-                systemPrompt = "Be brief.",
-                model = model(),
-                llmBridge = bridge(),
-            ))
+            val agent = Agent(
+                AgentOptions(
+                    systemPrompt = "Be brief.",
+                    model = model(),
+                    llmBridge = bridge(),
+                )
+            )
 
             agent.prompt("Hi")
 
@@ -304,11 +325,13 @@ class AgentIntegrationTest {
 
         @Test
         fun `reset clears all state`() = runTest(timeout = 2.minutes) {
-            val agent = Agent(AgentOptions(
-                systemPrompt = "Be brief.",
-                model = model(),
-                llmBridge = bridge(),
-            ))
+            val agent = Agent(
+                AgentOptions(
+                    systemPrompt = "Be brief.",
+                    model = model(),
+                    llmBridge = bridge(),
+                )
+            )
 
             agent.prompt("Hi")
             assertTrue(agent.state.messages.isNotEmpty())
@@ -328,11 +351,13 @@ class AgentIntegrationTest {
         fun `sliding window limits context sent to LLM`() = runTest(timeout = 3.minutes) {
             val transform = fraggle.agent.context.SlidingWindowTransform(maxTokens = 200)
 
-            val agent = Agent(AgentOptions(
-                systemPrompt = "Be very brief. Always respond with exactly one short sentence.",
-                model = model(),
-                llmBridge = bridge(),
-            ))
+            val agent = Agent(
+                AgentOptions(
+                    systemPrompt = "Be very brief. Always respond with exactly one short sentence.",
+                    model = model(),
+                    llmBridge = bridge(),
+                )
+            )
 
             // Have a multi-turn conversation
             agent.prompt("Tell me about cats")
@@ -361,6 +386,7 @@ class AgentIntegrationTest {
             val alwaysCallExecutor = object : ToolCallExecutor {
                 override suspend fun execute(toolCall: ToolCall, chatId: String) =
                     ToolCallResult("Need to call again")
+
                 override fun getToolDefinitions() = listOf(
                     ToolDefinition("loop_tool", "A tool that loops", """{"type":"object","properties":{}}""")
                 )
@@ -373,13 +399,15 @@ class AgentIntegrationTest {
                 )
             }
 
-            val agent = Agent(AgentOptions(
-                systemPrompt = "test",
-                model = "test",
-                llmBridge = loopingBridge,
-                toolExecutor = alwaysCallExecutor,
-                maxIterations = 3,
-            ))
+            val agent = Agent(
+                AgentOptions(
+                    systemPrompt = "test",
+                    model = "test",
+                    llmBridge = loopingBridge,
+                    toolExecutor = alwaysCallExecutor,
+                    maxIterations = 3,
+                )
+            )
 
             agent.prompt("go")
 
@@ -397,11 +425,13 @@ class AgentIntegrationTest {
                 ),
             )
 
-            val agent = Agent(AgentOptions(
-                systemPrompt = "test",
-                model = "test",
-                llmBridge = badBridge,
-            ))
+            val agent = Agent(
+                AgentOptions(
+                    systemPrompt = "test",
+                    model = "test",
+                    llmBridge = badBridge,
+                )
+            )
 
             agent.prompt("Hi")
 

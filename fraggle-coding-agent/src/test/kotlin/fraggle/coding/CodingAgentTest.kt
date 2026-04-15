@@ -15,6 +15,8 @@ import fraggle.coding.session.Session
 import fraggle.coding.session.SessionEntry
 import fraggle.coding.session.SessionFile
 import fraggle.coding.session.SessionManager
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -127,7 +129,11 @@ class CodingAgentTest {
 
             val entries = readEntries(session)
             // root + user + assistant
-            assertEquals(3, entries.size, "expected root + user + assistant, got: ${entries.map { it.payload::class.simpleName }}")
+            assertEquals(
+                3,
+                entries.size,
+                "expected root + user + assistant, got: ${entries.map { it.payload::class.simpleName }}"
+            )
             val user = entries[1].payload as SessionEntry.Payload.User
             val assistant = entries[2].payload as SessionEntry.Payload.Assistant
             assertEquals("hello", user.text)
@@ -151,12 +157,14 @@ class CodingAgentTest {
 
         @Test
         fun `usage is persisted on assistant entries`(@TempDir dir: Path) = runTest {
-            val bridge = ScriptedLlmBridge(listOf(
-                assistantReply(
-                    text = "response",
-                    usage = TokenUsage(promptTokens = 42, completionTokens = 8, totalTokens = 50),
-                ),
-            ))
+            val bridge = ScriptedLlmBridge(
+                listOf(
+                    assistantReply(
+                        text = "response",
+                        usage = TokenUsage(promptTokens = 42, completionTokens = 8, totalTokens = 50),
+                    ),
+                )
+            )
             val session = sessionAt(dir)
             val agent = CodingAgent(options(bridge), session)
 
@@ -175,10 +183,12 @@ class CodingAgentTest {
     inner class MultiTurn {
         @Test
         fun `second prompt produces two more entries chained on the first assistant`(@TempDir dir: Path) = runTest {
-            val bridge = ScriptedLlmBridge(listOf(
-                assistantReply("first answer"),
-                assistantReply("second answer"),
-            ))
+            val bridge = ScriptedLlmBridge(
+                listOf(
+                    assistantReply("first answer"),
+                    assistantReply("second answer"),
+                )
+            )
             val session = sessionAt(dir)
             val agent = CodingAgent(options(bridge), session)
 
@@ -244,62 +254,65 @@ class CodingAgentTest {
     @Nested
     inner class Compaction {
         @Test
-        fun `compaction fires when policy says yes, writes a Meta entry, and replaces agent state`(@TempDir dir: Path) = runTest {
-            // Scripted LLM calls:
-            //  call 0 — first prompt response
-            //  call 1 — second prompt response
-            //  call 2 — compaction summary (triggered before the third prompt)
-            //  call 3 — third prompt response
-            val bridge = ScriptedLlmBridge(listOf(
-                assistantReply("first"),
-                assistantReply("second"),
-                assistantReply("[COMPACTED SUMMARY]"),
-                assistantReply("third"),
-            ))
+        fun `compaction fires when policy says yes, writes a Meta entry, and replaces agent state`(@TempDir dir: Path) =
+            runTest {
+                // Scripted LLM calls:
+                //  call 0 — first prompt response
+                //  call 1 — second prompt response
+                //  call 2 — compaction summary (triggered before the third prompt)
+                //  call 3 — third prompt response
+                val bridge = ScriptedLlmBridge(
+                    listOf(
+                        assistantReply("first"),
+                        assistantReply("second"),
+                        assistantReply("[COMPACTED SUMMARY]"),
+                        assistantReply("third"),
+                    )
+                )
 
-            // Fire compaction exactly once, on the first call where there's
-            // actually something to elide (>= 4 messages in state, since
-            // keepRecent=2 means the head needs to be at least 2 messages).
-            var fired = false
-            val oneShotPolicy = CompactionPolicy { messages, _ ->
-                if (!fired && messages.size >= 4) {
-                    fired = true
-                    true
-                } else {
-                    false
+                // Fire compaction exactly once, on the first call where there's
+                // actually something to elide (>= 4 messages in state, since
+                // keepRecent=2 means the head needs to be at least 2 messages).
+                var fired = false
+                val oneShotPolicy = CompactionPolicy { messages, _ ->
+                    if (!fired && messages.size >= 4) {
+                        fired = true
+                        true
+                    } else {
+                        false
+                    }
                 }
+
+                val session = sessionAt(dir)
+                val agent = CodingAgent(
+                    options(
+                        bridge = bridge,
+                        compactionPolicy = oneShotPolicy,
+                        keepRecent = 2,
+                    ),
+                    session,
+                )
+
+                agent.prompt("q1")  // state after: [user1, assistant1] (2)
+                agent.prompt("q2")  // state after: [..., user2, assistant2] (4)
+                agent.prompt("q3")  // maybeCompact sees 4 messages → fires
+
+                val entries = readEntries(session)
+                val metaEntries = entries.filter { it.payload is SessionEntry.Payload.Meta }
+                assertEquals(1, metaEntries.size, "expected exactly one Meta entry for compaction")
+                val meta = metaEntries.single().payload as SessionEntry.Payload.Meta
+                assertEquals("compaction", meta.label)
+                assertEquals("[COMPACTED SUMMARY]", meta.summary)
+
+                // The session file still has the full history, including all prior user/assistant turns
+                val userEntries = entries.filter { it.payload is SessionEntry.Payload.User }
+                val assistantEntries = entries.filter { it.payload is SessionEntry.Payload.Assistant }
+                assertEquals(3, userEntries.size, "all three user turns should be in the file")
+                assertEquals(3, assistantEntries.size, "all three assistant turns should be in the file")
+
+                // The LlmBridge was called 4 times: 3 regular + 1 compaction summarization
+                assertEquals(4, bridge.callCount)
             }
-
-            val session = sessionAt(dir)
-            val agent = CodingAgent(
-                options(
-                    bridge = bridge,
-                    compactionPolicy = oneShotPolicy,
-                    keepRecent = 2,
-                ),
-                session,
-            )
-
-            agent.prompt("q1")  // state after: [user1, assistant1] (2)
-            agent.prompt("q2")  // state after: [..., user2, assistant2] (4)
-            agent.prompt("q3")  // maybeCompact sees 4 messages → fires
-
-            val entries = readEntries(session)
-            val metaEntries = entries.filter { it.payload is SessionEntry.Payload.Meta }
-            assertEquals(1, metaEntries.size, "expected exactly one Meta entry for compaction")
-            val meta = metaEntries.single().payload as SessionEntry.Payload.Meta
-            assertEquals("compaction", meta.label)
-            assertEquals("[COMPACTED SUMMARY]", meta.summary)
-
-            // The session file still has the full history, including all prior user/assistant turns
-            val userEntries = entries.filter { it.payload is SessionEntry.Payload.User }
-            val assistantEntries = entries.filter { it.payload is SessionEntry.Payload.Assistant }
-            assertEquals(3, userEntries.size, "all three user turns should be in the file")
-            assertEquals(3, assistantEntries.size, "all three assistant turns should be in the file")
-
-            // The LlmBridge was called 4 times: 3 regular + 1 compaction summarization
-            assertEquals(4, bridge.callCount)
-        }
 
         @Test
         fun `compaction failure does not break the turn`(@TempDir dir: Path) = runTest {
@@ -307,11 +320,13 @@ class CodingAgentTest {
             //  call 0 — q1 response
             //  call 1 — compaction summary (returns empty → Compactor reports Failed)
             //  call 2 — q2 response
-            val bridge = ScriptedLlmBridge(listOf(
-                assistantReply("first"),
-                assistantReply(""),  // empty compaction response → Failed
-                assistantReply("second"),
-            ))
+            val bridge = ScriptedLlmBridge(
+                listOf(
+                    assistantReply("first"),
+                    assistantReply(""),  // empty compaction response → Failed
+                    assistantReply("second"),
+                )
+            )
             // Fire compaction once when there are >= 2 messages (keepRecent=1 so
             // the head will have exactly 1 message — still enough to call the LLM).
             var fired = false
@@ -353,9 +368,11 @@ class CodingAgentTest {
             val agent = CodingAgent(options(bridge), session)
 
             val eventTypes = mutableListOf<String>()
-            agent.subscribe { event ->
-                eventTypes += event::class.simpleName ?: "?"
-            }
+            agent.events()
+                .onEach { event ->
+                    eventTypes += event::class.simpleName ?: "?"
+                }
+                .launchIn(backgroundScope)
 
             agent.prompt("hello")
 

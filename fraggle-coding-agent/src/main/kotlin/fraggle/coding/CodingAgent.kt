@@ -11,6 +11,7 @@ import fraggle.agent.message.ContentPart
 import fraggle.agent.message.StopReason
 import fraggle.coding.session.Session
 import fraggle.coding.session.SessionEntry
+import kotlinx.coroutines.flow.Flow
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
 import java.util.UUID
@@ -28,7 +29,7 @@ import java.util.UUID
  *    synthetic summary message; the session file keeps the full (uncompacted)
  *    history so `/tree` navigation and resume can still reach every turn.
  *  - **Event subscription** — the underlying [Agent]'s lifecycle events are
- *    re-exposed via [subscribe], so a TUI (or a test fixture) can forward
+ *    re-exposed via [events], so a TUI (or a test fixture) can forward
  *    them to the UI without knowing how the orchestrator is wired.
  *
  * The orchestrator owns the [Agent] instance for its lifetime. Multiple
@@ -78,7 +79,7 @@ class CodingAgent(private val options: CodingAgentOptions, private val session: 
     private var tipId: String? = session.tree.entries.lastOrNull()?.id
 
     /** Subscribe to lifecycle events from the underlying [Agent]. */
-    fun subscribe(listener: suspend (AgentEvent) -> Unit): () -> Unit = agent.subscribe(listener)
+    fun events(): Flow<AgentEvent> = agent.events()
 
     /** Read-only view of the current in-memory agent state. */
     val state get() = agent.state
