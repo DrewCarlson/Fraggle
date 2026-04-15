@@ -105,13 +105,18 @@ interface AgentCoreModule {
         val entries = mutableListOf<Skill>()
         val diagnostics = mutableListOf<SkillDiagnostic>()
 
-        config.globalDir?.takeIf { it.isNotBlank() }?.let { globalDir ->
-            val result = loader.loadFromDirectory(FraggleEnvironment.resolvePath(globalDir), SkillSource.GLOBAL)
-            entries += result.skills
-            diagnostics += result.diagnostics
-        }
+        val globalDir = config.globalDir
+            ?.takeIf { it.isNotBlank() }
+            ?.let { FraggleEnvironment.resolvePath(it) }
+            ?: FraggleEnvironment.skillsDir
+        val globalResult = loader.loadFromDirectory(globalDir, SkillSource.GLOBAL)
+        entries += globalResult.skills
+        diagnostics += globalResult.diagnostics
 
-        val projectDir = FraggleEnvironment.resolvePath(config.skillsDir)
+        val projectDir = config.projectDir
+            ?.takeIf { it.isNotBlank() }
+            ?.let { FraggleEnvironment.resolveProjectPath(it) }
+            ?: FraggleEnvironment.projectSkillsDir
         val projectResult = loader.loadFromDirectory(projectDir, SkillSource.PROJECT)
         entries += projectResult.skills
         diagnostics += projectResult.diagnostics

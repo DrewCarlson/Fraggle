@@ -36,6 +36,46 @@ object FraggleEnvironment {
     val logsDir: Path get() = root.resolve("logs")
 
     /**
+     * Global skills directory: {FRAGGLE_ROOT}/skills
+     *
+     * Holds SKILL.md bundles that are shared across every Fraggle session.
+     * The directory is created on demand by whichever component first writes
+     * to it (typically the `fraggle skills add` CLI).
+     */
+    val skillsDir: Path get() = root.resolve("skills")
+
+    /**
+     * Current working directory — the user's active project when running
+     * `fraggle code` or `fraggle skills` inside a repo. Resolved lazily at
+     * each access so test harnesses can chdir without stale caching.
+     */
+    val projectDir: Path get() = Path(System.getProperty("user.dir")).toAbsolutePath().normalize()
+
+    /**
+     * Per-project Fraggle state directory: {CWD}/.fraggle
+     *
+     * Everything project-scoped lives under here (skills, future session
+     * overrides, etc.). Keeping one well-known sub-directory means we never
+     * litter a user's repo with ad-hoc top-level folders.
+     */
+    val projectStateDir: Path get() = projectDir.resolve(".fraggle")
+
+    /** Per-project skills directory: {CWD}/.fraggle/skills */
+    val projectSkillsDir: Path get() = projectStateDir.resolve("skills")
+
+    /**
+     * Resolve a path that should be treated as CWD-relative (as opposed to
+     * [resolvePath], which treats relative paths as FRAGGLE_ROOT-relative).
+     * Absolute paths are returned unchanged; `~` still expands to the user's
+     * home directory.
+     */
+    fun resolveProjectPath(path: String): Path {
+        val expanded = path.replace("~", System.getProperty("user.home"))
+        val p = Path(expanded)
+        return if (p.isAbsolute) p else projectDir.resolve(p).normalize()
+    }
+
+    /**
      * Coding-agent directory: {FRAGGLE_ROOT}/coding
      *
      * Holds settings.json, AGENTS.md (global), SYSTEM.md override, prompt

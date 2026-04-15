@@ -603,21 +603,24 @@ data class SkillsConfig(
     @Documented(name = "Enabled", description = "Whether skills are loaded and advertised to the agent")
     val enabled: Boolean = true,
 
-    @SerialName("skills_dir")
-    @Documented(name = "Skills Directory", description = "Project-scoped directory containing SKILL.md bundles")
-    val skillsDir: String = "./config/skills",
+    @SerialName("project_dir")
+    @Documented(
+        name = "Project Skills Directory",
+        description = "Override for project-scoped skills (CWD-relative). Defaults to {CWD}/.fraggle/skills.",
+    )
+    val projectDir: String? = null,
 
     @SerialName("global_dir")
     @Documented(
-        name = "Global Directory",
-        description = "Global skills directory shared across projects (null to disable)"
+        name = "Global Skills Directory",
+        description = "Override for global skills shared across projects. Defaults to {FRAGGLE_ROOT}/skills.",
     )
-    val globalDir: String? = "~/.fraggle/skills",
+    val globalDir: String? = null,
 
     @SerialName("extra_paths")
     @Documented(
         name = "Extra Paths",
-        description = "Additional files or directories to load skills from (EXPLICIT precedence)"
+        description = "Additional files or directories to load skills from (EXPLICIT precedence)",
     )
     val extraPaths: List<String> = emptyList(),
 

@@ -30,9 +30,9 @@ import kotlin.system.exitProcess
 /**
  * Parent command for the `fraggle skills` subcommand family — a skill package
  * manager modelled on [vercel-labs/skills](https://github.com/vercel-labs/skills),
- * scoped to Fraggle's own skill directories (`~/.fraggle/skills` and
- * `./config/skills`). It does not write to other agents' directories; use
- * `npx skills` for cross-agent install.
+ * scoped to Fraggle's own skill directories ({FRAGGLE_ROOT}/skills for global
+ * and {CWD}/.fraggle/skills for project-local). It does not write to other
+ * agents' directories; use `npx skills` for cross-agent install.
  *
  * PR1 ships `list` and `validate`. Subsequent PRs add `init`, `add`, `remove`,
  * and `find`. See `docs/plans/agent-skills.md` → "Follow-up work" for the
@@ -77,6 +77,20 @@ internal fun loadSkillsConfig(configPath: String?): SkillsConfig {
     return config?.fraggle?.skills ?: SkillsConfig()
 }
 
+/** Resolved global skills directory for [config]. */
+internal fun globalSkillsDir(config: SkillsConfig): Path =
+    config.globalDir
+        ?.takeIf { it.isNotBlank() }
+        ?.let { FraggleEnvironment.resolvePath(it) }
+        ?: FraggleEnvironment.skillsDir
+
+/** Resolved project-scoped skills directory for [config]. */
+internal fun projectSkillsDir(config: SkillsConfig): Path =
+    config.projectDir
+        ?.takeIf { it.isNotBlank() }
+        ?.let { FraggleEnvironment.resolveProjectPath(it) }
+        ?: FraggleEnvironment.projectSkillsDir
+
 /**
  * Loads skills from the configured sources, matching the runtime wiring in
  * `AgentCoreModule.provideSkillRegistry` but without DI. Respects [target]
@@ -93,21 +107,13 @@ internal fun loadConfiguredSkills(
     val diagnostics = mutableListOf<SkillDiagnostic>()
 
     if (target != SkillTarget.PROJECT) {
-        config.globalDir?.takeIf { it.isNotBlank() }?.let { globalDir ->
-            val result = loader.loadFromDirectory(
-                FraggleEnvironment.resolvePath(globalDir),
-                SkillSource.GLOBAL,
-            )
-            entries += result.skills
-            diagnostics += result.diagnostics
-        }
+        val result = loader.loadFromDirectory(globalSkillsDir(config), SkillSource.GLOBAL)
+        entries += result.skills
+        diagnostics += result.diagnostics
     }
 
     if (target != SkillTarget.GLOBAL) {
-        val result = loader.loadFromDirectory(
-            FraggleEnvironment.resolvePath(config.skillsDir),
-            SkillSource.PROJECT,
-        )
+        val result = loader.loadFromDirectory(projectSkillsDir(config), SkillSource.PROJECT)
         entries += result.skills
         diagnostics += result.diagnostics
     }
@@ -130,15 +136,15 @@ internal fun loadConfiguredSkills(
 }
 
 /**
- * Resolves where `init` / `add` / (future) `remove` should write. Only ever
- * targets Fraggle's own skill directories — never `.claude/skills`, never
+ * Resolves where `init` / `add` / `remove` should write. Only ever targets
+ * Fraggle's own skill directories — never `.claude/skills`, never
  * `.cursor/skills`. Cross-agent installs are out of scope on purpose.
  *
  * Resolution order, first match wins:
  *  1. `--path <dir>` — explicit override.
- *  2. `--global` — `SkillsConfig.globalDir` (expanded via [FraggleEnvironment]).
- *  3. `--project` — `SkillsConfig.skillsDir`.
- *  4. Default: `--global` if configured, else `--project`.
+ *  2. `--global` — global skills directory.
+ *  3. `--project` — project skills directory.
+ *  4. Default: global.
  */
 internal fun resolveInstallTarget(
     config: SkillsConfig,
@@ -147,12 +153,10 @@ internal fun resolveInstallTarget(
     pathOverride: String?,
 ): Path {
     if (pathOverride != null) return Path(pathOverride).toAbsolutePath()
-    val globalDir = config.globalDir?.takeIf { it.isNotBlank() }
     return when {
-        project -> FraggleEnvironment.resolvePath(config.skillsDir)
-        global -> FraggleEnvironment.resolvePath(globalDir ?: "~/.fraggle/skills")
-        globalDir != null -> FraggleEnvironment.resolvePath(globalDir)
-        else -> FraggleEnvironment.resolvePath(config.skillsDir)
+        project -> projectSkillsDir(config)
+        global -> globalSkillsDir(config)
+        else -> globalSkillsDir(config)
     }
 }
 
@@ -190,9 +194,8 @@ class SkillsListCommand : CliktCommand(name = "list") {
         }
 
         val target = when {
-            globalOnly && projectOnly -> SkillTarget.BOTH
-            globalOnly -> SkillTarget.GLOBAL
-            projectOnly -> SkillTarget.PROJECT
+            globalOnly && !projectOnly -> SkillTarget.GLOBAL
+            projectOnly && !globalOnly -> SkillTarget.PROJECT
             else -> SkillTarget.BOTH
         }
 
@@ -233,12 +236,10 @@ class SkillsListCommand : CliktCommand(name = "list") {
         println()
         println("Searched:")
         if (target != SkillTarget.PROJECT) {
-            config.globalDir?.takeIf { it.isNotBlank() }?.let {
-                println("  global : ${FraggleEnvironment.resolvePath(it)}")
-            }
+            println("  global : ${globalSkillsDir(config)}")
         }
         if (target != SkillTarget.GLOBAL) {
-            println("  project: ${FraggleEnvironment.resolvePath(config.skillsDir)}")
+            println("  project: ${projectSkillsDir(config)}")
         }
     }
 }
