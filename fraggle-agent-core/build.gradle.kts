@@ -30,6 +30,9 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
 
+    // YAML parsing (SKILL.md frontmatter)
+    implementation(libs.kaml)
+
     // Logging
     implementation(libs.logback.classic)
 
