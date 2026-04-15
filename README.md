@@ -39,6 +39,13 @@ cd fraggle
 
 # Start a remote tool worker
 ./bin/fraggle worker
+
+# Manage agent skills
+./bin/fraggle skills list
+./bin/fraggle skills add vercel-labs/skills
+./bin/fraggle skills init my-skill -d "What the skill does and when to use it."
+./bin/fraggle skills find commit
+./bin/fraggle skills remove my-skill
 ```
 
 ## Requirements

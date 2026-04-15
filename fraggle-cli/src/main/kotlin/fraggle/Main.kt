@@ -28,7 +28,15 @@ import kotlin.time.Clock
  * Main entry point for Fraggle.
  */
 fun main(args: Array<String>) = Fraggle()
-    .subcommands(RunCommand(), ChatCommand(), CodeCommand(), ConfigureCommand(), InitBridgeCommand(), WorkerCommand())
+    .subcommands(
+        RunCommand(),
+        ChatCommand(),
+        CodeCommand(),
+        ConfigureCommand(),
+        InitBridgeCommand(),
+        SkillsCommand(),
+        WorkerCommand(),
+    )
     .main(args)
 
 class Fraggle : CliktCommand(name = "fraggle") {
