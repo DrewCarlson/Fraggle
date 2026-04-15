@@ -27,17 +27,22 @@ import kotlin.time.Clock
 /**
  * Main entry point for Fraggle.
  */
-fun main(args: Array<String>) = Fraggle()
-    .subcommands(
-        RunCommand(),
-        ChatCommand(),
-        CodeCommand(),
-        ConfigureCommand(),
-        InitBridgeCommand(),
-        SkillsCommand(),
-        WorkerCommand(),
-    )
-    .main(args)
+fun main(args: Array<String>) {
+    // Resolve FRAGGLE_ROOT before any logger is created so logback's
+    // file appender picks up the correct logs directory.
+    System.setProperty("FRAGGLE_ROOT", FraggleEnvironment.root.toString())
+    Fraggle()
+        .subcommands(
+            RunCommand(),
+            ChatCommand(),
+            CodeCommand(),
+            ConfigureCommand(),
+            InitBridgeCommand(),
+            SkillsCommand(),
+            WorkerCommand(),
+        )
+        .main(args)
+}
 
 class Fraggle : CliktCommand(name = "fraggle") {
     override fun run() = Unit
@@ -66,7 +71,8 @@ class RunCommand : CliktCommand(name = "run") {
         val permissionHandler = EventToolPermissionHandler(eventBus)
 
         // Create the dependency graph
-        val graph = createGraphFactory<AppGraph.Factory>().create(config, resolvedConfigPath, eventBus, permissionHandler)
+        val graph =
+            createGraphFactory<AppGraph.Factory>().create(config, resolvedConfigPath, eventBus, permissionHandler)
 
         // Create and initialize orchestrator with injected dependencies
         val orchestrator = graph.serviceOrchestrator
@@ -149,7 +155,8 @@ class ChatCommand : CliktCommand(name = "chat") {
         val permissionHandler = CliToolPermissionHandler()
 
         // Create the dependency graph
-        val graph = createGraphFactory<AppGraph.Factory>().create(config, resolvedConfigPath, eventBus, permissionHandler)
+        val graph =
+            createGraphFactory<AppGraph.Factory>().create(config, resolvedConfigPath, eventBus, permissionHandler)
 
         // Create and initialize orchestrator with injected dependencies
         val orchestrator = graph.serviceOrchestrator
