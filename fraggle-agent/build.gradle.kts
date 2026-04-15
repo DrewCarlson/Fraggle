@@ -16,6 +16,9 @@ dependencies {
     // DI
     api(project(":fraggle-di"))
 
+    // LLM provider (LMStudioProvider, ChatRequest/Response, Message types)
+    api(project(":fraggle-llm"))
+
     // Ktor Client for LLM API calls (from fraggle-di)
     implementation(ktorLibs.client.core)
     implementation(ktorLibs.client.cio)

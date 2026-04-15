@@ -14,7 +14,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
-import kotlin.time.Duration.Companion.minutes
 
 /**
  * Integration tests for [LMStudioProvider] against a live LM Studio instance.
@@ -158,8 +157,9 @@ class LMStudioProviderTest {
 
             val message = response.choices.first().message
             // Model should either call the tool or respond with text
-            if (message.toolCalls != null && message.toolCalls.isNotEmpty()) {
-                val toolCall = message.toolCalls.first()
+            val toolCalls = message.toolCalls
+            if (!toolCalls.isNullOrEmpty()) {
+                val toolCall = toolCalls.first()
                 assertEquals("get_weather", toolCall.function.name)
                 assertTrue(toolCall.id.isNotBlank(), "Tool call ID should not be blank")
                 assertTrue(
