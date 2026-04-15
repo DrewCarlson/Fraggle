@@ -1,5 +1,9 @@
 package fraggle.agent
 
+import fraggle.agent.compaction.CompactionResult
+import fraggle.agent.compaction.ContextUsage
+import fraggle.agent.compaction.LlmCompactor
+import fraggle.agent.compaction.MessageCountCompactionPolicy
 import fraggle.agent.loop.AgentOptions
 import fraggle.agent.message.AgentMessage
 import fraggle.agent.message.ContentPart.Text
@@ -45,6 +49,24 @@ class FraggleAgent(
     private val memoryTemplate by lazy { promptManager.getTemplate(PromptManager.MEMORY_FILE) }
 
     private val memoryExtractionJson = Json { ignoreUnknownKeys = true }
+
+    /**
+     * Shared compactor instance — reuses the agent-core compaction layer so
+     * the messenger assistant and the coding agent both exercise the same
+     * summarization algorithm. The assistant uses a message-count-based
+     * policy to preserve its historical behaviour of compacting whenever
+     * the stored conversation exceeds [AgentConfig.maxHistoryMessages].
+     *
+     * The keep-recent count is 2/3 of the max history, matching what
+     * `compressIfNeeded` used to hardcode.
+     */
+    private val compactor: LlmCompactor by lazy {
+        LlmCompactor(
+            llmBridge = llmBridge,
+            policy = MessageCountCompactionPolicy(maxMessages = config.maxHistoryMessages),
+            keepRecentMessages = (config.maxHistoryMessages * 2) / 3,
+        )
+    }
 
     /**
      * Process an incoming message and generate a response.
@@ -144,73 +166,63 @@ class FraggleAgent(
     }
 
     /**
-     * Compress conversation history if it exceeds the configured limit.
-     * Keeps the most recent 2/3 of messages verbatim and compresses older messages
-     * into a TLDR summary. Existing summaries are included as context for cumulative compression.
+     * Compact conversation history if it exceeds the configured limit.
+     *
+     * Delegates to the shared [LlmCompactor] in agent-core so the messenger
+     * assistant and the coding agent exercise the same summarization pipeline.
+     * The assistant stores the summary on [Conversation.historySummary] and
+     * injects it into the system prompt (see [buildBaseSystemPrompt]); the
+     * agent loop doesn't see the old history at all.
+     *
+     * Behaviour preserved from the previous in-class implementation:
+     *  - Trigger: `conversation.messages.size > config.maxHistoryMessages`
+     *    (policy = [MessageCountCompactionPolicy]).
+     *  - Keep-recent: 2/3 of the max.
+     *  - Cumulative summaries via [Conversation.historySummary] passed as
+     *    [LlmCompactor.compact]'s `previousSummary`.
+     *  - Compaction failures are logged and the original conversation is
+     *    returned unchanged so a turn never aborts because the summarizer
+     *    hiccupped.
      */
     private suspend fun compressIfNeeded(conversation: Conversation): Conversation {
-        if (conversation.messages.size <= config.maxHistoryMessages) {
-            return conversation
+        if (conversation.messages.size <= config.maxHistoryMessages) return conversation
+
+        // Stored conversation messages are simple role+text, so the round-trip
+        // through AgentMessage is lossless. No tool calls, no attachments.
+        val asAgentMessages: List<AgentMessage> = conversation.messages.map { cm ->
+            if (cm.role == ConversationRole.USER) {
+                AgentMessage.User(cm.content)
+            } else {
+                AgentMessage.Assistant(content = listOf(Text(cm.content)))
+            }
         }
 
-        val keepCount = (config.maxHistoryMessages * 2) / 3
-        val recentMessages = conversation.messages.takeLast(keepCount)
-        val oldMessages = conversation.messages.dropLast(keepCount)
-
-        if (oldMessages.isEmpty()) return conversation
-
-        logger.info(
-            "Compressing conversation history: {} total messages, keeping {} recent, compressing {}",
-            conversation.messages.size, recentMessages.size, oldMessages.size,
+        val result = compactor.compact(
+            messages = asAgentMessages,
+            usage = ContextUsage.fromMessages(asAgentMessages, maxTokens = 0),
+            previousSummary = conversation.historySummary,
         )
 
-        val oldMessagesText = oldMessages.joinToString("\n") { msg ->
-            val role = if (msg.role == ConversationRole.USER) "User" else "Assistant"
-            "$role: ${msg.content}"
-        }
-
-        val existingSummaryBlock = conversation.historySummary?.let {
-            "Previous conversation summary:\n$it\n\n"
-        } ?: ""
-
-        val compressionInput = buildString {
-            append(existingSummaryBlock)
-            appendLine("Messages to compress:")
-            appendLine(oldMessagesText)
-            appendLine()
-            appendLine("Create a concise TL;DR summary that captures:")
-            appendLine("- Key topics discussed and decisions made")
-            appendLine("- Important facts, preferences, or requests from the user")
-            appendLine("- Current status of any ongoing tasks or questions")
-            appendLine("- Any context the assistant would need to continue the conversation naturally")
-        }
-
-        return try {
-            val response = lmStudioProvider.chat(fraggle.provider.ChatRequest(
-                model = config.model,
-                messages = listOf(
-                    fraggle.provider.Message.system("You are a conversation summarizer. Produce a concise but comprehensive summary of the conversation history provided. Preserve all important context, decisions, and facts. Output only the summary, no preamble."),
-                    fraggle.provider.Message.user(compressionInput),
-                ),
-                temperature = 0.1,
-            ))
-            val summary = response.choices.firstOrNull()?.message?.content
-                ?.let { ReasoningContentFilter.strip(it) }
-                ?.takeIf { it.isNotBlank() }
-
-            if (summary == null) {
-                logger.warn("History compression returned empty result, keeping original conversation")
-                return conversation
+        return when (result) {
+            CompactionResult.NotNeeded -> conversation
+            is CompactionResult.Failed -> {
+                logger.warn("History compaction failed, keeping original conversation: ${result.reason}")
+                conversation
             }
-
-            logger.info("History compressed successfully ({} chars summary)", summary.length)
-            conversation.copy(
-                messages = recentMessages,
-                historySummary = summary,
-            )
-        } catch (e: Exception) {
-            logger.warn("History compression failed, keeping original conversation: ${e.message}")
-            conversation
+            is CompactionResult.Compacted -> {
+                // Map the kept tail back to ConversationMessage. The tail is
+                // equal by object identity to the original entries' agent-message
+                // projections, so indexing by size from the end is correct.
+                val keptTail = conversation.messages.takeLast(result.recentMessages.size)
+                logger.info(
+                    "History compacted: {} total, kept {} recent, summarized {}",
+                    conversation.messages.size, keptTail.size, result.compactedCount,
+                )
+                conversation.copy(
+                    messages = keptTail,
+                    historySummary = result.summary,
+                )
+            }
         }
     }
 
