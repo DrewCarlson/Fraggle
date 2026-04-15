@@ -16,7 +16,10 @@ application {
 }
 
 dependencies {
-    // Fraggle stack (filesystem/shell tools reused from fraggle-tools after PR4 pre-work)
+    // Fraggle stack — coding agent reuses the base filesystem/shell/web tools
+    // from fraggle-tools (decoupled from fraggle-assistant during PR4 pre-work)
+    // and adds its own edit_file tool on top via CodingToolRegistry.
+    api(project(":fraggle-tools"))
     api(project(":fraggle-agent-core"))
     api(project(":fraggle-llm"))
     api(project(":fraggle-common"))
