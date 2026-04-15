@@ -251,6 +251,199 @@ class SkillLoaderTest {
         }
 
         @Test
+        fun `skips dot-directories even without ignore files`(@TempDir tmp: Path) {
+            // Real skill
+            writeSkill(
+                tmp,
+                "real",
+                """
+                ---
+                name: real
+                description: Real skill.
+                ---
+                """.trimIndent(),
+            )
+            // Skill nested inside a dot-directory — must be ignored.
+            writeSkill(
+                tmp.resolve(".git"),
+                "nope",
+                """
+                ---
+                name: nope
+                description: Should be ignored because parent starts with dot.
+                ---
+                """.trimIndent(),
+            )
+
+            val result = SkillLoader().loadFromDirectory(tmp, SkillSource.PROJECT)
+
+            assertEquals(listOf("real"), result.skills.map { it.name })
+        }
+
+        @Test
+        fun `skips node_modules even without ignore files`(@TempDir tmp: Path) {
+            writeSkill(
+                tmp,
+                "real",
+                """
+                ---
+                name: real
+                description: Real skill.
+                ---
+                """.trimIndent(),
+            )
+            writeSkill(
+                tmp.resolve("node_modules"),
+                "nope",
+                """
+                ---
+                name: nope
+                description: Vendored, should be ignored.
+                ---
+                """.trimIndent(),
+            )
+
+            val result = SkillLoader().loadFromDirectory(tmp, SkillSource.PROJECT)
+
+            assertEquals(listOf("real"), result.skills.map { it.name })
+        }
+
+        @Test
+        fun `root gitignore excludes directory subtree`(@TempDir tmp: Path) {
+            tmp.resolve(".gitignore").writeText("fixtures/\n")
+            writeSkill(
+                tmp,
+                "real-skill",
+                """
+                ---
+                name: real-skill
+                description: The real skill we want to load.
+                ---
+                """.trimIndent(),
+            )
+            writeSkill(
+                tmp.resolve("fixtures"),
+                "bogus",
+                """
+                ---
+                name: bogus
+                description: Inside a fixtures dir excluded by .gitignore.
+                ---
+                """.trimIndent(),
+            )
+
+            val result = SkillLoader().loadFromDirectory(tmp, SkillSource.PROJECT)
+
+            assertEquals(listOf("real-skill"), result.skills.map { it.name })
+        }
+
+        @Test
+        fun `ignore and fdignore files are honored`(@TempDir tmp: Path) {
+            tmp.resolve(".ignore").writeText("dotignore-excluded/\n")
+            tmp.resolve(".fdignore").writeText("fdignore-excluded/\n")
+            writeSkill(
+                tmp,
+                "real",
+                """
+                ---
+                name: real
+                description: Real skill.
+                ---
+                """.trimIndent(),
+            )
+            writeSkill(
+                tmp.resolve("dotignore-excluded"),
+                "nope1",
+                """
+                ---
+                name: nope1
+                description: Excluded by .ignore.
+                ---
+                """.trimIndent(),
+            )
+            writeSkill(
+                tmp.resolve("fdignore-excluded"),
+                "nope2",
+                """
+                ---
+                name: nope2
+                description: Excluded by .fdignore.
+                ---
+                """.trimIndent(),
+            )
+
+            val result = SkillLoader().loadFromDirectory(tmp, SkillSource.PROJECT)
+
+            assertEquals(listOf("real"), result.skills.map { it.name })
+        }
+
+        @Test
+        fun `nested gitignore applies only to its subtree`(@TempDir tmp: Path) {
+            // /a contains a .gitignore that excludes cache/
+            // /b has no .gitignore, so /b/cache/ should load.
+            val a = tmp.resolve("a")
+            a.createDirectories()
+            a.resolve(".gitignore").writeText("cache/\n")
+            writeSkill(
+                a.resolve("cache"),
+                "a-cache-skill",
+                """
+                ---
+                name: a-cache-skill
+                description: Should be excluded by nested ignore.
+                ---
+                """.trimIndent(),
+            )
+            writeSkill(
+                tmp.resolve("b/cache"),
+                "b-cache-skill",
+                """
+                ---
+                name: b-cache-skill
+                description: Should NOT be excluded — ignore file is in a sibling subtree.
+                ---
+                """.trimIndent(),
+            )
+
+            val result = SkillLoader().loadFromDirectory(tmp, SkillSource.PROJECT)
+
+            assertEquals(listOf("b-cache-skill"), result.skills.map { it.name })
+        }
+
+        @Test
+        fun `negation reinstates a previously ignored directory`(@TempDir tmp: Path) {
+            // Matches real gitignore semantics: once a parent dir is ignored outright,
+            // git can't descend into it to un-ignore children. Use `cache/*` to ignore
+            // everything under cache while keeping cache itself walkable, then negate
+            // the specific subtree we want reinstated.
+            tmp.resolve(".gitignore").writeText("cache/*\n!cache/keep/\n")
+            writeSkill(
+                tmp.resolve("cache/drop"),
+                "dropped",
+                """
+                ---
+                name: dropped
+                description: Should be excluded.
+                ---
+                """.trimIndent(),
+            )
+            writeSkill(
+                tmp.resolve("cache/keep"),
+                "kept",
+                """
+                ---
+                name: kept
+                description: Reinstated by negation.
+                ---
+                """.trimIndent(),
+            )
+
+            val result = SkillLoader().loadFromDirectory(tmp, SkillSource.PROJECT)
+
+            assertEquals(listOf("kept"), result.skills.map { it.name })
+        }
+
+        @Test
         fun `loadFromFile parses a single SKILL_md`(@TempDir tmp: Path) {
             val file = writeSkill(
                 tmp,
