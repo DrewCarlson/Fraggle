@@ -27,6 +27,9 @@ dependencies {
     // Terminal UI — Compose-for-terminal (handles rendering AND key events)
     implementation(libs.mosaic.runtime)
 
+    // Markdown parsing for styling LLM output in the TUI
+    implementation(libs.jetbrains.markdown)
+
     // Kotlinx
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)

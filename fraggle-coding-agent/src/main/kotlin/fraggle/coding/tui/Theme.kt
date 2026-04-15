@@ -34,4 +34,17 @@ object Theme {
     val success: Color = Color.Green
     val warning: Color = Color.Yellow
     val cursor: Color = Color(140, 140, 140)
+
+    // Markdown element colors — used by the Markdown composable when rendering
+    // assistant LLM output. Keep these separate from the role colors above so
+    // a theme author can re-skin markdown without touching message roles.
+    val mdHeading: Color = Color.Cyan
+    val mdCode: Color = Color(200, 170, 110)
+    val mdCodeBlock: Color = Color(200, 170, 110)
+    val mdCodeBlockBorder: Color = Color(80, 80, 80)
+    val mdListBullet: Color = Color.Cyan
+    val mdQuote: Color = Color(170, 170, 170)
+    val mdQuoteBorder: Color = Color(100, 100, 100)
+    val mdLink: Color = Color.Blue
+    val mdRule: Color = Color(80, 80, 80)
 }
