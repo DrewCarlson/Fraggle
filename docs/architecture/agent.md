@@ -4,7 +4,7 @@
 
 ## Agent Loop
 
-The agent loop lives in `fraggle-agent/src/main/kotlin/fraggle/agent/loop/` (`runAgentLoop`, `AgentOptions`, `LlmBridge`, `ProviderLlmBridge`, `ToolCallExecutor`). It sends context to the LLM via an `LlmBridge`, dispatches tool calls, and iterates until a final response is produced. `FraggleAgent` is responsible for building the per-request input, wiring the bridge + registry, and managing memory.
+The agent loop lives in `fraggle-agent-core/src/main/kotlin/fraggle/agent/loop/` (`runAgentLoop`, `AgentOptions`, `LlmBridge`, `ProviderLlmBridge`, `ToolCallExecutor`). It sends context to the LLM via an `LlmBridge`, dispatches tool calls, and iterates until a final response is produced. `FraggleAgent` is responsible for building the per-request input, wiring the bridge + registry, and managing memory.
 
 ```
 ┌──────────────────────────────────────────────┐

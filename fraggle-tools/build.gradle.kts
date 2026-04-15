@@ -10,7 +10,7 @@ kotlin {
 }
 
 dependencies {
-    implementation(project(":fraggle-agent"))
+    implementation(project(":fraggle-assistant"))
 
     // Ktor Client for web tools
     implementation(ktorLibs.client.core)

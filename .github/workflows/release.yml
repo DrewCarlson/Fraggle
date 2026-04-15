@@ -36,7 +36,9 @@ jobs:
             build-logic/**
             fraggle-cli/**
             fraggle-api/**
-            fraggle-agent/**
+            fraggle-llm/**
+            fraggle-agent-core/**
+            fraggle-assistant/**
             fraggle-signal/**
             fraggle-discord/**
             fraggle-tools/**

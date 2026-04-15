@@ -28,14 +28,14 @@ For any change, consider and apply updates to:
 ./gradlew test
 
 # Run tests for a specific module
-./gradlew :fraggle-agent:test
+./gradlew :fraggle-assistant:test
 ./gradlew :fraggle-cli:test
 
 # Run a specific test class
-./gradlew :fraggle-agent:test --tests="*ToolsTest"
+./gradlew :fraggle-assistant:test --tests="*ToolsTest"
 
 # Run a specific test method (use full pattern)
-./gradlew :fraggle-agent:test --tests="*ToolsTest.Execution*"
+./gradlew :fraggle-assistant:test --tests="*ToolsTest.Execution*"
 
 # Build the dashboard for development (with vite, the KMP webpack tasks are not used)
 ./gradlew :fraggle-dashboard:jsBrowserDevelopmentDist
@@ -52,7 +52,9 @@ Fraggle is a Kotlin-based AI assistant that integrates with messaging platforms 
 
 - **`fraggle-di`** - Shared DI infrastructure: Metro scopes/qualifiers, HTTP clients, JSON, `CoroutineScope`, `ConfigModule` (sub-config extraction), `FraggleEnvironment` (path resolution)
 - **`fraggle-common`** - Shared models (Kotlin Multiplatform): config data classes, event models, API contracts
-- **`fraggle-agent`** - Core framework: agent loop, tool registry, memory, tool executor, chat bridge abstractions. `AgentModule` provides all core services via DI.
+- **`fraggle-llm`** - LLM provider library: `LMStudioProvider`, `ChatRequest`/`ChatResponse`, `Message`/`ToolCall`/`Role` types, native LM Studio v1 serializer. Zero Fraggle-specific coupling (no DI, no config models); consumers pass primitives into the constructor.
+- **`fraggle-agent-core`** - Generic agent runtime: `Agent`, `runAgentLoop`, `AgentState`, `AgentEvent`, `AgentMessage`, `LlmBridge`/`ProviderLlmBridge`, `AgentToolDef`, `FraggleToolRegistry`, `SupervisedToolCallExecutor`, `ToolExecutor`/`LocalToolExecutor`, `ToolSupervisor` + policy rules, `RemoteToolClient`, `AgentEventTracer`, `TraceStore`, `EventBus`, `ResponseAttachment`, `ToolExecutionContext`. Reusable by any agent application. `AgentCoreModule` provides `LMStudioProvider`, `ToolExecutor`, `ToolSupervisor`, `RemoteToolClient?`, `TraceStore?`.
+- **`fraggle-assistant`** - Messenger assistant built on top of `fraggle-agent-core`: `FraggleAgent` orchestration, hierarchical `MemoryStore` (Global/Chat/User), `PromptManager` + templates (SYSTEM/IDENTITY/USER), auto-memory extraction/reconciliation, history compression, `ChatBridge` + `ChatBridgeManager`, `ChatHistoryStore` + Exposed db, `InlineImageProcessor`. `AssistantModule` provides the assistant-specific bindings.
 - **`fraggle-tools`** - Built-in tools: filesystem, web fetching, shell execution, task scheduling. `ToolsModule` provides `FraggleToolRegistry`, `TaskScheduler`, `PlaywrightFetcher`.
 - **`fraggle-signal`** - Signal messenger integration. `SignalModule` provides nullable `SignalBridge?`, `MessageRouter?`, `SignalBridgeInitializer?`.
 - **`fraggle-discord`** - Discord bot integration (Kord 0.17.0). `DiscordModule` provides nullable `DiscordBridge?`, `DiscordBridgeInitializer?`.
@@ -68,7 +70,8 @@ The application uses [Metro](https://github.com/AdrianAndroid/Metro) v0.10.2 for
 - `AppGraph` (`fraggle-cli`) — `@DependencyGraph(AppScope::class)`, exposes all top-level bindings
 - `NetworkModule` (`fraggle-di`) — HTTP clients, JSON, `CoroutineScope`
 - `ConfigModule` (`fraggle-di`) — Extracts sub-configs from `FraggleConfig` (e.g., `ProviderConfig`, `MemoryConfig`, `SignalBridgeConfig?`)
-- `AgentModule` (`fraggle-agent`) — `MemoryStore`, `ToolExecutor`, `PromptManager`, `LMStudioProvider`, `LlmBridge`, `ToolCallExecutor`, `FraggleAgent`, `ChatBridgeManager`, etc.
+- `AgentCoreModule` (`fraggle-agent-core`) — `LMStudioProvider`, `ToolExecutor`, `ToolSupervisor`, `RemoteToolClient?`, `TraceStore?`
+- `AssistantModule` (`fraggle-assistant`) — `MemoryStore`, `PromptManager`, `LlmBridge`, `ToolCallExecutor`, runtime `AgentConfig`, `FraggleAgent`, `ChatBridgeManager`, `FraggleDatabase`, `ChatHistoryStore`, etc.
 - `ToolsModule` (`fraggle-tools`) — `FraggleToolRegistry`, `TaskScheduler`, `PlaywrightFetcher?`
 - `SignalModule` (`fraggle-signal`) — Nullable chain for Signal services
 - `DiscordModule` (`fraggle-discord`) — Nullable chain for Discord services
@@ -89,7 +92,7 @@ The application uses [Metro](https://github.com/AdrianAndroid/Metro) v0.10.2 for
 
 ### Key Architectural Patterns
 
-**Agent Loop** (`FraggleAgent` + `Agent`): `FraggleAgent.process()` builds per-request input (platform context, memory, history), constructs a stateful `Agent` (`fraggle.agent.Agent`) wired with `AgentOptions(systemPrompt, model, llmBridge, toolCallExecutor, maxIterations, ...)`, subscribes an `AgentEventTracer`, then calls `agent.prompt(userInput)` and `agent.waitForIdle()`. The loop itself lives in `fraggle-agent/src/main/kotlin/fraggle/agent/loop/` (`runAgentLoop`, `AgentOptions`, `LlmBridge`, `ProviderLlmBridge`, `ToolCallExecutor`). LLM calls go through `LlmBridge` → `ProviderLlmBridge` → `LMStudioProvider` (`fraggle-agent/src/main/kotlin/fraggle/provider/LMStudioProvider.kt`).
+**Agent Loop** (`FraggleAgent` in `fraggle-assistant` + `Agent` in `fraggle-agent-core`): `FraggleAgent.process()` builds per-request input (platform context, memory, history), constructs a stateful `Agent` (`fraggle.agent.Agent`) wired with `AgentOptions(systemPrompt, model, llmBridge, toolCallExecutor, maxIterations, ...)`, subscribes an `AgentEventTracer`, then calls `agent.prompt(userInput)` and `agent.waitForIdle()`. The loop itself lives in `fraggle-agent-core/src/main/kotlin/fraggle/agent/loop/` (`runAgentLoop`, `AgentOptions`, `LlmBridge`, `ProviderLlmBridge`, `ToolCallExecutor`). LLM calls go through `LlmBridge` → `ProviderLlmBridge` → `LMStudioProvider` (`fraggle-llm/src/main/kotlin/fraggle/provider/LMStudioProvider.kt`).
 
 **Tool System**: Tools extend `AgentToolDef<Args>` with `@Serializable` argument data classes and `@LLMDescription` annotations. JSON schemas for the LLM are generated from the serializer descriptors by `FraggleToolRegistry`.
 ```kotlin
@@ -120,7 +123,7 @@ Tool invocation goes through `SupervisedToolCallExecutor`, which consults `ToolS
 
 ### Database (Exposed ORM + SQLite)
 
-The application uses [JetBrains Exposed](https://github.com/JetBrains/Exposed) 1.0.0 with SQLite JDBC 3.51.1.0 for chat history and message metadata persistence. All database code lives in `fraggle-agent/src/main/kotlin/fraggle/db/`.
+The application uses [JetBrains Exposed](https://github.com/JetBrains/Exposed) 1.0.0 with SQLite JDBC 3.51.1.0 for chat history and message metadata persistence. All database code lives in `fraggle-assistant/src/main/kotlin/fraggle/db/`.
 
 **Critical: Exposed 1.0 API packages.** Exposed 1.0.0 uses `v1`-namespaced packages — **not** the legacy `org.jetbrains.exposed.sql.*` packages:
 ```kotlin
