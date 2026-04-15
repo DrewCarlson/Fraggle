@@ -10,17 +10,16 @@ kotlin {
 }
 
 dependencies {
-    // Shared models
+    // Shared models (ProviderConfig, AgentConfig, TraceEventRecord, etc.)
     api(project(":fraggle-common"))
 
-    // DI
+    // DI (scopes, qualifiers, HTTP client qualifiers)
     api(project(":fraggle-di"))
 
-    // Agent runtime (Agent loop, tool system, executor, tracing, events).
-    // Transitively brings fraggle-llm.
-    api(project(":fraggle-agent-core"))
+    // LLM provider (LMStudioProvider, ChatRequest/Response, Message types)
+    api(project(":fraggle-llm"))
 
-    // Ktor Client for LLM API calls (from fraggle-di)
+    // Ktor client (RemoteToolClient forwards HTTP calls)
     implementation(ktorLibs.client.core)
     implementation(ktorLibs.client.cio)
     implementation(ktorLibs.client.contentNegotiation)
@@ -31,22 +30,15 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
 
-    // Database
-    api(libs.exposed.core)
-    api(libs.exposed.jdbc)
-    implementation(libs.exposed.migration.core)
-    implementation(libs.exposed.migration.jdbc)
-    implementation(libs.sqlite.jdbc)
-
     // Logging
     implementation(libs.logback.classic)
-    testImplementation(ktorLibs.client.logging)
 
     // Testing
     testImplementation(libs.kotlin.test.junit5)
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(ktorLibs.client.logging)
     testRuntimeOnly(libs.junit.jupiter.engine)
 }
 

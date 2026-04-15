@@ -3,7 +3,6 @@ package fraggle.di
 import dev.zacsweers.metro.ContributesTo
 import dev.zacsweers.metro.Provides
 import dev.zacsweers.metro.SingleIn
-import io.ktor.client.*
 import kotlinx.coroutines.CoroutineScope
 import fraggle.FraggleEnvironment
 import fraggle.agent.FraggleAgent
@@ -20,29 +19,22 @@ import fraggle.db.ChatHistoryStore
 import fraggle.db.ExposedChatHistoryStore
 import fraggle.db.FraggleDatabase
 import fraggle.events.EventBus
-import fraggle.executor.LocalToolExecutor
 import fraggle.executor.RemoteToolClient
-import fraggle.executor.ToolExecutor
-import fraggle.executor.supervision.InteractiveToolSupervisor
-import fraggle.executor.supervision.NoOpToolSupervisor
-import fraggle.executor.supervision.ToolArgTypes
-import fraggle.executor.supervision.ToolPermissionHandler
-import fraggle.executor.supervision.ToolPolicyEvaluator
 import fraggle.executor.supervision.ToolSupervisor
 import fraggle.memory.FileMemoryStore
 import fraggle.memory.MemoryStore
 import fraggle.models.*
 import fraggle.prompt.PromptConfig
 import fraggle.prompt.PromptManager
-import fraggle.models.TracingConfig
-import fraggle.models.TracingLevel
 import fraggle.tracing.TraceStore
 import kotlin.io.path.createDirectories
 import fraggle.agent.AgentConfig as RuntimeAgentConfig
 import fraggle.models.AgentConfig as ModelsAgentConfig
 
 /**
- * Provides core agent services.
+ * Provides assistant-specific services (memory, prompts, chat bridges, database,
+ * and the FraggleAgent orchestrator itself). Generic runtime bindings (ToolExecutor,
+ * ToolSupervisor, LMStudioProvider, TraceStore) live in [AgentCoreModule].
  */
 @ContributesTo(AppScope::class)
 interface AgentModule {
@@ -52,41 +44,6 @@ interface AgentModule {
         val baseDir = FraggleEnvironment.resolvePath(config.baseDir)
         baseDir.createDirectories()
         return FileMemoryStore(baseDir)
-    }
-
-    @Provides
-    @SingleIn(AppScope::class)
-    fun provideToolExecutor(config: ExecutorConfig): ToolExecutor {
-        val workDir = FraggleEnvironment.resolvePath(config.workDir)
-        workDir.createDirectories()
-        return LocalToolExecutor(workDir)
-    }
-
-    @Provides
-    @SingleIn(AppScope::class)
-    fun provideToolSupervisor(
-        config: ExecutorConfig,
-        handler: ToolPermissionHandler?,
-        argTypes: ToolArgTypes,
-    ): ToolSupervisor {
-        return when (config.supervision) {
-            SupervisionMode.NONE -> NoOpToolSupervisor()
-            SupervisionMode.SUPERVISED -> {
-                val permHandler = handler ?: return NoOpToolSupervisor()
-                val evaluator = ToolPolicyEvaluator(config.toolPolicies, argTypes)
-                InteractiveToolSupervisor(evaluator, permHandler)
-            }
-        }
-    }
-
-    @Provides
-    @SingleIn(AppScope::class)
-    fun provideRemoteToolClient(
-        config: ExecutorConfig,
-        @DefaultHttpClient httpClient: HttpClient,
-    ): RemoteToolClient? {
-        if (config.type != ExecutorType.REMOTE || config.remoteUrl.isBlank()) return null
-        return RemoteToolClient(httpClient, config.remoteUrl)
     }
 
     @Provides
@@ -103,17 +60,6 @@ interface AgentModule {
         manager.initialize()
         return manager
     }
-
-    @Provides
-    @SingleIn(AppScope::class)
-    fun provideLMStudioProvider(
-        config: ProviderConfig,
-        @LlmHttpClient httpClient: HttpClient,
-    ): LMStudioProvider = LMStudioProvider(
-        baseUrl = config.url,
-        httpClient = httpClient,
-        apiKey = config.apiKey,
-    )
 
     @Provides
     @SingleIn(AppScope::class)
@@ -186,13 +132,6 @@ interface AgentModule {
     @SingleIn(AppScope::class)
     fun provideChatHistoryStore(database: FraggleDatabase): ChatHistoryStore {
         return ExposedChatHistoryStore(database.database)
-    }
-
-    @Provides
-    @SingleIn(AppScope::class)
-    fun provideTraceStore(config: TracingConfig): TraceStore? {
-        if (config.level == TracingLevel.OFF) return null
-        return TraceStore()
     }
 
     @Provides
