@@ -6,6 +6,7 @@ import com.jakewharton.mosaic.ui.Row
 import com.jakewharton.mosaic.ui.Text
 import fraggle.agent.message.AgentMessage
 import fraggle.agent.message.ContentPart
+import fraggle.coding.tui.markdown.Markdown
 
 /**
  * Renders the conversation history in the center panel.
@@ -56,10 +57,19 @@ private fun UserRow(msg: AgentMessage.User) {
 private fun AssistantRow(msg: AgentMessage.Assistant, streaming: Boolean) {
     val text = msg.textContent
     Column {
-        Row {
-            Text("◆ ", color = Theme.accent)
-            // Blank text during streaming with no content yet keeps the row height stable
-            Text(text.ifEmpty { if (streaming) "…" else "" }, color = Theme.assistantText)
+        if (text.isEmpty()) {
+            // Keep the row height stable while the LLM is still "thinking".
+            Row {
+                Text("◆ ", color = Theme.accent)
+                Text(if (streaming) "…" else "", color = Theme.assistantText)
+            }
+        } else {
+            Row {
+                Text("◆ ", color = Theme.accent)
+                // Markdown renders as a Column internally — wrap it so the
+                // accent marker shares the first visual line.
+                Markdown(text, fallbackColor = Theme.assistantText)
+            }
         }
         // Tool calls render as indented bullets beneath the assistant's text
         for (call in msg.toolCalls) {
