@@ -155,15 +155,9 @@ fun CodingApp(
                 onAbort = {
                     if (busy) agent.abort()
                 },
-                onExit = {
-                    if (editor.isEmpty && !busy) {
-                        onExitRequest()
-                    } else if (!confirmExit) {
-                        confirmExit = true
-                    } else {
-                        onExitRequest()
-                    }
-                },
+                onExit = { onExitRequest() },
+                onRequestExitConfirm = { confirmExit = true },
+                onCancelExitConfirm = { if (confirmExit) confirmExit = false },
                 onClearError = { errorMessage = null },
                 onApprove = {
                     permissionHandler?.approve()
@@ -232,6 +226,8 @@ private fun handleKey(
     onSubmit: () -> Unit,
     onAbort: () -> Unit,
     onExit: () -> Unit,
+    onRequestExitConfirm: () -> Unit,
+    onCancelExitConfirm: () -> Unit,
     onClearError: () -> Unit,
     onApprove: () -> Unit,
     onDeny: () -> Unit,
@@ -246,14 +242,10 @@ private fun handleKey(
         }
     }
 
-    // 2. Exit handling: Ctrl+C and Escape have layered semantics.
+    // 2. Exit handling: Ctrl+C exits immediately; Escape is layered.
     when (event) {
         KeyEvent("c", ctrl = true) -> {
-            if (!editor.isEmpty) {
-                onEditorChange(EditorState())
-            } else {
-                onExit()
-            }
+            onExit()
             return true
         }
         KeyEvent("Escape") -> {
@@ -261,11 +253,14 @@ private fun handleKey(
                 busy -> { onAbort(); return true }
                 confirmExit -> { onExit(); return true }
                 !editor.isEmpty -> { onEditorChange(EditorState()); return true }
-                else -> { onExit(); return true }
+                else -> { onRequestExitConfirm(); return true }
             }
         }
         else -> Unit
     }
+
+    // Any key other than Esc/Ctrl+C cancels a pending exit confirmation.
+    onCancelExitConfirm()
 
     // 3. While busy, eat all keys except the ones handled above. This
     //    prevents the user from typing into an editor that would otherwise

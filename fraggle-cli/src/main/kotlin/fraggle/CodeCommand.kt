@@ -298,16 +298,23 @@ class CodeCommand : CliktCommand(name = "code") {
         )
 
         // 13. Run the TUI. runCodingApp blocks until the composition exits.
-        var exitRequested = false
+        Runtime.getRuntime().addShutdownHook(
+            Thread {
+                runCatching { httpClient.close() }
+            },
+        )
         try {
             fraggle.coding.tui.runCodingApp(
                 agent = agent,
                 options = options,
                 header = header,
                 onExitRequest = {
-                    exitRequested = true
-                    // Mosaic respects CancellationException to stop the render loop.
-                    throw kotlinx.coroutines.CancellationException("user requested exit")
+                    // Blunt but reliable: Mosaic offers no composition-level
+                    // exit handle, and throwing CancellationException from the
+                    // key dispatcher gets swallowed before it reaches
+                    // runMosaicBlocking. The shutdown hook above releases the
+                    // HTTP client.
+                    exitProcess(0)
                 },
                 permissionHandler = permissionHandler,
             )
@@ -315,11 +322,7 @@ class CodeCommand : CliktCommand(name = "code") {
             // Normal exit path.
         }
 
-        // Clean shutdown
         httpClient.close()
-        if (exitRequested) {
-            exitProcess(0)
-        }
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────────
