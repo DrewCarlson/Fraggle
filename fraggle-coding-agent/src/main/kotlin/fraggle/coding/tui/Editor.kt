@@ -1,6 +1,7 @@
 package fraggle.coding.tui
 
 import androidx.compose.runtime.Composable
+import com.jakewharton.mosaic.LocalTerminalState
 import com.jakewharton.mosaic.ui.Column
 import com.jakewharton.mosaic.ui.Row
 import com.jakewharton.mosaic.ui.Text
@@ -15,6 +16,13 @@ import com.jakewharton.mosaic.ui.Text
  * etc.) and having a single-source key handler avoids "where does this key go"
  * confusion when the approval overlay or message list is focused.
  *
+ * Long logical lines are explicitly hard-wrapped to the terminal width before
+ * rendering. Mosaic's layout is driven by the row count it emits; if we hand
+ * it a single `Text` that's wider than the terminal, the terminal itself
+ * wraps the glyphs to a new visual row but Mosaic still thinks the row count
+ * is 1. On the next repaint Mosaic moves up by its (too-small) row count and
+ * overwrites the header area. Pre-wrapping keeps the two views in sync.
+ *
  * [enabled] controls the prompt color — when the agent is busy we dim the
  * prompt to cue the user that input is queued, not sent immediately.
  * [placeholder] shows when the buffer is empty and the editor has focus.
@@ -26,37 +34,72 @@ fun Editor(
     placeholder: String = "type a message, /command, or press Esc to cancel",
 ) {
     val promptColor = if (enabled) Theme.accent else Theme.veryDim
+    val terminalColumns = LocalTerminalState.current.size.columns.coerceAtLeast(10)
+    // Prefix is 2 cells ("> " or "  "); leave 1 cell of slack so the caret
+    // block at end-of-line doesn't itself trigger a wrap.
+    val innerWidth = (terminalColumns - 3).coerceAtLeast(1)
+
     Column {
-        Text("─────────────────────────────────────────────────────────", color = Theme.divider)
+        Text("─".repeat(terminalColumns.coerceAtMost(80)), color = Theme.divider)
         if (state.isEmpty) {
             Row {
                 Text("> ", color = promptColor)
                 Text(placeholder, color = Theme.veryDim)
             }
         } else {
-            // Render lines with the cursor overlayed on whichever line it's on.
-            val lines = state.text.split('\n')
-            val (cursorRow, cursorCol) = rowColOf(state.text, state.cursor)
-            for (row in lines.indices) {
-                val line = lines[row]
-                val prefix = if (row == 0) "> " else "  "
-                Row {
-                    Text(prefix, color = promptColor)
-                    if (row == cursorRow && enabled) {
-                        // Split the line at the cursor and insert a caret marker.
-                        val before = line.substring(0, cursorCol.coerceAtMost(line.length))
-                        val atCursor = if (cursorCol < line.length) line.substring(cursorCol, cursorCol + 1) else " "
-                        val after = if (cursorCol < line.length) line.substring(cursorCol + 1) else ""
-                        Text(before, color = Theme.foreground)
-                        Text(atCursor, color = Theme.cursor, background = Theme.dim)
-                        Text(after, color = Theme.foreground)
-                    } else {
-                        Text(line, color = Theme.foreground)
+            val (cursorLogicalRow, cursorLogicalCol) = rowColOf(state.text, state.cursor)
+            val logicalLines = state.text.split('\n')
+            var firstPhysicalRow = true
+            for (logicalRow in logicalLines.indices) {
+                val line = logicalLines[logicalRow]
+                val segments = wrapLine(line, innerWidth)
+                val cursorOnThisLogicalRow = enabled && logicalRow == cursorLogicalRow
+                // Track which segment the cursor falls into.
+                val cursorSegmentIndex = if (cursorOnThisLogicalRow) {
+                    (cursorLogicalCol / innerWidth).coerceAtMost(segments.lastIndex)
+                } else {
+                    -1
+                }
+                val cursorSegmentCol = if (cursorOnThisLogicalRow) cursorLogicalCol % innerWidth else -1
+
+                for (segIndex in segments.indices) {
+                    val segment = segments[segIndex]
+                    val prefix = if (firstPhysicalRow) "> " else "  "
+                    firstPhysicalRow = false
+                    Row {
+                        Text(prefix, color = promptColor)
+                        if (segIndex == cursorSegmentIndex) {
+                            val col = cursorSegmentCol.coerceAtMost(segment.length)
+                            val before = segment.substring(0, col)
+                            val atCursor = if (col < segment.length) segment.substring(col, col + 1) else " "
+                            val after = if (col < segment.length) segment.substring(col + 1) else ""
+                            Text(before, color = Theme.foreground)
+                            Text(atCursor, color = Theme.cursor, background = Theme.dim)
+                            Text(after, color = Theme.foreground)
+                        } else {
+                            Text(segment, color = Theme.foreground)
+                        }
                     }
                 }
             }
         }
     }
+}
+
+/**
+ * Hard-wrap [line] into chunks of at most [width] characters. Always returns
+ * at least one element so empty logical lines still render.
+ */
+private fun wrapLine(line: String, width: Int): List<String> {
+    if (line.isEmpty()) return listOf("")
+    val result = ArrayList<String>(line.length / width + 1)
+    var start = 0
+    while (start < line.length) {
+        val end = (start + width).coerceAtMost(line.length)
+        result.add(line.substring(start, end))
+        start = end
+    }
+    return result
 }
 
 /**
