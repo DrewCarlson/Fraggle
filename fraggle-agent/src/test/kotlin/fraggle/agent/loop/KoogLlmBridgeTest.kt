@@ -26,45 +26,46 @@ import kotlin.time.Duration.Companion.minutes
 class KoogLlmBridgeTest {
 
     companion object {
-        private val apiUrl: String = System.getenv("LMS_API_URL") ?: ""
-        private val apiKey: String? = System.getenv("LMS_API_KEY")
-
-        private val model = LLModel(
-            provider = LLMProvider.OpenAI,
-            id = "",  // empty = use whatever is loaded
-            capabilities = listOf(
-                LLMCapability.Temperature,
-                LLMCapability.Completion,
-            ),
-        )
+        private val env get() = fraggle.testing.TestLlmEnvironment
 
         private val promptExecutor: MultiLLMPromptExecutor by lazy {
             val client = OpenAILLMClient(
-                apiKey = apiKey ?: "lm-studio",
-                settings = OpenAIClientSettings(baseUrl = apiUrl),
+                apiKey = env.apiKey ?: "lm-studio",
+                settings = OpenAIClientSettings(baseUrl = env.apiUrl),
             )
             MultiLLMPromptExecutor(client)
         }
 
-        val bridge: KoogLlmBridge by lazy {
-            KoogLlmBridge(
-                promptExecutor = promptExecutor,
-                model = model,
-            )
-        }
+        /** Build a bridge with the resolved chat model. */
+        suspend fun bridge(): KoogLlmBridge = KoogLlmBridge(
+            promptExecutor = promptExecutor,
+            model = LLModel(
+                provider = LLMProvider.OpenAI,
+                id = env.getChatModel(),
+                capabilities = listOf(
+                    LLMCapability.Temperature,
+                    LLMCapability.Completion,
+                    LLMCapability.OpenAIEndpoint.Completions,
+                ),
+            ),
+        )
     }
 
     @Nested
     inner class BasicCalls {
         @Test
         fun `simple text response`() = runTest(timeout = 2.minutes) {
-            val result = bridge.call(
+            val result = bridge().call(
                 systemPrompt = "You are a helpful assistant. Be very brief.",
                 messages = listOf(AgentMessage.User("What is 2+2? Reply with just the number.")),
                 tools = emptyList(),
             )
 
-            assertEquals(StopReason.STOP, result.stopReason)
+            assertEquals(
+                StopReason.STOP,
+                result.stopReason,
+                "Expected STOP but got ${result.stopReason}; errorMessage=${result.errorMessage}; content=${result.textContent}",
+            )
             assertTrue(result.textContent.contains("4"), "Should contain '4', got: ${result.textContent}")
         }
 
@@ -76,7 +77,7 @@ class KoogLlmBridgeTest {
                 AgentMessage.User("What is my name? Reply with just the name."),
             )
 
-            val result = bridge.call(
+            val result = bridge().call(
                 systemPrompt = "Be very brief.",
                 messages = messages,
                 tools = emptyList(),
@@ -93,7 +94,7 @@ class KoogLlmBridgeTest {
     inner class ConversionTests {
         @Test
         fun `handles empty messages list`() = runTest(timeout = 2.minutes) {
-            val result = bridge.call(
+            val result = bridge().call(
                 systemPrompt = "Say hello.",
                 messages = emptyList(),
                 tools = emptyList(),
@@ -110,7 +111,7 @@ class KoogLlmBridgeTest {
                 AgentMessage.User("Say PONG"),
             )
 
-            val result = bridge.call(
+            val result = bridge().call(
                 systemPrompt = "Always respond with exactly: PONG",
                 messages = messages,
                 tools = emptyList(),
