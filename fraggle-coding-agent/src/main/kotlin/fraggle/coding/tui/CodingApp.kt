@@ -274,7 +274,7 @@ private fun handleKey(
     event: KeyEvent,
     editor: EditorState,
     busy: Boolean,
-    pending: fraggle.coding.tui.PendingApproval?,
+    pending: PendingApproval?,
     confirmExit: Boolean,
     onEditorChange: (EditorState) -> Unit,
     onSubmit: () -> Unit,

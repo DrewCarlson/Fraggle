@@ -5,6 +5,8 @@ import fraggle.agent.compaction.ContextUsage
 import fraggle.agent.compaction.LlmCompactor
 import fraggle.agent.compaction.MessageCountCompactionPolicy
 import fraggle.agent.loop.AgentOptions
+import fraggle.agent.loop.LlmBridge
+import fraggle.agent.loop.ToolCallExecutor
 import fraggle.agent.message.AgentMessage
 import fraggle.agent.message.ContentPart.Text
 import fraggle.agent.skill.SkillPromptFormatter
@@ -19,12 +21,15 @@ import kotlinx.serialization.json.Json
 import fraggle.chat.ChatPlatform
 import fraggle.chat.IncomingMessage
 import fraggle.chat.MessageContent
+import fraggle.events.EventBus
 import fraggle.memory.Fact
 import fraggle.memory.Memory
 import fraggle.memory.MemoryScope
 import fraggle.memory.MemoryStore
 import fraggle.prompt.PromptManager
+import fraggle.provider.LMStudioProvider
 import fraggle.provider.Usage
+import fraggle.tracing.TraceStore
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.offsetIn
 import kotlinx.datetime.toLocalDateTime
@@ -37,16 +42,16 @@ import kotlin.time.Instant
  * Main agent orchestration class.
  */
 class FraggleAgent(
-    private val lmStudioProvider: fraggle.provider.LMStudioProvider,
-    private val llmBridge: fraggle.agent.loop.LlmBridge,
-    private val toolCallExecutor: fraggle.agent.loop.ToolCallExecutor,
+    private val lmStudioProvider: LMStudioProvider,
+    private val llmBridge: LlmBridge,
+    private val toolCallExecutor: ToolCallExecutor,
     private val memory: MemoryStore,
     private val config: AgentConfig,
     private val promptManager: PromptManager,
     private val skillRegistryLoader: SkillRegistryLoader,
     private val skillsConfig: SkillsConfig,
-    private val traceStore: fraggle.tracing.TraceStore?,
-    private val eventBus: fraggle.events.EventBus?,
+    private val traceStore: TraceStore?,
+    private val eventBus: EventBus?,
 ) : Closeable {
     private val logger = LoggerFactory.getLogger(FraggleAgent::class.java)
 
