@@ -1,7 +1,7 @@
 package fraggle.di
 
 import dev.zacsweers.metro.ContributesTo
-import fraggle.agent.skill.SkillRegistry
+import fraggle.agent.skill.SkillRegistryLoader
 import fraggle.agent.tool.FraggleToolRegistry
 import dev.zacsweers.metro.Provides
 import dev.zacsweers.metro.SingleIn
@@ -22,6 +22,7 @@ import fraggle.memory.MemoryStore
 import fraggle.models.ApiConfig
 import fraggle.models.DashboardConfig
 import fraggle.models.FraggleConfig
+import fraggle.models.SkillsConfig
 import fraggle.scheduling.TaskScheduler
 import fraggle.tracing.TraceStore
 import java.nio.file.Path
@@ -36,7 +37,8 @@ interface ApiModule {
     fun provideFraggleServices(
         memory: MemoryStore,
         toolRegistry: FraggleToolRegistry,
-        skillRegistry: SkillRegistry,
+        skillRegistryLoader: SkillRegistryLoader,
+        skillsConfig: SkillsConfig,
         bridges: ChatBridgeManager,
         taskScheduler: TaskScheduler,
         config: FraggleConfig,
@@ -51,7 +53,8 @@ interface ApiModule {
     ): FraggleServicesImpl = FraggleServicesImpl(
         memory = memory,
         toolRegistry = toolRegistry,
-        skillRegistry = skillRegistry,
+        skillRegistryLoader = skillRegistryLoader,
+        skillsConfig = skillsConfig,
         bridges = bridges,
         taskScheduler = taskScheduler,
         fraggleConfig = config,

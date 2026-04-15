@@ -17,9 +17,13 @@ import kotlin.io.path.readText
  *
  * Lives in `fraggle-agent-core` so both the messenger assistant and the future coding
  * agent can drive skill expansion from their own input layers.
+ *
+ * The registry is provided via a lambda so every invocation reads the live view of
+ * disk — a skill installed mid-session is reachable on the very next message without
+ * a server restart.
  */
 class SkillCommandExpander(
-    private val registry: SkillRegistry,
+    private val registryProvider: () -> SkillRegistry,
 ) {
 
     fun tryExpand(text: String): Result {
@@ -35,7 +39,7 @@ class SkillCommandExpander(
 
         if (name.isEmpty()) return Result.MalformedCommand("expected /skill:<name>")
 
-        val skill = registry.findByName(name) ?: return Result.UnknownSkill(name)
+        val skill = registryProvider().findByName(name) ?: return Result.UnknownSkill(name)
 
         val body = try {
             stripFrontmatter(skill.filePath.readText())

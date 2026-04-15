@@ -8,7 +8,8 @@ import fraggle.agent.loop.AgentOptions
 import fraggle.agent.message.AgentMessage
 import fraggle.agent.message.ContentPart.Text
 import fraggle.agent.skill.SkillPromptFormatter
-import fraggle.agent.skill.SkillRegistry
+import fraggle.agent.skill.SkillRegistryLoader
+import fraggle.models.SkillsConfig
 import fraggle.agent.tracing.AgentEventTracer
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -42,7 +43,8 @@ class FraggleAgent(
     private val memory: MemoryStore,
     private val config: AgentConfig,
     private val promptManager: PromptManager,
-    private val skillRegistry: SkillRegistry,
+    private val skillRegistryLoader: SkillRegistryLoader,
+    private val skillsConfig: SkillsConfig,
     private val traceStore: fraggle.tracing.TraceStore?,
     private val eventBus: fraggle.events.EventBus?,
 ) : Closeable {
@@ -250,7 +252,7 @@ class FraggleAgent(
         appendLine(promptManager.buildFullPrompt())
         appendLine()
 
-        val skillsBlock = SkillPromptFormatter.format(skillRegistry.visibleToModel())
+        val skillsBlock = SkillPromptFormatter.format(skillRegistryLoader.load(skillsConfig).visibleToModel())
         if (skillsBlock.isNotEmpty()) {
             appendLine(skillsBlock)
             appendLine()

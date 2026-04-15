@@ -7,7 +7,7 @@ import kotlinx.coroutines.CoroutineScope
 import fraggle.FraggleEnvironment
 import fraggle.agent.FraggleAgent
 import fraggle.agent.skill.SkillCommandExpander
-import fraggle.agent.skill.SkillRegistry
+import fraggle.agent.skill.SkillRegistryLoader
 import fraggle.agent.loop.LlmBridge
 import fraggle.agent.loop.ProviderLlmBridge
 import fraggle.agent.loop.ToolCallExecutor
@@ -174,11 +174,11 @@ interface AssistantModule {
     @SingleIn(AppScope::class)
     fun provideChatCommandProcessor(
         eventBus: EventBus,
-        skillRegistry: SkillRegistry,
+        skillRegistryLoader: SkillRegistryLoader,
         skillsConfig: SkillsConfig,
     ): ChatCommandProcessor = ChatCommandProcessor(
         eventBus = eventBus,
-        skillExpander = SkillCommandExpander(skillRegistry),
+        skillExpander = SkillCommandExpander { skillRegistryLoader.load(skillsConfig) },
         skillCommandsEnabled = skillsConfig.enabled && skillsConfig.enableSlashCommands,
     )
 
@@ -206,7 +206,8 @@ interface AssistantModule {
         memory: MemoryStore,
         config: RuntimeAgentConfig,
         promptManager: PromptManager,
-        skillRegistry: SkillRegistry,
+        skillRegistryLoader: SkillRegistryLoader,
+        skillsConfig: SkillsConfig,
         traceStore: TraceStore?,
         eventBus: EventBus,
     ): FraggleAgent = FraggleAgent(
@@ -216,7 +217,8 @@ interface AssistantModule {
         memory = memory,
         config = config,
         promptManager = promptManager,
-        skillRegistry = skillRegistry,
+        skillRegistryLoader = skillRegistryLoader,
+        skillsConfig = skillsConfig,
         traceStore = traceStore,
         eventBus = eventBus,
     )

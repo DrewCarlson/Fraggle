@@ -1,7 +1,7 @@
 package fraggle
 
 import io.ktor.client.*
-import fraggle.agent.skill.SkillRegistry
+import fraggle.agent.skill.SkillRegistryLoader
 import fraggle.agent.tool.FraggleToolRegistry
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -38,7 +38,8 @@ import kotlin.time.Instant
 class FraggleServicesImpl(
     override val memory: MemoryStore,
     override val toolRegistry: FraggleToolRegistry,
-    override val skillRegistry: SkillRegistry,
+    private val skillRegistryLoader: SkillRegistryLoader,
+    private val skillsConfig: SkillsConfig,
     override val bridges: ChatBridgeManager,
     private val taskScheduler: TaskScheduler,
     private val fraggleConfig: FraggleConfig,
@@ -87,7 +88,7 @@ class FraggleServicesImpl(
             totalChats = chatHistoryStore.countChats(),
             connectedBridges = registeredBridges.count { bridges.isConnected(it) },
             availableTools = toolRegistry.tools.size,
-            availableSkills = skillRegistry.skills.size,
+            availableSkills = skillRegistryLoader.load(skillsConfig).skills.size,
             scheduledTasks = taskScheduler.listPendingTasks().size,
             memoryUsage = MemoryUsage(
                 heapUsed = runtime.totalMemory() - runtime.freeMemory(),

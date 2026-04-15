@@ -8,35 +8,40 @@ import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import fraggle.agent.skill.Skill
-import fraggle.api.FraggleServices
+import fraggle.agent.skill.SkillRegistryLoader
 import fraggle.di.AppScope
 import fraggle.models.ErrorResponse
 import fraggle.models.SkillDetail
 import fraggle.models.SkillInfo
+import fraggle.models.SkillsConfig
 import kotlin.io.path.readText
 
 /**
- * Skill registry routes — reads from the SkillRegistry.
+ * Skill registry routes — rescans disk on every request so newly-installed
+ * skills show up in the dashboard without a server restart. This is a
+ * deliberate departure from the cached startup snapshot the agent loop uses.
  */
 @SingleIn(AppScope::class)
 @ContributesIntoSet(scope = AppScope::class, binding = binding<RoutingController>())
 @Inject
 class SkillRoutes(
-    private val services: FraggleServices,
+    private val skillsConfig: SkillsConfig,
+    private val registryLoader: SkillRegistryLoader,
 ) : RoutingController {
     override fun init(parent: Route) {
         parent.apply {
             route("/skills") {
                 get {
-                    val skills = services.skillRegistry.skills.map { it.toInfo() }
-                    call.respond(skills)
+                    val registry = registryLoader.load(skillsConfig)
+                    call.respond(registry.skills.map { it.toInfo() })
                 }
 
                 get("/{name}") {
                     val name = call.parameters["name"]
                         ?: return@get call.respond(HttpStatusCode.BadRequest, ErrorResponse("Missing skill name"))
 
-                    val skill = services.skillRegistry.findByName(name)
+                    val registry = registryLoader.load(skillsConfig)
+                    val skill = registry.findByName(name)
                         ?: return@get call.respond(HttpStatusCode.NotFound, ErrorResponse("Skill not found"))
 
                     val body = runCatching { skill.filePath.readText() }.getOrElse { "" }

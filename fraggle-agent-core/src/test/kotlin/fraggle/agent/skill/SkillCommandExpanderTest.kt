@@ -36,21 +36,21 @@ class SkillCommandExpanderTest {
     @Test
     fun `returns NotASkillCommand for normal text`() {
         val (reg, _) = registry(java.nio.file.Files.createTempDirectory("sk"))
-        val result = SkillCommandExpander(reg).tryExpand("hello world")
+        val result = SkillCommandExpander { reg }.tryExpand("hello world")
         assertEquals(SkillCommandExpander.Result.NotASkillCommand, result)
     }
 
     @Test
     fun `returns NotASkillCommand for other slash commands`() {
         val (reg, _) = registry(java.nio.file.Files.createTempDirectory("sk"))
-        val result = SkillCommandExpander(reg).tryExpand("/approve")
+        val result = SkillCommandExpander { reg }.tryExpand("/approve")
         assertEquals(SkillCommandExpander.Result.NotASkillCommand, result)
     }
 
     @Test
     fun `returns UnknownSkill for missing skill`(@TempDir tmp: Path) {
         val (reg, _) = registry(tmp)
-        val result = SkillCommandExpander(reg).tryExpand("/skill:does-not-exist")
+        val result = SkillCommandExpander { reg }.tryExpand("/skill:does-not-exist")
         assertIs<SkillCommandExpander.Result.UnknownSkill>(result)
         assertEquals("does-not-exist", result.name)
     }
@@ -58,7 +58,7 @@ class SkillCommandExpanderTest {
     @Test
     fun `returns Malformed for bare prefix`(@TempDir tmp: Path) {
         val (reg, _) = registry(tmp)
-        val result = SkillCommandExpander(reg).tryExpand("/skill:")
+        val result = SkillCommandExpander { reg }.tryExpand("/skill:")
         assertIs<SkillCommandExpander.Result.MalformedCommand>(result)
     }
 
@@ -66,7 +66,7 @@ class SkillCommandExpanderTest {
     fun `expands skill without args`(@TempDir tmp: Path) {
         val (reg, skill) = registry(tmp)
 
-        val result = SkillCommandExpander(reg).tryExpand("/skill:code-review")
+        val result = SkillCommandExpander { reg }.tryExpand("/skill:code-review")
 
         assertIs<SkillCommandExpander.Result.Expanded>(result)
         assertEquals(skill.name, result.skill.name)
@@ -82,7 +82,7 @@ class SkillCommandExpanderTest {
     fun `preserves trailing args after skill block`(@TempDir tmp: Path) {
         val (reg, _) = registry(tmp)
 
-        val result = SkillCommandExpander(reg).tryExpand("/skill:code-review please look at main.kt")
+        val result = SkillCommandExpander { reg }.tryExpand("/skill:code-review please look at main.kt")
 
         assertIs<SkillCommandExpander.Result.Expanded>(result)
         assertTrue(result.text.contains("please look at main.kt"))
@@ -93,7 +93,7 @@ class SkillCommandExpanderTest {
     @Test
     fun `includes base directory in preamble`(@TempDir tmp: Path) {
         val (reg, skill) = registry(tmp)
-        val result = SkillCommandExpander(reg).tryExpand("/skill:code-review")
+        val result = SkillCommandExpander { reg }.tryExpand("/skill:code-review")
         assertIs<SkillCommandExpander.Result.Expanded>(result)
         assertTrue(skill.baseDir.toString() in result.text)
     }
@@ -117,7 +117,7 @@ class SkillCommandExpanderTest {
         val registry = InMemorySkillRegistry(result.skills)
         assertTrue(registry.visibleToModel().isEmpty())
 
-        val expanded = SkillCommandExpander(registry).tryExpand("/skill:secret do the thing")
+        val expanded = SkillCommandExpander { registry }.tryExpand("/skill:secret do the thing")
 
         assertIs<SkillCommandExpander.Result.Expanded>(expanded)
         assertEquals("secret", expanded.skill.name)

@@ -10,6 +10,7 @@ import dev.zacsweers.metro.createGraphFactory
 import kotlinx.coroutines.runBlocking
 import fraggle.chat.BridgeInitializer
 import fraggle.chat.BridgeInitializerRegistry
+import fraggle.chat.CommandResult
 import fraggle.chat.InitStepResult
 import fraggle.di.AppGraph
 import fraggle.events.EventBus
@@ -162,6 +163,8 @@ class ChatCommand : CliktCommand(name = "chat") {
         val orchestrator = graph.serviceOrchestrator
         orchestrator.initialize()
 
+        val chatCommandProcessor = graph.chatCommandProcessor
+
         println("Available tools: ${orchestrator.getToolRegistry().tools.map { it.name }}")
         println()
 
@@ -180,12 +183,61 @@ class ChatCommand : CliktCommand(name = "chat") {
 
             if (input.isBlank()) continue
 
+            // Dispatch slash commands (/skill:name, /approve, /deny, …) the same
+            // way the bridged message loop does — otherwise `/skill:foo` would
+            // flow to the LLM as literal text.
+            var effectiveInput = input
+            if (chatCommandProcessor.isCommand(input)) {
+                when (val result = chatCommandProcessor.handleCommand(chatId, input)) {
+                    is CommandResult.Expanded -> {
+                        effectiveInput = result.newText
+                        println("(expanded /skill:${result.skillName})")
+                        println()
+                    }
+                    is CommandResult.Approved -> {
+                        println("Tool execution approved.")
+                        println()
+                        continue
+                    }
+                    is CommandResult.Denied -> {
+                        println("Tool execution denied.")
+                        println()
+                        continue
+                    }
+                    is CommandResult.NoPermissionPending -> {
+                        println("No pending permission request.")
+                        println()
+                        continue
+                    }
+                    is CommandResult.Unknown -> {
+                        println("Unknown command: ${result.command}")
+                        println()
+                        continue
+                    }
+                    is CommandResult.UnknownSkill -> {
+                        println("Unknown skill: ${result.name}")
+                        println()
+                        continue
+                    }
+                    is CommandResult.MalformedSkill -> {
+                        println("Malformed skill command: ${result.reason}")
+                        println()
+                        continue
+                    }
+                    is CommandResult.SkillReadError -> {
+                        println("Failed to load skill ${result.name}: ${result.reason}")
+                        println()
+                        continue
+                    }
+                }
+            }
+
             try {
                 val response = orchestrator.processMessage(
                     chatId = chatId,
                     senderId = senderId,
                     senderName = "User",
-                    text = input,
+                    text = effectiveInput,
                 )
                 println()
                 println("Fraggle: $response")

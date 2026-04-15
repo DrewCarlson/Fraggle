@@ -152,7 +152,7 @@ class ChatCommandProcessorTest {
             val registry = InMemorySkillRegistry(loaded.skills)
             return ChatCommandProcessor(
                 eventBus = eventBus,
-                skillExpander = SkillCommandExpander(registry),
+                skillExpander = SkillCommandExpander { registry },
                 skillCommandsEnabled = enabled,
             )
         }
