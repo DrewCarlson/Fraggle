@@ -48,6 +48,7 @@ class ApiRoutesTest {
             connectedBridges = 2,
             availableTools = 5,
             scheduledTasks = 1,
+            availableSkills = 0,
             memoryUsage = MemoryUsage(heapUsed = 100_000, heapMax = 256_000),
         )
         coEvery { memory.load(any()) } returns Memory(
