@@ -1,18 +1,7 @@
 package fraggle.provider
 
-import io.ktor.client.*
-import io.ktor.client.engine.cio.*
-import io.ktor.client.plugins.*
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.plugins.logging.LogLevel
-import io.ktor.client.plugins.logging.Logger
-import io.ktor.client.plugins.logging.Logging
-import io.ktor.client.plugins.logging.SIMPLE
-import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -26,7 +15,6 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.minutes
-import kotlin.time.Duration.Companion.seconds
 
 /**
  * Integration tests for [LMStudioProvider] against a live LM Studio instance.
@@ -40,77 +28,11 @@ import kotlin.time.Duration.Companion.seconds
 class LMStudioProviderTest {
 
     companion object {
-        private val apiUrl: String = System.getenv("LMS_API_URL") ?: ""
-        private val apiKey: String? = System.getenv("LMS_API_KEY")
+        val provider: LMStudioProvider get() = fraggle.testing.TestLlmEnvironment.provider
+        val httpClient: io.ktor.client.HttpClient get() = fraggle.testing.TestLlmEnvironment.httpClient
 
-        /** Resolved once from the live server. */
-        private var resolvedModel: String = ""
-
-        private val json = Json {
-            ignoreUnknownKeys = true
-            encodeDefaults = true
-            isLenient = true
-            explicitNulls = false
-        }
-
-        val httpClient: HttpClient by lazy {
-            HttpClient(CIO) {
-                install(ContentNegotiation) { json(json) }
-                install(HttpTimeout) {
-                    requestTimeoutMillis = 5.minutes.inWholeMilliseconds
-                    connectTimeoutMillis = 10.seconds.inWholeMilliseconds
-                }
-                defaultRequest {
-                    contentType(ContentType.Application.Json)
-                }
-                Logging {
-                    level = LogLevel.ALL
-                    logger = Logger.SIMPLE
-                }
-            }
-        }
-
-        val provider: LMStudioProvider by lazy {
-            LMStudioProvider(
-                baseUrl = apiUrl,
-                httpClient = httpClient,
-                apiKey = apiKey,
-            )
-        }
-
-        /**
-         * Get a model identifier to use for tests. Queries the server once
-         * and caches the result. Prefers a loaded LLM model.
-         */
-        suspend fun getModel(): String {
-            if (resolvedModel.isNotEmpty()) return resolvedModel
-
-            // Try native endpoint first for richer info
-            try {
-                val nativeModels = provider.nativeListModels()
-                val loadedLlm = nativeModels.models.firstOrNull { model ->
-                    model.type == "llm" && model.loadedInstances.isNotEmpty()
-                }
-                if (loadedLlm != null) {
-                    resolvedModel = loadedLlm.key
-                    return resolvedModel
-                }
-                // Fall back to any LLM
-                val anyLlm = nativeModels.models.firstOrNull { it.type == "llm" }
-                if (anyLlm != null) {
-                    resolvedModel = anyLlm.key
-                    return resolvedModel
-                }
-            } catch (_: Exception) {
-                // Native endpoint may not be available, fall through
-            }
-
-            // Fall back to OpenAI-compat models list
-            val models = provider.listModels()
-            assertTrue(models.isNotEmpty(), "No models available on the LM Studio server")
-            resolvedModel = models.first().id
-            return resolvedModel
-        }
+        /** Delegates to [fraggle.testing.TestLlmEnvironment.getChatModel]. */
+        suspend fun getModel(): String = fraggle.testing.TestLlmEnvironment.getChatModel()
     }
 
     // ═════════════════════════════════════════════════════════════════════
@@ -145,7 +67,7 @@ class LMStudioProviderTest {
                     Message.user("What is 2+2? Reply with just the number."),
                 ),
                 temperature = 0.0,
-                maxTokens = 32,
+                maxTokens = fraggle.testing.TestLlmEnvironment.maxTokens(32),
             ))
 
             assertEquals(1, response.choices.size)
@@ -167,7 +89,7 @@ class LMStudioProviderTest {
                     Message.user("What is my name? Reply with just the name."),
                 ),
                 temperature = 0.0,
-                maxTokens = 32,
+                maxTokens = fraggle.testing.TestLlmEnvironment.maxTokens(32),
             ))
 
             val content = response.choices.first().message.content
@@ -257,6 +179,7 @@ class LMStudioProviderTest {
         @Test
         fun `chat with tool result roundtrip`() = runTest {
             val model = getModel()
+            fraggle.testing.TestLlmEnvironment.assumeToolRoundtripSupported(provider, model)
 
             val weatherTool = buildJsonObject {
                 put("type", "function")
@@ -330,7 +253,7 @@ class LMStudioProviderTest {
                     Message.user("Count from 1 to 5, separated by commas."),
                 ),
                 temperature = 0.0,
-                maxTokens = 64,
+                maxTokens = fraggle.testing.TestLlmEnvironment.maxTokens(64),
             )).toList()
 
             assertTrue(events.isNotEmpty(), "Should receive streaming events")
@@ -605,19 +528,8 @@ class LMStudioProviderTest {
             assertTrue(usage.totalTokens >= 0, "Total tokens should be >= 0")
         }
 
-        private suspend fun findEmbeddingModel(): String? {
-            return try {
-                val nativeModels = provider.nativeListModels()
-                val embeddingModel = nativeModels.models.firstOrNull { it.type == "embedding" }
-                if (embeddingModel == null) {
-                    println("No embedding model available — skipping embedding test")
-                }
-                embeddingModel?.key
-            } catch (_: Exception) {
-                println("Could not query native models for embedding model — skipping")
-                null
-            }
-        }
+        private suspend fun findEmbeddingModel(): String? =
+            fraggle.testing.TestLlmEnvironment.findEmbeddingModel()
 
         private fun cosineSimilarity(a: List<Double>, b: List<Double>): Double {
             require(a.size == b.size)
@@ -689,7 +601,7 @@ class LMStudioProviderTest {
                 input = NativeChatInput.Text("What is 2+2? Reply with just the number."),
                 systemPrompt = "Be very brief.",
                 temperature = 0.0,
-                maxOutputTokens = 32,
+                maxOutputTokens = fraggle.testing.TestLlmEnvironment.maxTokens(32),
             ))
 
             assertTrue(response.output.isNotEmpty(), "Should have output items")
@@ -716,7 +628,7 @@ class LMStudioProviderTest {
                     NativeChatInputItem(type = "text", content = "Say hello"),
                 )),
                 temperature = 0.0,
-                maxOutputTokens = 32,
+                maxOutputTokens = fraggle.testing.TestLlmEnvironment.maxTokens(32),
             ))
 
             assertTrue(response.output.isNotEmpty())
@@ -753,7 +665,7 @@ class LMStudioProviderTest {
                 input = NativeChatInput.Text("My name is FraggleTestUser."),
                 systemPrompt = "Remember facts about the user. Be brief.",
                 store = true,
-                maxOutputTokens = 64,
+                maxOutputTokens = fraggle.testing.TestLlmEnvironment.maxTokens(64),
             ))
 
             val responseId = first.responseId
@@ -767,7 +679,7 @@ class LMStudioProviderTest {
                 model = model,
                 input = NativeChatInput.Text("What is my name? Reply with just the name."),
                 previousResponseId = responseId,
-                maxOutputTokens = 32,
+                maxOutputTokens = fraggle.testing.TestLlmEnvironment.maxTokens(32),
                 temperature = 0.0,
             ))
 
@@ -794,7 +706,7 @@ class LMStudioProviderTest {
                 input = NativeChatInput.Text("Count from 1 to 3, separated by commas."),
                 systemPrompt = "Be very brief.",
                 temperature = 0.0,
-                maxOutputTokens = 32,
+                maxOutputTokens = fraggle.testing.TestLlmEnvironment.maxTokens(32),
             )).toList()
 
             assertTrue(events.isNotEmpty(), "Should receive streaming events")
@@ -821,7 +733,7 @@ class LMStudioProviderTest {
             val events = provider.nativeChatStream(NativeChatRequest(
                 model = model,
                 input = NativeChatInput.Text("Hi"),
-                maxOutputTokens = 8,
+                maxOutputTokens = fraggle.testing.TestLlmEnvironment.maxTokens(32),
             )).toList()
 
             // Should have MessageStart and MessageEnd

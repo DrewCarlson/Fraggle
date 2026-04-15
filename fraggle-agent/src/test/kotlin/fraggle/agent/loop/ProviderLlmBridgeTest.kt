@@ -5,18 +5,7 @@ import fraggle.agent.message.AgentMessage
 import fraggle.agent.message.ContentPart
 import fraggle.agent.message.StopReason
 import fraggle.provider.LMStudioProvider
-import io.ktor.client.*
-import io.ktor.client.engine.cio.*
-import io.ktor.client.plugins.*
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.plugins.logging.LogLevel
-import io.ktor.client.plugins.logging.Logger
-import io.ktor.client.plugins.logging.Logging
-import io.ktor.client.plugins.logging.SIMPLE
-import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
@@ -24,7 +13,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.minutes
-import kotlin.time.Duration.Companion.seconds
 
 /**
  * Integration tests for [ProviderLlmBridge] against a live LM Studio instance.
@@ -35,54 +23,22 @@ import kotlin.time.Duration.Companion.seconds
 class ProviderLlmBridgeTest {
 
     companion object {
-        private val apiUrl: String = System.getenv("LMS_API_URL") ?: ""
-        private val apiKey: String? = System.getenv("LMS_API_KEY")
+        private val env get() = fraggle.testing.TestLlmEnvironment
+        val provider: LMStudioProvider get() = env.provider
 
-        private val json = Json {
-            ignoreUnknownKeys = true
-            encodeDefaults = true
-            isLenient = true
-            explicitNulls = false
-        }
-
-        val httpClient: HttpClient by lazy {
-            HttpClient(CIO) {
-                install(ContentNegotiation) { json(json) }
-                install(HttpTimeout) {
-                    requestTimeoutMillis = 5.minutes.inWholeMilliseconds
-                    connectTimeoutMillis = 10.seconds.inWholeMilliseconds
-                }
-                defaultRequest {
-                    contentType(ContentType.Application.Json)
-                }
-                Logging {
-                    level = LogLevel.ALL
-                    logger = Logger.SIMPLE
-                }
-            }
-        }
-
-        val provider: LMStudioProvider by lazy {
-            LMStudioProvider(
-                baseUrl = apiUrl,
-                httpClient = httpClient,
-                apiKey = apiKey,
-            )
-        }
-
-        val bridge: ProviderLlmBridge by lazy {
-            ProviderLlmBridge(
-                provider = provider,
-                temperature = 0.0,
-            )
-        }
+        /** Build a bridge with the resolved chat model. */
+        suspend fun bridge(): ProviderLlmBridge = ProviderLlmBridge(
+            provider = provider,
+            model = env.getChatModel(),
+            temperature = 0.0,
+        )
     }
 
     @Nested
     inner class NonStreamingCalls {
         @Test
         fun `basic text response`() = runTest(timeout = 2.minutes) {
-            val result = bridge.call(
+            val result = bridge().call(
                 systemPrompt = "You are a helpful assistant. Be very brief.",
                 messages = listOf(AgentMessage.User("What is 2+2? Reply with just the number.")),
                 tools = emptyList(),
@@ -100,7 +56,7 @@ class ProviderLlmBridgeTest {
                 AgentMessage.User("What is my name? Reply with just the name."),
             )
 
-            val result = bridge.call(
+            val result = bridge().call(
                 systemPrompt = "Be very brief.",
                 messages = messages,
                 tools = emptyList(),
@@ -114,7 +70,7 @@ class ProviderLlmBridgeTest {
 
         @Test
         fun `returns usage statistics`() = runTest(timeout = 2.minutes) {
-            val result = bridge.call(
+            val result = bridge().call(
                 systemPrompt = "Be brief.",
                 messages = listOf(AgentMessage.User("Say hi")),
                 tools = emptyList(),
@@ -134,7 +90,7 @@ class ProviderLlmBridgeTest {
             val deltas = mutableListOf<StreamDelta>()
             val partials = mutableListOf<AgentMessage.Assistant>()
 
-            val result = bridge.callStreaming(
+            val result = bridge().callStreaming(
                 systemPrompt = "Be very brief.",
                 messages = listOf(AgentMessage.User("Count from 1 to 5, separated by commas.")),
                 tools = emptyList(),
@@ -165,9 +121,9 @@ class ProviderLlmBridgeTest {
             val systemPrompt = "Always respond with exactly: PONG"
             val messages = listOf(AgentMessage.User("PING"))
 
-            val nonStreamResult = bridge.call(systemPrompt, messages, emptyList())
+            val nonStreamResult = bridge().call(systemPrompt, messages, emptyList())
 
-            val streamResult = bridge.callStreaming(systemPrompt, messages, emptyList()) { _, _ -> }
+            val streamResult = bridge().callStreaming(systemPrompt, messages, emptyList()) { _, _ -> }
 
             // Both should produce similar content
             assertTrue(
@@ -197,7 +153,7 @@ class ProviderLlmBridgeTest {
                 ),
             )
 
-            val result = bridge.call(
+            val result = bridge().call(
                 systemPrompt = "You must use the add_numbers tool when asked to add.",
                 messages = listOf(AgentMessage.User("Add 3 and 7")),
                 tools = tools,
@@ -229,7 +185,7 @@ class ProviderLlmBridgeTest {
             )
 
             // First call — get tool call
-            val firstResult = bridge.call(
+            val firstResult = bridge().call(
                 systemPrompt = "You must use the get_weather tool to answer weather questions.",
                 messages = listOf(AgentMessage.User("What's the weather in Paris?")),
                 tools = tools,
@@ -240,7 +196,7 @@ class ProviderLlmBridgeTest {
             val toolCall = firstResult.toolCalls.first()
 
             // Second call — provide tool result
-            val secondResult = bridge.call(
+            val secondResult = bridge().call(
                 systemPrompt = "You must use the get_weather tool to answer weather questions.",
                 messages = listOf(
                     AgentMessage.User("What's the weather in Paris?"),
@@ -267,7 +223,7 @@ class ProviderLlmBridgeTest {
                 AgentMessage.User("Say PONG"),
             )
 
-            val result = bridge.call(
+            val result = bridge().call(
                 systemPrompt = "Always respond with exactly: PONG",
                 messages = messages,
                 tools = emptyList(),

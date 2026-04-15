@@ -26,6 +26,9 @@ import ai.koog.prompt.executor.clients.openai.base.models.ReasoningEffort
 import ai.koog.prompt.message.AttachmentContent
 import ai.koog.prompt.message.ContentPart
 import ai.koog.prompt.message.Message
+import fraggle.agent.loop.AgentOptions
+import fraggle.agent.message.AgentMessage
+import fraggle.agent.message.ContentPart.Text
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -206,6 +209,90 @@ class FraggleAgent(
             )
         } catch (e: Exception) {
             logger.error("Koog agent error: ${e.message}", e)
+            AgentResponse.Error("Failed to get response from LLM: ${e.message}")
+        }
+
+        return ProcessResult(response = response, conversation = compressed)
+    }
+
+    /**
+     * Process an incoming message using the new Fraggle-owned agent loop.
+     * This delegates to [Agent] instead of Koog's AIAgentService.
+     *
+     * Uses the same system prompt building, memory extraction, and compression
+     * as [process], but the core agent loop is Fraggle-owned.
+     */
+    suspend fun processWithAgent(
+        conversation: Conversation,
+        message: IncomingMessage,
+        platform: ChatPlatform? = null,
+        llmBridge: fraggle.agent.loop.LlmBridge,
+        toolCallExecutor: fraggle.agent.loop.ToolCallExecutor? = null,
+    ): ProcessResult {
+        logger.info("Processing message (new loop) from ${message.sender.id} in chat ${message.chatId}")
+
+        val compressed = compressIfNeeded(conversation)
+
+        val executionContext = ToolExecutionContext(
+            chatId = message.chatId,
+            userId = message.sender.id,
+        )
+
+        val response = try {
+            val systemPrompt = buildBaseSystemPrompt(
+                promptManager = promptManager,
+                platform = platform,
+                chatId = message.chatId,
+                senderId = message.sender.id,
+                historySummary = compressed.historySummary,
+            )
+
+            val userInput = buildKoogInput(message)
+
+            // Convert existing conversation messages to AgentMessages
+            val historyMessages = compressed.messages.map { contextMessage ->
+                if (contextMessage.role == ConversationRole.USER) {
+                    AgentMessage.User(contextMessage.content)
+                } else {
+                    AgentMessage.Assistant(
+                        content = listOf(Text(contextMessage.content)),
+                    )
+                }
+            }
+
+            val agent = Agent(
+                AgentOptions(
+                    systemPrompt = systemPrompt,
+                    model = config.model,
+                    llmBridge = llmBridge,
+                    toolExecutor = toolCallExecutor,
+                    maxIterations = config.maxIterations,
+                    chatId = message.chatId,
+                )
+            )
+
+            // Inject history and prompt
+            withContext(ToolExecutionContext.asContextElement(executionContext)) {
+                agent.prompt(
+                    listOf(AgentMessage.User(userInput)),
+                )
+            }
+
+            val lastAssistant = agent.state.messages
+                .filterIsInstance<AgentMessage.Assistant>()
+                .lastOrNull()
+            val content = lastAssistant?.textContent ?: ""
+
+            if (config.autoMemory && content.isNotBlank()) {
+                extractMemoryViaLLM(message, content)
+            }
+
+            AgentResponse.Success(
+                content = content,
+                attachments = executionContext.attachments.toList(),
+            )
+        } catch (e: Exception) {
+            logger.error("Agent error: ${e.message}", e)
             AgentResponse.Error("Failed to get response from LLM: ${e.message}")
         }
 
