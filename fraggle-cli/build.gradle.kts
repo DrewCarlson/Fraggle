@@ -23,6 +23,7 @@ kotlin {
 dependencies {
     implementation(project(":fraggle-common"))
     implementation(project(":fraggle-assistant"))
+    implementation(project(":fraggle-coding-agent"))
     implementation(project(":fraggle-signal"))
     implementation(project(":fraggle-discord"))
     implementation(project(":fraggle-tools"))
