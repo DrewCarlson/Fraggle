@@ -5,7 +5,6 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 
 /**
  * Base class for tools in the Fraggle agent system.
- * Replaces Koog's SimpleTool for the new agent loop.
  *
  * Tools define their argument schema via kotlinx.serialization and produce string results.
  */

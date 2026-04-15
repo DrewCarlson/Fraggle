@@ -11,7 +11,6 @@ import java.util.UUID
 
 /**
  * Bridges [AgentEvent]s to the existing [TraceStore] and [EventBus].
- * Replaces the Koog Tracing feature + FraggleTraceProcessor.
  *
  * Usage:
  * ```

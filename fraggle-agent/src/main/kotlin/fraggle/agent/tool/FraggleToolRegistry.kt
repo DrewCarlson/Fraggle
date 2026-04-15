@@ -13,7 +13,6 @@ import kotlinx.serialization.json.putJsonObject
 
 /**
  * Registry of agent tools with schema generation.
- * Replaces Koog's ToolRegistry for the new agent loop.
  */
 class FraggleToolRegistry(
     val tools: List<AgentToolDef<*>>,

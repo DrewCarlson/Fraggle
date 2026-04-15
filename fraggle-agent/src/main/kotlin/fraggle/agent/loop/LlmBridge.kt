@@ -5,8 +5,8 @@ import fraggle.agent.message.AgentMessage
 
 /**
  * Bridge between the agent loop and the LLM.
- * Abstracts away the specifics of how LLM calls are made (Koog PromptExecutor,
- * direct HTTP, etc.).
+ * Abstracts away the specifics of how LLM calls are made so different providers
+ * can be plugged in behind a uniform interface.
  */
 fun interface LlmBridge {
     /**

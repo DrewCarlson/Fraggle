@@ -94,7 +94,7 @@ class MockTest {
 
 ### Testing Tools
 
-Tools extend Koog's `SimpleTool` and can be tested directly by calling `execute`:
+Tools extend `AgentToolDef` and can be tested directly by calling `execute`:
 
 ```kotlin
 class ToolTest {
