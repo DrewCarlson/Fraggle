@@ -75,8 +75,7 @@ class LMStudioProvider(
      * lifecycle events that other providers also emit.
      */
     override fun stream(request: ChatRequest): Flow<ChatEvent> = flow {
-        val resolvedModel = request.model.ifEmpty { defaultModel ?: "" }
-        val state = StreamReducer(resolvedModel, name)
+        val state = ChatEventReducer()
         emit(ChatEvent.Start(state.partial()))
 
         try {
@@ -128,7 +127,7 @@ class LMStudioProvider(
     fun chatStream(request: ChatRequest): Flow<ChatStreamEvent> = flow {
         val apiRequest = request.toOpenAIRequest(defaultModel).copy(
             stream = true,
-            streamOptions = StreamOptions(includeUsage = true),
+            streamOptions = OpenAIStreamOptions(includeUsage = true),
         )
 
         httpClient.preparePost("$baseUrl/chat/completions") {
@@ -145,10 +144,10 @@ class LMStudioProvider(
             }
 
             val channel = response.bodyAsChannel()
-            parseSSEStream(channel) { eventData ->
+            parseOpenAISse(channel) { eventData ->
                 if (eventData == "[DONE]") {
                     emit(ChatStreamEvent.Done)
-                    return@parseSSEStream
+                    return@parseOpenAISse
                 }
 
                 val chunk = json.decodeFromString<OpenAIStreamChunk>(eventData)
@@ -222,7 +221,7 @@ class LMStudioProvider(
                     finishReason = choice.finishReason,
                 )
             },
-            usage = apiResponse.usage?.toUsage(),
+            usage = apiResponse.usage?.toNeutralUsage(),
         )
     }
 
@@ -256,10 +255,10 @@ class LMStudioProvider(
             }
 
             val channel = response.bodyAsChannel()
-            parseSSEStream(channel) { eventData ->
+            parseOpenAISse(channel) { eventData ->
                 if (eventData == "[DONE]") {
                     emit(CompletionStreamEvent.Done)
-                    return@parseSSEStream
+                    return@parseOpenAISse
                 }
 
                 val chunk = json.decodeFromString<OpenAICompletionStreamChunk>(eventData)
@@ -485,33 +484,7 @@ class LMStudioProvider(
     }
 
     // ── SSE parsing ─────────────────────────────────────────────────────
-
-    /**
-     * Parse OpenAI-format SSE stream (no event: field, just data: lines).
-     */
-    private suspend fun parseSSEStream(
-        channel: ByteReadChannel,
-        onData: suspend (String) -> Unit,
-    ) {
-        while (!channel.isClosedForRead) {
-            val line = channel.readLine() ?: break
-
-            when {
-                line.startsWith("data: ") -> {
-                    val data = line.removePrefix("data: ").trim()
-                    if (data.isNotEmpty()) {
-                        onData(data)
-                    }
-                }
-                line.isBlank() -> {
-                    // SSE event boundary
-                }
-                line.startsWith(":") -> {
-                    // SSE comment (keepalive), ignore
-                }
-            }
-        }
-    }
+    // Plain OpenAI-style SSE (`data:` only) lives in SseParser.kt.
 
     /**
      * Parse native LM Studio SSE stream (has both event: and data: fields).
@@ -820,152 +793,11 @@ data class NativeReasoningCapability(
 )
 
 // ═════════════════════════════════════════════════════════════════════════
-// Internal OpenAI-compatible wire models
+// LM Studio-only wire models (text completions, embeddings, native v1)
+//
+// OpenAI chat completions wire models + conversions live in
+// OpenAICompletionsWire.kt so that OpenAICompletionsProvider can share them.
 // ═════════════════════════════════════════════════════════════════════════
-
-// ── Chat Completions ────────────────────────────────────────────────────
-
-@Serializable
-internal data class OpenAIChatRequest(
-    val model: String,
-    val messages: List<OpenAIMessage>,
-    val tools: List<JsonElement>? = null,
-    @SerialName("tool_choice")
-    val toolChoice: JsonElement? = null,
-    val temperature: Double? = null,
-    @SerialName("max_tokens")
-    val maxTokens: Int? = null,
-    @SerialName("top_p")
-    val topP: Double? = null,
-    @SerialName("top_k")
-    val topK: Int? = null,
-    @SerialName("min_p")
-    val minP: Double? = null,
-    @SerialName("repeat_penalty")
-    val repeatPenalty: Double? = null,
-    @SerialName("presence_penalty")
-    val presencePenalty: Double? = null,
-    @SerialName("frequency_penalty")
-    val frequencyPenalty: Double? = null,
-    val stop: List<String>? = null,
-    val seed: Int? = null,
-    val stream: Boolean = false,
-    @SerialName("stream_options")
-    val streamOptions: StreamOptions? = null,
-    @SerialName("response_format")
-    val responseFormat: JsonElement? = null,
-)
-
-@Serializable
-internal data class StreamOptions(
-    @SerialName("include_usage")
-    val includeUsage: Boolean = true,
-)
-
-@Serializable
-internal data class OpenAIMessage(
-    val role: String,
-    val content: String? = null,
-    @SerialName("tool_calls")
-    val toolCalls: List<OpenAIToolCall>? = null,
-    @SerialName("tool_call_id")
-    val toolCallId: String? = null,
-    val name: String? = null,
-)
-
-@Serializable
-internal data class OpenAIToolCall(
-    val id: String,
-    val type: String = "function",
-    val function: OpenAIFunctionCall,
-)
-
-@Serializable
-internal data class OpenAIFunctionCall(
-    val name: String,
-    val arguments: String,
-)
-
-@Serializable
-internal data class OpenAIChatResponse(
-    val id: String,
-    val model: String,
-    val choices: List<OpenAIChoice>,
-    val usage: OpenAIUsage? = null,
-)
-
-@Serializable
-internal data class OpenAIChoice(
-    val index: Int,
-    val message: OpenAIMessage,
-    @SerialName("finish_reason")
-    val finishReason: String? = null,
-)
-
-@Serializable
-internal data class OpenAIUsage(
-    @SerialName("prompt_tokens")
-    val promptTokens: Int,
-    @SerialName("completion_tokens")
-    val completionTokens: Int,
-    @SerialName("total_tokens")
-    val totalTokens: Int,
-)
-
-// ── Streaming Chunks ────────────────────────────────────────────────────
-
-@Serializable
-internal data class OpenAIStreamChunk(
-    val id: String? = null,
-    val model: String? = null,
-    val choices: List<OpenAIStreamChoice>? = null,
-    val usage: OpenAIUsage? = null,
-)
-
-@Serializable
-internal data class OpenAIStreamChoice(
-    val index: Int = 0,
-    val delta: OpenAIStreamDelta? = null,
-    @SerialName("finish_reason")
-    val finishReason: String? = null,
-)
-
-@Serializable
-internal data class OpenAIStreamDelta(
-    val role: String? = null,
-    val content: String? = null,
-    val reasoning: String? = null,
-    @SerialName("tool_calls")
-    val toolCalls: List<OpenAIStreamToolCall>? = null,
-)
-
-@Serializable
-internal data class OpenAIStreamToolCall(
-    val index: Int = 0,
-    val id: String? = null,
-    val type: String? = null,
-    val function: OpenAIStreamFunctionCall? = null,
-)
-
-@Serializable
-internal data class OpenAIStreamFunctionCall(
-    val name: String? = null,
-    val arguments: String? = null,
-)
-
-// ── Models ──────────────────────────────────────────────────────────────
-
-@Serializable
-internal data class OpenAIModelsResponse(
-    val data: List<OpenAIModel>,
-)
-
-@Serializable
-internal data class OpenAIModel(
-    val id: String,
-    @SerialName("owned_by")
-    val ownedBy: String? = null,
-)
 
 // ── Text Completions ────────────────────────────────────────────────────
 
@@ -1108,275 +940,5 @@ internal data class NativeSSEPromptProcessingProgress(
     val progress: Double,
 )
 
-// ═════════════════════════════════════════════════════════════════════════
-// Conversion extensions
-// ═════════════════════════════════════════════════════════════════════════
-
-private fun ChatRequest.toOpenAIRequest(defaultModel: String?): OpenAIChatRequest {
-    return OpenAIChatRequest(
-        model = model.ifEmpty { defaultModel ?: error("No model specified") },
-        messages = messages.map { it.toOpenAIMessage() },
-        tools = tools?.takeIf { it.isNotEmpty() },
-        toolChoice = toolChoice?.toJsonElement(),
-        temperature = temperature,
-        maxTokens = maxTokens,
-    )
-}
-
-private fun Message.toOpenAIMessage(): OpenAIMessage {
-    return OpenAIMessage(
-        role = when (role) {
-            Role.SYSTEM -> "system"
-            Role.USER -> "user"
-            Role.ASSISTANT -> "assistant"
-            Role.TOOL -> "tool"
-        },
-        content = content,
-        toolCalls = toolCalls?.map { tc ->
-            OpenAIToolCall(
-                id = tc.id,
-                type = tc.type,
-                function = OpenAIFunctionCall(
-                    name = tc.function.name,
-                    arguments = tc.function.arguments,
-                ),
-            )
-        },
-        toolCallId = toolCallId,
-        name = name,
-    )
-}
-
-private fun ToolChoice.toJsonElement(): JsonElement {
-    return when (this) {
-        is ToolChoice.Auto -> JsonPrimitive("auto")
-        is ToolChoice.None -> JsonPrimitive("none")
-        is ToolChoice.Required -> JsonPrimitive("required")
-        is ToolChoice.Specific -> JsonObject(
-            mapOf(
-                "type" to JsonPrimitive("function"),
-                "function" to JsonObject(mapOf("name" to JsonPrimitive(function.name))),
-            )
-        )
-    }
-}
-
-private fun OpenAIChatResponse.toChatResponse(): ChatResponse {
-    return ChatResponse(
-        id = id,
-        model = model,
-        choices = choices.map { choice ->
-            Choice(
-                index = choice.index,
-                message = choice.message.toMessage(),
-                finishReason = choice.finishReason,
-            )
-        },
-        usage = usage?.toUsage(),
-    )
-}
-
-private fun OpenAIUsage.toUsage(): Usage {
-    return Usage(
-        promptTokens = promptTokens,
-        completionTokens = completionTokens,
-        totalTokens = totalTokens,
-    )
-}
-
-// ─────────────────────────────────────────────────────────────────────────
-// ChatEvent stream reducer
-// ─────────────────────────────────────────────────────────────────────────
-
-/**
- * Translates LM Studio's flat [ChatStreamEvent] stream into the lifecycle
- * [ChatEvent] protocol: opens/closes text, thinking, and tool-call blocks,
- * carries a growing [Message] snapshot, and yields a terminal [ChatEvent.Done]
- * with the final assembled message.
- */
-private class StreamReducer(
-    private val model: String,
-    @Suppress("unused") private val providerName: String,
-) {
-    private val blocks = mutableListOf<ContentBlock>()
-    var usage: Usage? = null
-    var finishReason: String? = null
-
-    /**
-     * The currently open text block's index in [blocks], if any. Mutually
-     * exclusive with [openThinkingIndex] — providers close one before opening
-     * the other.
-     */
-    private var openTextIndex: Int? = null
-    private var openThinkingIndex: Int? = null
-
-    /** Per-index tool-call accumulator (by stream-local index, not block index). */
-    private val toolCalls = linkedMapOf<Int, ToolCallState>()
-
-    private data class ToolCallState(
-        var blockIndex: Int,
-        var id: String? = null,
-        var name: String? = null,
-        val arguments: StringBuilder = StringBuilder(),
-    )
-
-    fun partial(): Message = Message(
-        role = Role.ASSISTANT,
-        blocks = blocks.toList(),
-    )
-
-    fun onTextDelta(delta: String): List<ChatEvent> {
-        if (delta.isEmpty()) return emptyList()
-        val out = mutableListOf<ChatEvent>()
-        closeThinkingIfOpen(out)
-        val idx = openTextIndex ?: run {
-            val i = blocks.size
-            blocks.add(ContentBlock.Text(""))
-            openTextIndex = i
-            out.add(ChatEvent.TextStart(contentIndex = i, partial = partial()))
-            i
-        }
-        val current = blocks[idx] as ContentBlock.Text
-        blocks[idx] = ContentBlock.Text(current.text + delta)
-        out.add(ChatEvent.TextDelta(contentIndex = idx, delta = delta, partial = partial()))
-        return out
-    }
-
-    fun onThinkingDelta(delta: String): List<ChatEvent> {
-        if (delta.isEmpty()) return emptyList()
-        val out = mutableListOf<ChatEvent>()
-        closeTextIfOpen(out)
-        val idx = openThinkingIndex ?: run {
-            val i = blocks.size
-            blocks.add(ContentBlock.Thinking(thinking = ""))
-            openThinkingIndex = i
-            out.add(ChatEvent.ThinkingStart(contentIndex = i, partial = partial()))
-            i
-        }
-        val current = blocks[idx] as ContentBlock.Thinking
-        blocks[idx] = current.copy(thinking = current.thinking + delta)
-        out.add(ChatEvent.ThinkingDelta(contentIndex = idx, delta = delta, partial = partial()))
-        return out
-    }
-
-    fun onToolCallDelta(
-        index: Int,
-        id: String?,
-        name: String?,
-        argumentsDelta: String?,
-    ): List<ChatEvent> {
-        val out = mutableListOf<ChatEvent>()
-        closeTextIfOpen(out)
-        closeThinkingIfOpen(out)
-
-        val state = toolCalls[index]
-        val tcState = if (state == null) {
-            val blockIdx = blocks.size
-            blocks.add(ContentBlock.ToolCallBlock(id = id ?: "", name = name ?: "", arguments = ""))
-            val s = ToolCallState(blockIndex = blockIdx, id = id, name = name)
-            toolCalls[index] = s
-            out.add(ChatEvent.ToolCallStart(contentIndex = blockIdx, partial = partial()))
-            s
-        } else {
-            if (id != null) state.id = id
-            if (name != null) state.name = name
-            state
-        }
-
-        if (!argumentsDelta.isNullOrEmpty()) {
-            tcState.arguments.append(argumentsDelta)
-        }
-
-        // Refresh the stored block with the latest accumulated state.
-        blocks[tcState.blockIndex] = ContentBlock.ToolCallBlock(
-            id = tcState.id ?: "",
-            name = tcState.name ?: "",
-            arguments = tcState.arguments.toString(),
-        )
-
-        if (!argumentsDelta.isNullOrEmpty() || id != null || name != null) {
-            out.add(
-                ChatEvent.ToolCallDelta(
-                    contentIndex = tcState.blockIndex,
-                    argumentsDelta = argumentsDelta ?: "",
-                    partial = partial(),
-                ),
-            )
-        }
-        return out
-    }
-
-    /**
-     * Close any open blocks and emit the terminal [ChatEvent.Done] (or [ChatEvent.Error]
-     * if the finish reason indicates failure).
-     */
-    fun finish(): List<ChatEvent> {
-        val out = mutableListOf<ChatEvent>()
-        closeTextIfOpen(out)
-        closeThinkingIfOpen(out)
-
-        // Close all open tool calls, emitting ToolCallEnd for each.
-        for ((_, state) in toolCalls) {
-            val block = blocks[state.blockIndex] as ContentBlock.ToolCallBlock
-            out.add(
-                ChatEvent.ToolCallEnd(
-                    contentIndex = state.blockIndex,
-                    toolCall = ToolCall(
-                        id = block.id,
-                        function = FunctionCall(block.name, block.arguments),
-                    ),
-                    partial = partial(),
-                ),
-            )
-        }
-
-        val reason = when (finishReason) {
-            "tool_calls" -> StopReason.TOOL_USE
-            "length" -> StopReason.LENGTH
-            "stop", null -> if (toolCalls.isNotEmpty()) StopReason.TOOL_USE else StopReason.STOP
-            "content_filter" -> StopReason.ERROR
-            else -> StopReason.STOP
-        }
-        out.add(ChatEvent.Done(reason = reason, message = partial(), usage = usage))
-        return out
-    }
-
-    private fun closeTextIfOpen(out: MutableList<ChatEvent>) {
-        val idx = openTextIndex ?: return
-        val block = blocks[idx] as ContentBlock.Text
-        out.add(ChatEvent.TextEnd(contentIndex = idx, content = block.text, partial = partial()))
-        openTextIndex = null
-    }
-
-    private fun closeThinkingIfOpen(out: MutableList<ChatEvent>) {
-        val idx = openThinkingIndex ?: return
-        val block = blocks[idx] as ContentBlock.Thinking
-        out.add(ChatEvent.ThinkingEnd(contentIndex = idx, content = block.thinking, partial = partial()))
-        openThinkingIndex = null
-    }
-}
-
-private fun OpenAIMessage.toMessage(): Message {
-    val textBlocks = content?.takeIf { it.isNotEmpty() }?.let {
-        listOf(ContentBlock.Text(it))
-    } ?: emptyList()
-    val toolCallBlocks = toolCalls.orEmpty().map { tc ->
-        ContentBlock.ToolCallBlock(
-            id = tc.id,
-            name = tc.function.name,
-            arguments = tc.function.arguments,
-        )
-    }
-    return Message(
-        role = when (role) {
-            "system" -> Role.SYSTEM
-            "user" -> Role.USER
-            "assistant" -> Role.ASSISTANT
-            "tool" -> Role.TOOL
-            else -> Role.USER
-        },
-        blocks = textBlocks + toolCallBlocks,
-        toolCallId = toolCallId,
-        name = name,
-    )
-}
+// Conversion helpers for OpenAI-compatible chat completions live in
+// OpenAICompletionsWire.kt.
