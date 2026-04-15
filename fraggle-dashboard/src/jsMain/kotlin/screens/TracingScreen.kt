@@ -15,6 +15,7 @@ import fraggle.models.TraceSessionDetail
 import org.jetbrains.compose.web.css.*
 import org.jetbrains.compose.web.dom.*
 import rememberRefreshableDataLoader
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 @Composable
@@ -1289,17 +1290,17 @@ private fun statusIcon(status: String): String = when (status) {
 
 @Composable
 private fun DurationCell(event: TraceEventRecord) {
-    val duration = event.durationMs
+    val duration = event.duration
     val text = when {
-        duration != null -> formatDurationMs(duration)
+        duration != null -> duration.toString()
         event.phase == "start" || event.phase == "starting" -> "—"
         else -> "—"
     }
     val color = when {
         duration == null -> "#71717a"
-        duration < 100 -> "#22c55e"
-        duration < 1_000 -> "#06b6d4"
-        duration < 10_000 -> "#f59e0b"
+        duration < 1.seconds -> "#22c55e"
+        duration < 5.seconds -> "#06b6d4"
+        duration < 10.seconds -> "#f59e0b"
         else -> "#ef4444"
     }
     Span({
