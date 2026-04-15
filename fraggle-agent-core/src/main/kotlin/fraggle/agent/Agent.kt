@@ -106,6 +106,29 @@ class Agent(private val options: AgentOptions) {
         followUpQueue.clear()
     }
 
+    /**
+     * Replace the agent's message history. Intended for orchestrators that
+     * apply out-of-band transformations to the live conversation — most
+     * notably compaction, where older messages are replaced with a summary
+     * while recent messages are kept verbatim.
+     *
+     * Preserves [systemPrompt], [subscribe] listeners, and pending
+     * steering/follow-up queues. Throws if the agent is currently running;
+     * replacing messages mid-turn would race with [processEvent].
+     *
+     * Optionally replaces [systemPrompt] too — coding-agent orchestrators
+     * re-inject the compaction summary into the system prompt rather than
+     * inline, which requires updating both the message list AND the prompt
+     * atomically.
+     */
+    fun replaceMessages(messages: List<AgentMessage>, systemPrompt: String? = null) {
+        check(activeJob == null) { "Cannot replace messages while the agent is running" }
+        _state.messages = messages
+        if (systemPrompt != null) {
+            _state.systemPrompt = systemPrompt
+        }
+    }
+
     private suspend fun runWithLifecycle(block: suspend () -> Unit) {
         _state.isStreaming = true
         _state.streamingMessage = null
