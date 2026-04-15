@@ -10,6 +10,7 @@ import fraggle.agent.message.AgentMessage
 import fraggle.agent.message.ContentPart
 import fraggle.agent.message.StopReason
 import fraggle.agent.message.ToolCall
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -160,13 +161,14 @@ class AgentTest {
         fun `unsubscribe stops receiving events`() = runTest {
             val events = mutableListOf<AgentEvent>()
             val agent = simpleAgent()
-            agent.events()
+            val job = agent.events()
                 .onEach { events.add(it) }
                 .launchIn(backgroundScope)
 
             agent.prompt("First")
             val countAfterFirst = events.size
 
+            job.cancel()
             agent.prompt("Second")
 
             assertEquals(countAfterFirst, events.size)
