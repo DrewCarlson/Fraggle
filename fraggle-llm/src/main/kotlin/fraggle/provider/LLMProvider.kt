@@ -1,37 +1,49 @@
 package fraggle.provider
 
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.toList
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 
 /**
  * Abstract interface for LLM providers.
- * Implementations can wrap different APIs (OpenAI, Anthropic, LM Studio, Ollama, etc.)
+ * Implementations wrap different APIs (OpenAI, Anthropic, Gemini, LM Studio, ...).
  */
 interface LLMProvider {
-    /**
-     * Send a chat completion request.
-     */
-    suspend fun chat(request: ChatRequest): ChatResponse
 
-    /**
-     * Check if this provider supports tool/function calling.
-     */
+    /** Provider name for logging/identification. */
+    val name: String
+
+    /** Whether this provider supports tool/function calling. */
     fun supportsTools(): Boolean
 
-    /**
-     * Get information about available models.
-     */
+    /** List available models. */
     suspend fun listModels(): List<ModelInfo>
 
     /**
-     * Get the provider name for logging/identification.
+     * Streaming chat completion. Returns a cold [Flow] of [ChatEvent]s.
+     *
+     * Contract:
+     * - The flow emits [ChatEvent.Start] first.
+     * - Errors and cancellation *after* [ChatEvent.Start] must be encoded as
+     *   [ChatEvent.Error], never thrown from the flow.
+     * - Errors *before* the first emission (e.g. invalid request construction)
+     *   may be thrown as [LLMProviderException].
      */
-    val name: String
+    fun stream(request: ChatRequest): Flow<ChatEvent>
+
+    /**
+     * Non-streaming chat completion. The default implementation reduces
+     * [stream] into a single [ChatResponse]. Providers may override this
+     * to call a native non-streaming endpoint directly.
+     */
+    suspend fun chat(request: ChatRequest): ChatResponse {
+        val events = stream(request).toList()
+        return reduceEventsToResponse(request.model, events)
+    }
 }
 
-/**
- * Chat completion request.
- */
+/** Chat completion request. */
 @Serializable
 data class ChatRequest(
     val model: String,
@@ -40,12 +52,31 @@ data class ChatRequest(
     val toolChoice: ToolChoice? = null,
     val temperature: Double? = null,
     val maxTokens: Int? = null,
+    /** Reasoning/thinking level. Providers that don't support it ignore this. */
+    val thinking: ThinkingLevel? = null,
+    /**
+     * Advisory: whether the caller *prefers* streaming. Providers are free
+     * to stream regardless via [LLMProvider.stream]; this flag is forwarded
+     * to wire requests only when a provider exposes both modes.
+     */
     val stream: Boolean = false,
 )
 
 /**
- * Chat completion response.
+ * Requested reasoning/thinking intensity. Maps to provider-specific knobs:
+ * - OpenAI: `reasoning_effort`
+ * - Anthropic: thinking budget tokens
+ * - Gemini: thinking config
  */
+@Serializable
+enum class ThinkingLevel {
+    MINIMAL,
+    LOW,
+    MEDIUM,
+    HIGH,
+}
+
+/** Chat completion response. */
 @Serializable
 data class ChatResponse(
     val id: String,
@@ -69,24 +100,66 @@ data class Usage(
 )
 
 /**
- * Message in a conversation.
+ * A message in a conversation.
+ *
+ * Content is stored as an ordered list of [ContentBlock]s. The legacy
+ * [content] and [toolCalls] convenience accessors remain as derived views
+ * so existing call sites continue to work during the provider refactor.
  */
 @Serializable
 data class Message(
     val role: Role,
-    val content: String? = null,
-    val toolCalls: List<ToolCall>? = null,
+    val blocks: List<ContentBlock> = emptyList(),
     val toolCallId: String? = null,
     val name: String? = null,
 ) {
+    /** Concatenation of all [ContentBlock.Text] blocks, or null if none. */
+    val content: String?
+        get() = blocks.asSequence()
+            .filterIsInstance<ContentBlock.Text>()
+            .joinToString("") { it.text }
+            .takeIf { it.isNotEmpty() || blocks.any { b -> b is ContentBlock.Text } }
+
+    /** Derived view of assistant tool calls, or null if none. */
+    val toolCalls: List<ToolCall>?
+        get() = blocks.asSequence()
+            .filterIsInstance<ContentBlock.ToolCallBlock>()
+            .map { tc ->
+                ToolCall(id = tc.id, function = FunctionCall(tc.name, tc.arguments))
+            }
+            .toList()
+            .takeIf { it.isNotEmpty() }
+
     companion object {
-        fun system(content: String) = Message(role = Role.SYSTEM, content = content)
-        fun user(content: String) = Message(role = Role.USER, content = content)
-        fun assistant(content: String) = Message(role = Role.ASSISTANT, content = content)
-        fun assistant(toolCalls: List<ToolCall>) = Message(role = Role.ASSISTANT, toolCalls = toolCalls)
+        fun system(content: String) = Message(
+            role = Role.SYSTEM,
+            blocks = listOf(ContentBlock.Text(content)),
+        )
+
+        fun user(content: String) = Message(
+            role = Role.USER,
+            blocks = listOf(ContentBlock.Text(content)),
+        )
+
+        fun assistant(content: String) = Message(
+            role = Role.ASSISTANT,
+            blocks = listOf(ContentBlock.Text(content)),
+        )
+
+        fun assistant(toolCalls: List<ToolCall>) = Message(
+            role = Role.ASSISTANT,
+            blocks = toolCalls.map { tc ->
+                ContentBlock.ToolCallBlock(
+                    id = tc.id,
+                    name = tc.function.name,
+                    arguments = tc.function.arguments,
+                )
+            },
+        )
+
         fun tool(toolCallId: String, content: String) = Message(
             role = Role.TOOL,
-            content = content,
+            blocks = listOf(ContentBlock.Text(content)),
             toolCallId = toolCallId,
         )
     }
@@ -101,7 +174,9 @@ enum class Role {
 }
 
 /**
- * Tool call made by the assistant.
+ * Wire-shaped tool call. Kept as a distinct type because OpenAI-compatible
+ * backends exchange it directly; internally [Message] stores tool calls as
+ * [ContentBlock.ToolCallBlock] entries.
  */
 @Serializable
 data class ToolCall(
@@ -116,9 +191,6 @@ data class FunctionCall(
     val arguments: String,
 )
 
-/**
- * Tool choice specification.
- */
 @Serializable
 sealed class ToolChoice {
     @Serializable
@@ -135,13 +207,8 @@ sealed class ToolChoice {
 }
 
 @Serializable
-data class ToolChoiceFunction(
-    val name: String,
-)
+data class ToolChoiceFunction(val name: String)
 
-/**
- * Information about an available model.
- */
 @Serializable
 data class ModelInfo(
     val id: String,
@@ -150,11 +217,62 @@ data class ModelInfo(
     val owned_by: String? = null,
 )
 
-/**
- * Exception thrown when LLM provider encounters an error.
- */
+/** Exception thrown when an LLM provider encounters an unrecoverable error. */
 class LLMProviderException(
     message: String,
     val statusCode: Int? = null,
     cause: Throwable? = null,
 ) : Exception(message, cause)
+
+// ─────────────────────────────────────────────────────────────────────────
+// Event-stream reducer
+// ─────────────────────────────────────────────────────────────────────────
+
+/**
+ * Collapse a completed list of [ChatEvent]s into a [ChatResponse]. Used by
+ * the default [LLMProvider.chat] implementation. Throws [LLMProviderException]
+ * if the stream terminated with [ChatEvent.Error].
+ */
+internal fun reduceEventsToResponse(
+    requestedModel: String,
+    events: List<ChatEvent>,
+): ChatResponse {
+    var terminal: ChatEvent? = null
+    for (e in events) {
+        if (e is ChatEvent.Done || e is ChatEvent.Error) {
+            terminal = e
+            break
+        }
+    }
+
+    when (val t = terminal) {
+        is ChatEvent.Done -> {
+            val finishReason = when (t.reason) {
+                StopReason.STOP -> "stop"
+                StopReason.LENGTH -> "length"
+                StopReason.TOOL_USE -> "tool_calls"
+                StopReason.ERROR -> "error"
+                StopReason.ABORTED -> "aborted"
+            }
+            return ChatResponse(
+                id = "evt-${t.message.hashCode()}",
+                model = requestedModel,
+                choices = listOf(
+                    Choice(index = 0, message = t.message, finishReason = finishReason),
+                ),
+                usage = t.usage,
+            )
+        }
+        is ChatEvent.Error -> {
+            throw LLMProviderException(
+                message = t.errorMessage,
+                cause = null,
+            )
+        }
+        else -> {
+            throw LLMProviderException(
+                message = "Stream ended without a terminal Done/Error event",
+            )
+        }
+    }
+}
