@@ -9,12 +9,12 @@ import kotlin.io.path.Path
 object FraggleEnvironment {
     /**
      * The root directory for all Fraggle runtime files.
-     * Set via FRAGGLE_ROOT environment variable, defaults to current directory.
+     * Set via FRAGGLE_ROOT environment variable, defaults to ~/.fraggle.
      */
     val root: Path by lazy {
         val envRoot = System.getenv("FRAGGLE_ROOT")
         if (envRoot == null) {
-            Path(".").toAbsolutePath().normalize()
+            Path(System.getProperty("user.home")).resolve(".fraggle").toAbsolutePath().normalize()
         } else {
             Path(envRoot).toAbsolutePath().normalize()
         }

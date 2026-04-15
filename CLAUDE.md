@@ -168,7 +168,7 @@ Database.connect(url = url, driver = "org.sqlite.JDBC")
 ### Configuration
 
 - Config file: `{FRAGGLE_ROOT}/config/fraggle.yaml`
-- FRAGGLE_ROOT env var defaults to current directory
+- FRAGGLE_ROOT env var defaults to `~/.fraggle`
 - Development runs use `runtime-dev/` (set automatically by Gradle)
 - `FraggleEnvironment` (in `fraggle-di`) handles path resolution across all modules
 
