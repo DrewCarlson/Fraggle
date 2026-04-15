@@ -1,8 +1,7 @@
 package fraggle.tools.web
 
-import ai.koog.agents.core.tools.SimpleTool
-import ai.koog.agents.core.tools.annotations.LLMDescription
-import ai.koog.serialization.typeToken
+import fraggle.agent.tool.AgentToolDef
+import fraggle.agent.tool.LLMDescription
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -15,8 +14,7 @@ import org.slf4j.LoggerFactory
 class FetchWebpageTool(
     private val httpClient: HttpClient,
     private val playwrightFetcher: PlaywrightFetcher?,
-) : SimpleTool<FetchWebpageTool.Args>(
-    argsType = typeToken<Args>(),
+) : AgentToolDef<FetchWebpageTool.Args>(
     name = "fetch_webpage",
     description = buildString {
         append("Fetch content from a webpage URL. ")
@@ -33,6 +31,7 @@ class FetchWebpageTool(
         append("- Downloading images\n")
         append("- Raw data files or non-HTML content")
     },
+    argsSerializer = Args.serializer(),
 ) {
     private val logger = LoggerFactory.getLogger(FetchWebpageTool::class.java)
 
@@ -104,8 +103,7 @@ class FetchWebpageTool(
 
 class FetchApiTool(
     private val httpClient: HttpClient,
-) : SimpleTool<FetchApiTool.Args>(
-    argsType = typeToken<Args>(),
+) : AgentToolDef<FetchApiTool.Args>(
     name = "fetch_api",
     description = """Fetch data from an API endpoint. Uses simple HTTP without browser rendering.
 
@@ -120,6 +118,7 @@ DO NOT USE FOR:
 - HTML webpages (use fetch_webpage instead)
 - Websites with JavaScript rendering
 - Downloading images""",
+    argsSerializer = Args.serializer(),
 ) {
     @Serializable
     data class Args(
@@ -161,14 +160,14 @@ DO NOT USE FOR:
 
 class ScreenshotPageTool(
     private val playwrightFetcher: PlaywrightFetcher,
-) : SimpleTool<ScreenshotPageTool.Args>(
-    argsType = typeToken<Args>(),
+) : AgentToolDef<ScreenshotPageTool.Args>(
     name = "screenshot_page",
     description = """Take a screenshot of a web page and send it WITH your response.
 The page will be fully rendered with JavaScript before the screenshot is taken.
 
 The screenshot will be automatically combined with your text response into one cohesive message.
 Simply describe or explain the screenshot in your response text - the image will be attached automatically.""",
+    argsSerializer = Args.serializer(),
 ) {
     private val logger = LoggerFactory.getLogger(ScreenshotPageTool::class.java)
 

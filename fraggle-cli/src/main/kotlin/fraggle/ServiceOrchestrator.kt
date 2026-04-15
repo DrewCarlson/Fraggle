@@ -1,7 +1,7 @@
 package fraggle
 
-import ai.koog.agents.core.tools.ToolRegistry
 import dev.zacsweers.metro.Inject
+import fraggle.agent.tool.FraggleToolRegistry
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import kotlinx.coroutines.*
@@ -37,7 +37,7 @@ import kotlin.time.measureTimedValue
 class ServiceOrchestrator(
     private val scope: CoroutineScope,
     private val agent: FraggleAgent,
-    private val toolRegistry: ToolRegistry,
+    private val toolRegistry: FraggleToolRegistry,
     private val bridgeManager: ChatBridgeManager,
     private val initializerRegistry: BridgeInitializerRegistry,
     private val messageRouter: MessageRouter?,

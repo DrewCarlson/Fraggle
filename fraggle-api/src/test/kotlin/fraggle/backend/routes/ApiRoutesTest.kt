@@ -39,7 +39,8 @@ class ApiRoutesTest {
         every { scheduler.getTask(any()) } returns null
         every { chatHistory.getChat(any()) } returns null
         every { tracing.getSession(any()) } returns null
-        every { toolRegistry.getToolOrNull(any()) } returns null
+        every { toolRegistry.findTool(any()) } returns null
+        every { toolRegistry.tools } returns emptyList()
 
         coEvery { getStatus() } returns SystemStatus(
             uptime = 5.minutes,

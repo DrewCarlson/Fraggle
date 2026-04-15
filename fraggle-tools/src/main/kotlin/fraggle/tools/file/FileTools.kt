@@ -1,22 +1,21 @@
 package fraggle.tools.file
 
-import ai.koog.agents.core.tools.SimpleTool
-import ai.koog.agents.core.tools.annotations.LLMDescription
-import ai.koog.serialization.typeToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import fraggle.agent.tool.AgentToolDef
+import fraggle.agent.tool.LLMDescription
 import fraggle.executor.ToolExecutor
 import fraggle.executor.supervision.ToolArg
 import fraggle.executor.supervision.ToolArgKind
 import java.nio.file.Path
 import kotlin.io.path.*
 
-class ReadFileTool(private val toolExecutor: ToolExecutor) : SimpleTool<ReadFileTool.Args>(
-    argsType = typeToken<Args>(),
+class ReadFileTool(private val toolExecutor: ToolExecutor) : AgentToolDef<ReadFileTool.Args>(
     name = "read_file",
     description = "Read the contents of a file. Returns the file content as text.",
+    argsSerializer = Args.serializer(),
 ) {
     @Serializable
     data class Args(
@@ -49,10 +48,10 @@ class ReadFileTool(private val toolExecutor: ToolExecutor) : SimpleTool<ReadFile
     }
 }
 
-class WriteFileTool(private val toolExecutor: ToolExecutor) : SimpleTool<WriteFileTool.Args>(
-    argsType = typeToken<Args>(),
+class WriteFileTool(private val toolExecutor: ToolExecutor) : AgentToolDef<WriteFileTool.Args>(
     name = "write_file",
     description = "Write content to a file. Creates the file if it doesn't exist, overwrites if it does.",
+    argsSerializer = Args.serializer(),
 ) {
     @Serializable
     data class Args(
@@ -77,10 +76,10 @@ class WriteFileTool(private val toolExecutor: ToolExecutor) : SimpleTool<WriteFi
     }
 }
 
-class AppendFileTool(private val toolExecutor: ToolExecutor) : SimpleTool<AppendFileTool.Args>(
-    argsType = typeToken<Args>(),
+class AppendFileTool(private val toolExecutor: ToolExecutor) : AgentToolDef<AppendFileTool.Args>(
     name = "append_file",
     description = "Append content to a file. Creates the file if it doesn't exist.",
+    argsSerializer = Args.serializer(),
 ) {
     @Serializable
     data class Args(
@@ -105,10 +104,10 @@ class AppendFileTool(private val toolExecutor: ToolExecutor) : SimpleTool<Append
     }
 }
 
-class ListFilesTool(private val toolExecutor: ToolExecutor) : SimpleTool<ListFilesTool.Args>(
-    argsType = typeToken<Args>(),
+class ListFilesTool(private val toolExecutor: ToolExecutor) : AgentToolDef<ListFilesTool.Args>(
     name = "list_files",
     description = "List files and directories in a given path.",
+    argsSerializer = Args.serializer(),
 ) {
     @Serializable
     data class Args(
@@ -154,10 +153,10 @@ class ListFilesTool(private val toolExecutor: ToolExecutor) : SimpleTool<ListFil
     }
 }
 
-class SearchFilesTool(private val toolExecutor: ToolExecutor) : SimpleTool<SearchFilesTool.Args>(
-    argsType = typeToken<Args>(),
+class SearchFilesTool(private val toolExecutor: ToolExecutor) : AgentToolDef<SearchFilesTool.Args>(
     name = "search_files",
     description = "Search for files matching a pattern in a directory.",
+    argsSerializer = Args.serializer(),
 ) {
     @Serializable
     data class Args(
@@ -198,10 +197,10 @@ class SearchFilesTool(private val toolExecutor: ToolExecutor) : SimpleTool<Searc
     }
 }
 
-class FileExistsTool(private val toolExecutor: ToolExecutor) : SimpleTool<FileExistsTool.Args>(
-    argsType = typeToken<Args>(),
+class FileExistsTool(private val toolExecutor: ToolExecutor) : AgentToolDef<FileExistsTool.Args>(
     name = "file_exists",
     description = "Check if a file or directory exists at the given path.",
+    argsSerializer = Args.serializer(),
 ) {
     @Serializable
     data class Args(
@@ -224,10 +223,10 @@ class FileExistsTool(private val toolExecutor: ToolExecutor) : SimpleTool<FileEx
     }
 }
 
-class DeleteFileTool(private val toolExecutor: ToolExecutor) : SimpleTool<DeleteFileTool.Args>(
-    argsType = typeToken<Args>(),
+class DeleteFileTool(private val toolExecutor: ToolExecutor) : AgentToolDef<DeleteFileTool.Args>(
     name = "delete_file",
     description = "Delete a file at the given path.",
+    argsSerializer = Args.serializer(),
 ) {
     @Serializable
     data class Args(

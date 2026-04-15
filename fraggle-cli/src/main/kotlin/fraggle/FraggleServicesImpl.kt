@@ -1,7 +1,7 @@
 package fraggle
 
-import ai.koog.agents.core.tools.ToolRegistry
 import io.ktor.client.*
+import fraggle.agent.tool.FraggleToolRegistry
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -36,7 +36,7 @@ import kotlin.time.Instant
  */
 class FraggleServicesImpl(
     override val memory: MemoryStore,
-    override val toolRegistry: ToolRegistry,
+    override val toolRegistry: FraggleToolRegistry,
     override val bridges: ChatBridgeManager,
     private val taskScheduler: TaskScheduler,
     private val fraggleConfig: FraggleConfig,

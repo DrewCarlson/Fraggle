@@ -1,7 +1,7 @@
 package fraggle.di
 
-import ai.koog.agents.core.tools.ToolRegistry
 import dev.zacsweers.metro.DependencyGraph
+import fraggle.agent.tool.FraggleToolRegistry
 import dev.zacsweers.metro.Provides
 import io.ktor.client.*
 import io.ktor.server.engine.*
@@ -72,7 +72,7 @@ interface AppGraph {
     val memoryStore: MemoryStore
 
     /** Tool registry */
-    val toolRegistry: ToolRegistry
+    val toolRegistry: FraggleToolRegistry
 
     /** Chat bridge manager */
     val chatBridgeManager: ChatBridgeManager

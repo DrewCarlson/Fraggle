@@ -1,5 +1,7 @@
 package fraggle.agent.loop
 
+import fraggle.agent.message.AgentMessage
+
 /**
  * Options for creating an [Agent] instance.
  */
@@ -27,4 +29,7 @@ data class AgentOptions(
 
     /** Chat ID for supervision context. */
     val chatId: String = "",
+
+    /** Pre-seeded conversation history. Prepended before the first [Agent.prompt]. */
+    val initialMessages: List<AgentMessage> = emptyList(),
 )

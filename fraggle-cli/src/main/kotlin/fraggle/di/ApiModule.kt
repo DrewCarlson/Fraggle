@@ -1,7 +1,7 @@
 package fraggle.di
 
-import ai.koog.agents.core.tools.ToolRegistry
 import dev.zacsweers.metro.ContributesTo
+import fraggle.agent.tool.FraggleToolRegistry
 import dev.zacsweers.metro.Provides
 import dev.zacsweers.metro.SingleIn
 import io.ktor.client.*
@@ -33,7 +33,7 @@ interface ApiModule {
         @SingleIn(AppScope::class)
         fun provideFraggleServices(
             memory: MemoryStore,
-            toolRegistry: ToolRegistry,
+            toolRegistry: FraggleToolRegistry,
             bridges: ChatBridgeManager,
             taskScheduler: TaskScheduler,
             config: FraggleConfig,

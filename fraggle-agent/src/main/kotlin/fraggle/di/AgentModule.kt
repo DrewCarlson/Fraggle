@@ -1,11 +1,5 @@
 package fraggle.di
 
-import ai.koog.agents.core.tools.ToolRegistry
-import ai.koog.agents.memory.providers.AgentMemoryProvider
-import ai.koog.prompt.executor.clients.openai.OpenAIClientSettings
-import ai.koog.prompt.executor.clients.openai.OpenAILLMClient
-import ai.koog.prompt.executor.llms.MultiLLMPromptExecutor
-import ai.koog.prompt.executor.model.PromptExecutor
 import dev.zacsweers.metro.ContributesTo
 import dev.zacsweers.metro.Provides
 import dev.zacsweers.metro.SingleIn
@@ -13,6 +7,12 @@ import io.ktor.client.*
 import kotlinx.coroutines.CoroutineScope
 import fraggle.FraggleEnvironment
 import fraggle.agent.FraggleAgent
+import fraggle.agent.loop.LlmBridge
+import fraggle.agent.loop.ProviderLlmBridge
+import fraggle.agent.loop.ToolCallExecutor
+import fraggle.agent.tool.FraggleToolRegistry
+import fraggle.agent.tool.SupervisedToolCallExecutor
+import fraggle.provider.LMStudioProvider
 import fraggle.chat.BridgeInitializerRegistry
 import fraggle.chat.ChatBridgeManager
 import fraggle.chat.ChatCommandProcessor
@@ -30,14 +30,12 @@ import fraggle.executor.supervision.ToolPermissionHandler
 import fraggle.executor.supervision.ToolPolicyEvaluator
 import fraggle.executor.supervision.ToolSupervisor
 import fraggle.memory.FileMemoryStore
-import fraggle.memory.FraggleMemoryProvider
 import fraggle.memory.MemoryStore
 import fraggle.models.*
 import fraggle.prompt.PromptConfig
 import fraggle.prompt.PromptManager
 import fraggle.models.TracingConfig
 import fraggle.models.TracingLevel
-import fraggle.tracing.FraggleTraceProcessor
 import fraggle.tracing.TraceStore
 import kotlin.io.path.createDirectories
 import fraggle.agent.AgentConfig as RuntimeAgentConfig
@@ -109,17 +107,37 @@ interface AgentModule {
 
         @Provides
         @SingleIn(AppScope::class)
-        fun providePromptExecutor(
+        fun provideLMStudioProvider(
             config: ProviderConfig,
-            @LlmHttpClient httpClient: HttpClient
-        ): PromptExecutor {
-            val client = OpenAILLMClient(
-                apiKey = config.apiKey ?: "stub",
-                settings = OpenAIClientSettings(baseUrl = config.url),
-                baseClient = httpClient,
-            )
-            return MultiLLMPromptExecutor(client)
-        }
+            @LlmHttpClient httpClient: HttpClient,
+        ): LMStudioProvider = LMStudioProvider(
+            baseUrl = config.url,
+            httpClient = httpClient,
+            apiKey = config.apiKey,
+        )
+
+        @Provides
+        @SingleIn(AppScope::class)
+        fun provideLlmBridge(
+            provider: LMStudioProvider,
+            runtimeConfig: RuntimeAgentConfig,
+        ): LlmBridge = ProviderLlmBridge(
+            provider = provider,
+            model = runtimeConfig.model,
+            temperature = runtimeConfig.temperature,
+        )
+
+        @Provides
+        @SingleIn(AppScope::class)
+        fun provideToolCallExecutor(
+            registry: FraggleToolRegistry,
+            supervisor: ToolSupervisor,
+            remoteClient: RemoteToolClient?,
+        ): ToolCallExecutor = SupervisedToolCallExecutor(
+            registry = registry,
+            supervisor = supervisor,
+            remoteClient = remoteClient,
+        )
 
         @Provides
         @SingleIn(AppScope::class)
@@ -173,11 +191,6 @@ interface AgentModule {
 
         @Provides
         @SingleIn(AppScope::class)
-        fun provideMemoryProvider(memory: MemoryStore): AgentMemoryProvider =
-            FraggleMemoryProvider(memory)
-
-        @Provides
-        @SingleIn(AppScope::class)
         fun provideTraceStore(config: TracingConfig): TraceStore? {
             if (config.level == TracingLevel.OFF) return null
             return TraceStore()
@@ -185,33 +198,24 @@ interface AgentModule {
 
         @Provides
         @SingleIn(AppScope::class)
-        fun provideFraggleTraceProcessor(
-            config: TracingConfig,
-            traceStore: TraceStore?,
-            eventBus: EventBus,
-        ): FraggleTraceProcessor? {
-            if (config.level == TracingLevel.OFF || traceStore == null) return null
-            return FraggleTraceProcessor(config.level, traceStore, eventBus)
-        }
-
-        @Provides
-        @SingleIn(AppScope::class)
         fun provideFraggleAgent(
-            promptExecutor: PromptExecutor,
-            toolRegistry: ToolRegistry,
+            lmStudioProvider: LMStudioProvider,
+            llmBridge: LlmBridge,
+            toolCallExecutor: ToolCallExecutor,
             memory: MemoryStore,
-            memoryProvider: AgentMemoryProvider,
             config: RuntimeAgentConfig,
             promptManager: PromptManager,
-            traceProcessor: FraggleTraceProcessor?,
+            traceStore: TraceStore?,
+            eventBus: EventBus,
         ): FraggleAgent = FraggleAgent(
-            promptExecutor = promptExecutor,
-            toolRegistry = toolRegistry,
+            lmStudioProvider = lmStudioProvider,
+            llmBridge = llmBridge,
+            toolCallExecutor = toolCallExecutor,
             memory = memory,
-            memoryProvider = memoryProvider,
             config = config,
             promptManager = promptManager,
-            traceProcessor = traceProcessor,
+            traceStore = traceStore,
+            eventBus = eventBus,
         )
     }
 }

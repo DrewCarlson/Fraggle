@@ -81,7 +81,7 @@ interface NetworkModule {
                 json(json)
             }
             Logging {
-                level = LogLevel.ALL
+                level = LogLevel.INFO
                 logger = Logger.SIMPLE
             }
             install(HttpTimeout) {

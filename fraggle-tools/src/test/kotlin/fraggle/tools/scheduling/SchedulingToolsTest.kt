@@ -101,7 +101,7 @@ class SchedulingToolsTest {
         @Test
         fun `list_tasks returns empty message when no tasks`() = runTest {
             val tool = ListTasksTool(scheduler)
-            val result = tool.execute(Unit)
+            val result = tool.execute(ListTasksTool.Args())
 
             assertTrue(result.contains("No tasks scheduled"))
         }
@@ -112,7 +112,7 @@ class SchedulingToolsTest {
             scheduler.schedule("Task B", "action", "chat", kotlin.time.Duration.parse("2m"))
 
             val tool = ListTasksTool(scheduler)
-            val result = tool.execute(Unit)
+            val result = tool.execute(ListTasksTool.Args())
 
             assertTrue(result.contains("Task A"))
             assertTrue(result.contains("Task B"))
@@ -130,7 +130,7 @@ class SchedulingToolsTest {
             )
 
             val tool = ListTasksTool(scheduler)
-            val result = tool.execute(Unit)
+            val result = tool.execute(ListTasksTool.Args())
 
             assertTrue(result.contains("recurring"))
         }
