@@ -1,6 +1,6 @@
 # Tools
 
-Tools are the capabilities available to the Fraggle agent. They enable the agent to interact with the file system, web, shell, and more. Tools are built on [Koog's](https://github.com/JetBrains/koog) `SimpleTool` framework.
+Tools are the capabilities available to the Fraggle agent. They enable the agent to interact with the file system, web, shell, and more. Tools extend `AgentToolDef<Args>` and are collected into a `FraggleToolRegistry`.
 
 ## Built-in Tools
 
@@ -97,13 +97,13 @@ The agent can determine a user's local time by:
 
 ## Defining Custom Tools
 
-Tools extend Koog's `SimpleTool<Args>` with a `@Serializable` data class for parameters:
+Tools extend `AgentToolDef<Args>` with a `@Serializable` data class for parameters:
 
 ```kotlin
-class WeatherTool(private val apiClient: HttpClient) : SimpleTool<WeatherTool.Args>(
-    argsSerializer = Args.serializer(),
+class WeatherTool(private val apiClient: HttpClient) : AgentToolDef<WeatherTool.Args>(
     name = "get_weather",
     description = "Get current weather for a location",
+    argsSerializer = Args.serializer(),
 ) {
     @Serializable
     data class Args(
@@ -127,12 +127,12 @@ Key points:
 
 ## Tool Registry
 
-Tools are collected into a Koog `ToolRegistry`:
+Tools are collected into a `FraggleToolRegistry`:
 
 ```kotlin
-val registry = ToolRegistry {
-    tool(MyTool().managed(supervisor, remoteClient))
-}
+val registry = FraggleToolRegistry(
+    tools = listOf(MyTool().managed(supervisor, remoteClient)),
+)
 ```
 
 The built-in `DefaultTools.createToolRegistry()` registers all standard tools:

@@ -3,7 +3,6 @@
 [![codecov](https://codecov.io/gh/DrewCarlson/Fraggle/graph/badge.svg?token=W77U2C9HUB)](https://codecov.io/gh/DrewCarlson/Fraggle)
 
 An AI-powered assistant framework that connects LLMs to messaging platforms with extensible tool capabilities.
-Built on [Koog](https://github.com/JetBrains/koog)'s agent orchestration framework.
 
 ## Highlights
 
@@ -58,7 +57,7 @@ Full documentation available at **[drewcarlson.github.io/Fraggle](https://drewca
 ```
 Fraggle/
 ├── fraggle-cli/            # CLI application
-├── fraggle-agent/          # Core agent framework (Koog integration)
+├── fraggle-agent/          # Core agent framework (agent loop, tools, memory)
 ├── fraggle-signal/         # Signal messenger bridge
 ├── fraggle-discord/        # Discord bot bridge
 ├── fraggle-tools/          # Built-in tool implementations

@@ -1,6 +1,6 @@
 # Fraggle
 
-Fraggle is a Kotlin-based AI assistant framework that integrates with messaging platforms. Built on [Koog](https://github.com/JetBrains/koog) for agent orchestration, it connects to local or cloud LLM providers and provides extensible tools for tasks like file operations, web fetching, and command execution.
+Fraggle is a Kotlin-based AI assistant framework that integrates with messaging platforms. It runs its own ReAct-style agent loop against local or cloud LLM providers and ships with extensible tools for tasks like file operations, web fetching, and command execution.
 
 ## Key Features
 
@@ -9,11 +9,11 @@ Fraggle is a Kotlin-based AI assistant framework that integrates with messaging 
 - :material-chat-processing: **Chat Bridge Integration**
   Connect to messaging platforms like Signal and Discord, with support for direct conversations.
 
-- :material-robot: **Koog Agent**
-  ReAct-style reasoning and acting loop powered by Koog for reliable tool use with any compatible LLM.
+- :material-robot: **ReAct Agent Loop**
+  Purpose-built reasoning and acting loop with streaming, tool dispatch, and iteration control for any OpenAI-compatible LLM.
 
 - :material-puzzle: **Extensible Tools**
-  Type-safe tool definitions using Koog's `SimpleTool` framework make it easy to add custom capabilities.
+  Type-safe `AgentToolDef` definitions backed by `kotlinx.serialization` make it easy to add custom capabilities.
 
 - :material-memory: **Persistent Memory**
   Hierarchical memory system with global, chat, and user scopes.
@@ -48,7 +48,7 @@ See the [Getting Started](installation/getting-started.md) guide for full setup 
 ```
 Fraggle/
 ├── fraggle-cli/            # CLI application entry point
-├── fraggle-agent/          # Core agent framework (Koog integration)
+├── fraggle-agent/          # Core agent framework (agent loop, tools, memory)
 ├── fraggle-signal/         # Signal messaging bridge
 ├── fraggle-discord/        # Discord bot bridge
 ├── fraggle-tools/          # Built-in tool implementations
@@ -62,7 +62,7 @@ Fraggle/
 ## How It Works
 
 1. **Message Received** - A message arrives via a chat bridge (or interactive mode)
-2. **Agent Processing** - Koog's agent service evaluates the message and available tools
+2. **Agent Processing** - The agent loop evaluates the message and available tools
 3. **Tool Execution** - The agent calls tools as needed (file ops, web fetch, etc.)
 4. **Response Sent** - The final response is delivered back to the user
 

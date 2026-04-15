@@ -25,7 +25,6 @@ import kotlin.time.Instant
 
 /**
  * Main agent orchestration class.
- * Uses Koog AIAgent framework for LLM interaction with native tool support.
  */
 class FraggleAgent(
     private val lmStudioProvider: fraggle.provider.LMStudioProvider,
@@ -214,7 +213,7 @@ class FraggleAgent(
 
     /**
      * Build the static base system prompt (identity, instructions).
-     * Called once during agent construction. Tool descriptions are handled natively by Koog.
+     * Called once during agent construction. Tool schemas are passed separately via the tool registry.
      */
     private suspend fun buildBaseSystemPrompt(
         promptManager: PromptManager,

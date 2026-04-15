@@ -1,6 +1,6 @@
 # Memory System
 
-Fraggle includes a hierarchical memory system that persists facts across conversations. Memory is stored as human-readable markdown and integrated with Koog's agent memory system.
+Fraggle includes a hierarchical memory system that persists facts across conversations. Memory is stored as human-readable markdown and loaded directly by `FraggleAgent` when building per-request input for the agent loop.
 
 ## Memory Scopes
 

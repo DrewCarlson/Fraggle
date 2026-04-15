@@ -1,6 +1,6 @@
 # Architecture Overview
 
-Fraggle is built as a modular Kotlin application with clear separation of concerns. The agent loop and tool system are powered by [Koog](https://github.com/JetBrains/koog), an AI agent framework.
+Fraggle is built as a modular Kotlin application with clear separation of concerns. The agent loop and tool system are implemented directly in `fraggle-agent`, with `LMStudioProvider` handling OpenAI-compatible LLM traffic.
 
 ## Module Structure
 
@@ -22,25 +22,25 @@ Fraggle/
 
 ### FraggleAgent
 
-The central component that orchestrates message processing. It wraps Koog's `AIAgentService` which implements a ReAct (Reasoning + Acting) loop:
+The central component that orchestrates message processing. It constructs a stateful `Agent` that runs a ReAct (Reasoning + Acting) loop:
 
 1. Receives a message
 2. Builds per-request input (platform context, memory, conversation history)
-3. Delegates to Koog's agent service, which sends the context + tools to the LLM
-4. Koog handles tool calls iteratively until a final response is produced
+3. Constructs an `Agent` with the system prompt, tool definitions, and an `LlmBridge`
+4. The agent loop sends context + tools to the LLM via `ProviderLlmBridge` → `LMStudioProvider`, dispatches tool calls, and iterates until a final response is produced
 5. If auto-memory is enabled, new facts are extracted and reconciled
 
 See [Agent System](agent.md) for details.
 
 ### Tool System
 
-Tools are the capabilities available to the agent. Each tool extends Koog's `SimpleTool` with type-safe serializable parameters:
+Tools are the capabilities available to the agent. Each tool extends `AgentToolDef` with type-safe serializable parameters:
 
 ```kotlin
-class MyTool : SimpleTool<MyTool.Args>(
-    argsSerializer = Args.serializer(),
+class MyTool : AgentToolDef<MyTool.Args>(
     name = "my_tool",
     description = "Does something useful",
+    argsSerializer = Args.serializer(),
 ) {
     @Serializable
     data class Args(
@@ -61,7 +61,7 @@ Hierarchical memory storage with three scopes:
 - **Chat** - Per-conversation memory
 - **User** - Per-user memory across chats
 
-Memory is persisted as human-readable markdown files. A `FraggleMemoryProvider` adapter bridges Fraggle's storage to Koog's memory system.
+Memory is persisted as human-readable markdown files. `FraggleAgent` reads directly from `MemoryStore` when building per-request input.
 
 See [Memory](memory.md) for details.
 
@@ -80,7 +80,7 @@ Every tool that performs I/O (file, shell, web) is wrapped in a `ManagedTool` th
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
 │    Chat     │────>│   Agent     │────>│ ManagedTool │────>│   Worker    │
-│   Bridge    │<────│   (Koog)    │<────│ (supervise) │     │  (remote)   │
+│   Bridge    │<────│    Loop     │<────│ (supervise) │     │  (remote)   │
 └─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
                           │                    │
                           v                    v
@@ -90,7 +90,7 @@ Every tool that performs I/O (file, shell, web) is wrapped in a `ManagedTool` th
 ```
 
 1. **Chat Bridge** receives messages and passes them to the agent
-2. **Agent** builds context and delegates to Koog's agent service, which calls tools as needed
+2. **Agent** builds context and runs the agent loop, calling tools as needed
 3. **ManagedTool** checks supervision (evaluate tool policies or prompt for permission), then either executes locally or forwards to the remote worker
 4. **Memory** stores and retrieves conversation context
 5. **Agent** generates final response

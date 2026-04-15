@@ -1,10 +1,10 @@
 # Agent System
 
-The FraggleAgent uses [Koog's](https://github.com/JetBrains/koog) `AIAgentService` to implement a ReAct-style (Reasoning + Acting) loop for reliable tool use with LLMs.
+`FraggleAgent` orchestrates message processing by constructing a stateful `Agent` (`fraggle.agent.Agent`) that runs a ReAct-style (Reasoning + Acting) loop for reliable tool use with LLMs.
 
 ## Agent Loop
 
-Koog's agent service handles the core loop: sending context to the LLM, dispatching tool calls, and iterating until a final response is produced. FraggleAgent is responsible for building the per-request input and managing memory.
+The agent loop lives in `fraggle-agent/src/main/kotlin/fraggle/agent/loop/` (`runAgentLoop`, `AgentOptions`, `LlmBridge`, `ProviderLlmBridge`, `ToolCallExecutor`). It sends context to the LLM via an `LlmBridge`, dispatches tool calls, and iterates until a final response is produced. `FraggleAgent` is responsible for building the per-request input, wiring the bridge + registry, and managing memory.
 
 ```
 ┌──────────────────────────────────────────────┐
@@ -22,8 +22,8 @@ Koog's agent service handles the core loop: sending context to the LLM, dispatch
                        │
                        v
 ┌──────────────────────────────────────────────┐
-│       Koog AIAgentService                    │
-│  Runs ReAct loop with tools until done       │
+│       Agent + runAgentLoop                   │
+│  ReAct loop via LlmBridge until done         │
 └──────────────────────────────────────────────┘
                        │
                        v
@@ -58,7 +58,7 @@ The system prompt is built from template files and set once at agent constructio
 2. **IDENTITY.md** - Agent personality and behavior
 3. **USER.md** - User-specific instructions
 
-Tool definitions are registered in the Koog `ToolRegistry` and injected into LLM requests automatically by Koog.
+Tool definitions are registered in a `FraggleToolRegistry`, which generates JSON schemas from each tool's `kotlinx.serialization` descriptor and passes them to the LLM alongside the system prompt on every call.
 
 Files are loaded from `prompts_dir` and concatenated with separators.
 
