@@ -42,6 +42,8 @@ data class FraggleSettings(
     val database: DatabaseConfig = DatabaseConfig(),
     @Documented(name = "Tracing", description = "Agent tracing configuration")
     val tracing: TracingConfig = TracingConfig(),
+    @Documented(name = "Skills", description = "Agent skills discovery and loading")
+    val skills: SkillsConfig = SkillsConfig(),
 )
 
 @Serializable
@@ -524,6 +526,36 @@ enum class TracingLevel {
     @SerialName("full")
     FULL,
 }
+
+/**
+ * Agent skills configuration — see [agentskills.io](https://agentskills.io).
+ */
+@Serializable
+@Documented(
+    name = "Skills",
+    description = "Configuration for agent skills discovery and loading",
+    extras = ["icon=bi-lightbulb"],
+)
+data class SkillsConfig(
+    @Documented(name = "Enabled", description = "Whether skills are loaded and advertised to the agent")
+    val enabled: Boolean = true,
+
+    @SerialName("skills_dir")
+    @Documented(name = "Skills Directory", description = "Project-scoped directory containing SKILL.md bundles")
+    val skillsDir: String = "./config/skills",
+
+    @SerialName("global_dir")
+    @Documented(name = "Global Directory", description = "Global skills directory shared across projects (null to disable)")
+    val globalDir: String? = "~/.fraggle/skills",
+
+    @SerialName("extra_paths")
+    @Documented(name = "Extra Paths", description = "Additional files or directories to load skills from (EXPLICIT precedence)")
+    val extraPaths: List<String> = emptyList(),
+
+    @SerialName("enable_slash_commands")
+    @Documented(name = "Enable Slash Commands", description = "Whether to register /skill:name commands in chat mode")
+    val enableSlashCommands: Boolean = true,
+)
 
 @Serializable
 @Documented(

@@ -5,6 +5,13 @@ import dev.zacsweers.metro.Provides
 import dev.zacsweers.metro.SingleIn
 import io.ktor.client.*
 import fraggle.FraggleEnvironment
+import fraggle.agent.skill.EmptySkillRegistry
+import fraggle.agent.skill.InMemorySkillRegistry
+import fraggle.agent.skill.Skill
+import fraggle.agent.skill.SkillDiagnostic
+import fraggle.agent.skill.SkillLoader
+import fraggle.agent.skill.SkillRegistry
+import fraggle.agent.skill.SkillSource
 import fraggle.executor.LocalToolExecutor
 import fraggle.executor.RemoteToolClient
 import fraggle.executor.ToolExecutor
@@ -17,12 +24,16 @@ import fraggle.executor.supervision.ToolSupervisor
 import fraggle.models.ExecutorConfig
 import fraggle.models.ExecutorType
 import fraggle.models.ProviderConfig
+import fraggle.models.SkillsConfig
 import fraggle.models.SupervisionMode
 import fraggle.models.TracingConfig
 import fraggle.models.TracingLevel
 import fraggle.provider.LMStudioProvider
 import fraggle.tracing.TraceStore
+import org.slf4j.LoggerFactory
+import java.nio.file.Path
 import kotlin.io.path.createDirectories
+import kotlin.io.path.isRegularFile
 
 /**
  * Provides generic agent runtime services: LLM provider, tool executor, supervision,
@@ -83,5 +94,50 @@ interface AgentCoreModule {
     fun provideTraceStore(config: TracingConfig): TraceStore? {
         if (config.level == TracingLevel.OFF) return null
         return TraceStore()
+    }
+
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideSkillRegistry(config: SkillsConfig): SkillRegistry {
+        if (!config.enabled) return EmptySkillRegistry
+
+        val loader = SkillLoader()
+        val entries = mutableListOf<Skill>()
+        val diagnostics = mutableListOf<SkillDiagnostic>()
+
+        config.globalDir?.takeIf { it.isNotBlank() }?.let { globalDir ->
+            val result = loader.loadFromDirectory(FraggleEnvironment.resolvePath(globalDir), SkillSource.GLOBAL)
+            entries += result.skills
+            diagnostics += result.diagnostics
+        }
+
+        val projectDir = FraggleEnvironment.resolvePath(config.skillsDir)
+        val projectResult = loader.loadFromDirectory(projectDir, SkillSource.PROJECT)
+        entries += projectResult.skills
+        diagnostics += projectResult.diagnostics
+
+        for (extra in config.extraPaths) {
+            val path: Path = FraggleEnvironment.resolvePath(extra)
+            val result = if (path.isRegularFile()) {
+                loader.loadFromFile(path, SkillSource.EXPLICIT)
+            } else {
+                loader.loadFromDirectory(path, SkillSource.EXPLICIT)
+            }
+            entries += result.skills
+            diagnostics += result.diagnostics
+        }
+
+        val registry = InMemorySkillRegistry(entries, diagnostics)
+        val log = LoggerFactory.getLogger("fraggle.skills")
+        if (registry.skills.isNotEmpty()) {
+            log.info("Loaded {} skill(s): {}", registry.skills.size, registry.skills.joinToString { it.name })
+        }
+        for (d in registry.diagnostics) {
+            when (d) {
+                is SkillDiagnostic.Warning -> log.warn("skill {}: {}", d.path, d.message)
+                is SkillDiagnostic.Error -> log.error("skill {}: {}", d.path, d.message)
+            }
+        }
+        return registry
     }
 }
