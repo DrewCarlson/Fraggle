@@ -90,6 +90,14 @@ fraggle:
       viewport_height: 720
       user_agent: null                # null = browser default
 
+  # Agent skills (see architecture/skills.md)
+  skills:
+    enabled: true
+    skills_dir: ./config/skills       # Project-scoped skills directory
+    global_dir: ~/.fraggle/skills     # Cross-project directory (null to disable)
+    extra_paths: []                   # Additional files or directories
+    enable_slash_commands: true       # /skill:name invocation in chat bridges
+
   # Tracing
   tracing:
     level: off                        # off, metadata, full
@@ -414,6 +422,32 @@ web:
 ```
 
 See [Tools - Web Tools](../architecture/tools.md#web-tools) for setup instructions.
+
+### Skills
+
+Controls discovery and loading of [agent skills](../architecture/skills.md) — portable, `agentskills.io`-compliant capability bundles authored as `SKILL.md` files with YAML frontmatter. Only skill metadata is injected into the system prompt at startup; the model reads the full body on demand via `read_file`.
+
+| Option                  | Description                                                              | Default              |
+|-------------------------|--------------------------------------------------------------------------|----------------------|
+| `enabled`               | Whether skills are loaded and advertised to the agent                    | `true`               |
+| `skills_dir`            | Project-scoped directory containing skill bundles                        | `./config/skills`    |
+| `global_dir`            | Cross-project skills directory (`null` to disable)                       | `~/.fraggle/skills`  |
+| `extra_paths`           | Additional files or directories with `EXPLICIT` precedence (highest)     | `[]`                 |
+| `enable_slash_commands` | Enable explicit `/skill:name` invocation in chat bridges                 | `true`               |
+
+**Precedence on name collision** (higher wins): `PACKAGE < GLOBAL < PROJECT < EXPLICIT`. You can ship defaults globally and override per-project without editing the original.
+
+```yaml
+skills:
+  enabled: true
+  skills_dir: ./config/skills
+  global_dir: ~/.fraggle/skills
+  extra_paths:
+    - ./vendor/shared-skills
+  enable_slash_commands: true
+```
+
+See [Skills](../architecture/skills.md) for the skill format, authoring guide, and invocation semantics.
 
 ### Tracing
 
