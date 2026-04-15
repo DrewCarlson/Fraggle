@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://drewcarlson.github.io/Fraggle/snapshot/architecture/memory/">
       
       
-        <link rel="prev" href="../tools/">
+        <link rel="prev" href="../skills/">
       
       
         <link rel="next" href="../../development/building/">
@@ -465,6 +465,33 @@
       
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../../coding-agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coding Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
     
   
   
@@ -483,10 +510,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
         
           
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
             
   
   
@@ -504,8 +531,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_3">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -586,6 +613,34 @@
     
   
     Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../skills/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Skills
   
 
     
@@ -819,10 +874,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
         
           
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
             
   
   
@@ -840,8 +895,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1110,7 +1165,7 @@
 
 
 <h1 id="memory-system">Memory System<a class="headerlink" href="#memory-system" title="Permanent link">&para;</a></h1>
-<p>Fraggle includes a hierarchical memory system that persists facts across conversations. Memory is stored as human-readable markdown and integrated with Koog's agent memory system.</p>
+<p>Fraggle includes a hierarchical memory system that persists facts across conversations. Memory is stored as human-readable markdown and loaded directly by <code>FraggleAgent</code> when building per-request input for the agent loop.</p>
 <h2 id="memory-scopes">Memory Scopes<a class="headerlink" href="#memory-scopes" title="Permanent link">&para;</a></h2>
 <p>Memory is organized into three scopes:</p>
 <h3 id="global-memory">Global Memory<a class="headerlink" href="#global-memory" title="Permanent link">&para;</a></h3>
