@@ -16,45 +16,43 @@ import fraggle.models.DiscordBridgeConfig
  */
 @ContributesTo(AppScope::class)
 interface DiscordModule {
-    companion object {
-        @Provides
-        @SingleIn(AppScope::class)
-        fun provideDiscordConfig(bridgeConfig: DiscordBridgeConfig?): DiscordConfig? {
-            if (bridgeConfig == null || !bridgeConfig.enabled) return null
-            return DiscordConfig(
-                token = bridgeConfig.token,
-                clientId = bridgeConfig.clientId,
-                clientSecret = bridgeConfig.clientSecret,
-                oauthRedirectUri = bridgeConfig.oauthRedirectUri,
-                triggerPrefix = bridgeConfig.trigger,
-                respondToDirectMessages = bridgeConfig.respondToDirectMessages,
-                showTypingIndicator = bridgeConfig.showTypingIndicator,
-                maxImagesPerMessage = bridgeConfig.maxImagesPerMessage,
-                maxFileSizeBytes = bridgeConfig.maxFileSizeMb.toLong() * 1024 * 1024,
-                allowedGuildIds = bridgeConfig.allowedGuildIds,
-                allowedChannelIds = bridgeConfig.allowedChannelIds,
-            )
-        }
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideDiscordConfig(bridgeConfig: DiscordBridgeConfig?): DiscordConfig? {
+        if (bridgeConfig == null || !bridgeConfig.enabled) return null
+        return DiscordConfig(
+            token = bridgeConfig.token,
+            clientId = bridgeConfig.clientId,
+            clientSecret = bridgeConfig.clientSecret,
+            oauthRedirectUri = bridgeConfig.oauthRedirectUri,
+            triggerPrefix = bridgeConfig.trigger,
+            respondToDirectMessages = bridgeConfig.respondToDirectMessages,
+            showTypingIndicator = bridgeConfig.showTypingIndicator,
+            maxImagesPerMessage = bridgeConfig.maxImagesPerMessage,
+            maxFileSizeBytes = bridgeConfig.maxFileSizeMb.toLong() * 1024 * 1024,
+            allowedGuildIds = bridgeConfig.allowedGuildIds,
+            allowedChannelIds = bridgeConfig.allowedChannelIds,
+        )
+    }
 
-        @Provides
-        @SingleIn(AppScope::class)
-        fun provideDiscordBridge(
-            config: DiscordConfig?,
-            @DefaultHttpClient httpClient: HttpClient,
-            scope: CoroutineScope,
-        ): DiscordBridge? {
-            if (config == null) return null
-            return DiscordBridge(config, httpClient, scope)
-        }
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideDiscordBridge(
+        config: DiscordConfig?,
+        @DefaultHttpClient httpClient: HttpClient,
+        scope: CoroutineScope,
+    ): DiscordBridge? {
+        if (config == null) return null
+        return DiscordBridge(config, httpClient, scope)
+    }
 
-        @Provides
-        @SingleIn(AppScope::class)
-        fun provideDiscordBridgeInitializer(
-            config: DiscordConfig?,
-            @DefaultHttpClient httpClient: HttpClient,
-        ): DiscordBridgeInitializer? {
-            if (config == null) return null
-            return DiscordBridgeInitializer(config, httpClient)
-        }
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideDiscordBridgeInitializer(
+        config: DiscordConfig?,
+        @DefaultHttpClient httpClient: HttpClient,
+    ): DiscordBridgeInitializer? {
+        if (config == null) return null
+        return DiscordBridgeInitializer(config, httpClient)
     }
 }
