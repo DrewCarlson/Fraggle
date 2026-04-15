@@ -107,9 +107,15 @@ class CodingAgent(private val options: CodingAgentOptions, private val session: 
         // will push onto the state via the MessageEnd event path. Walking past
         // this index means we skip the duplicate of the user we already recorded.
         baselineMessageCount = agent.state.messages.size + 1
-        agent.prompt(text)
-        agent.waitForIdle()
-        persistNewMessages()
+        try {
+            agent.prompt(text)
+            agent.waitForIdle()
+        } finally {
+            // Persist whatever new messages made it into agent.state even if
+            // the run was cancelled (user pressed escape) or errored mid-turn.
+            // Re-thrown CancellationException still propagates after this.
+            persistNewMessages()
+        }
     }
 
     /** Steer a currently-running prompt with a follow-up message. Non-blocking. */
