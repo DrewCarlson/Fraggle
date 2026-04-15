@@ -53,6 +53,7 @@ dependencies {
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(ktorLibs.client.mock)
     testRuntimeOnly(libs.junit.jupiter.engine)
 }
 

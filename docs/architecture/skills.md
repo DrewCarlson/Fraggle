@@ -161,6 +161,107 @@ Setting `enabled: false` wires an empty registry — no catalog block is injecte
 - **Use relative paths to bundled assets.** Scripts or reference docs shipped alongside `SKILL.md` can be referenced with plain relative paths — the expander tells the model they resolve against the skill's directory.
 - **Test with `/skill:name` first.** Explicit invocation forces the skill body into context without having to rely on the model's automatic match. Once the workflow itself works, tweak the description until automatic invocation kicks in reliably.
 
+## CLI reference
+
+The `fraggle skills` subcommand family is a lightweight skill package manager modelled on [vercel-labs/skills](https://github.com/vercel-labs/skills), scoped to Fraggle's own skill directories. It **does not** write to other agents' directories (`.claude/skills`, `.cursor/skills`, …) — use the JS `npx skills` tool for cross-agent installs.
+
+| Command | What it does |
+|---|---|
+| `fraggle skills list` | List installed skills from the configured sources, with source, description, and on-disk location. Flags: `-g`/`-p` to filter, `--all` to include hidden skills. |
+| `fraggle skills find <terms…>` | Substring-match skills by name and description. Multiple terms are AND-matched, case-insensitive. |
+| `fraggle skills validate [path]` | Validate SKILL.md files at a path (or the configured sources if omitted). Exits non-zero on any error; warnings don't fail. CI-friendly. |
+| `fraggle skills init <name> [-d "…"]` | Scaffold a new `SKILL.md` under the target directory with a templated body. |
+| `fraggle skills add <source>` | Install skills from a local path, a GitHub repo, or a git URL. |
+| `fraggle skills update [<names…>]` | Re-fetch and reinstall tracked skills. Omit `<names>` to update everything tracked in the target's manifest. Supports `--dry-run`. |
+| `fraggle skills remove <name…>` | Uninstall skills previously installed via `add`. Only touches entries tracked in the target's manifest. |
+
+### Target resolution
+
+`init`, `add`, and `remove` all share the same target resolution:
+
+1. `--path <dir>` — explicit override.
+2. `--global` — `SkillsConfig.globalDir` (default `~/.fraggle/skills`).
+3. `--project` — `SkillsConfig.skillsDir` (default `./config/skills`).
+4. Default: `--global` if configured, else `--project`.
+
+### Source syntax for `add`
+
+`fraggle skills add` accepts four source forms, evaluated in this order:
+
+| Form | Example | Notes |
+|---|---|---|
+| Local path | `./my-skill`, `/abs/path/to/skill`, `~/skills/code-review` | A single `SKILL.md`, a skill directory, or a parent directory containing multiple skill dirs. Existing local paths always win over shorthand parsing. |
+| GitHub shorthand | `vercel-labs/skills`, `acme/tools@main`, `acme/tools/skills/code-review@dev` | Fetched as a zipball from `codeload.github.com`. `@ref` selects a branch, tag, or commit SHA (defaults to `HEAD`). A path after the repo slices to a subdirectory. The **last** `@` in the string is treated as the ref delimiter, so subpath + ref combinations work. |
+| github.com URL | `https://github.com/acme/tools/tree/main/skills/foo`, `https://github.com/acme/tools/blob/main/SKILL.md` | `tree/<ref>/<path>` and `blob/<ref>/<path>` forms are parsed into ref + subpath. |
+| Git URL | `https://gitlab.com/foo/bar.git`, `git@github.com:foo/bar.git` | Requires `git` on `PATH`. Shells out to `git clone --depth=1 [--branch <ref>] …`. |
+
+On install, `add`:
+
+- Downloads (or clones) into a temp directory and runs `SkillLoader` against it, applying all the normal validation rules (name/description, `.gitignore`, dot-dir skip).
+- Copies each discovered skill's directory into the target (or symlinks it, for local sources, with `--symlink`).
+- Refuses to overwrite an existing destination — pass `--force` to replace it.
+- Records each installation in `<target>/.fraggle-skills.json`. The manifest is what `remove` consults, so skills you drop into the target manually are **not** `remove`-able via the CLI and will be left alone.
+
+### Examples
+
+```bash
+# Scaffold a new skill locally
+fraggle skills init pr-review -d "Review a pull request for correctness, style, and tests."
+
+# Install from GitHub shorthand
+fraggle skills add vercel-labs/skills
+
+# Install one skill from a subdirectory on a branch
+fraggle skills add acme/tools/skills/code-review@dev
+
+# Install from a local directory you're authoring, as a symlink
+fraggle skills add --symlink ~/code/my-skill
+
+# Install from a GitLab repo
+fraggle skills add https://gitlab.com/foo/bar.git
+
+# List everything loaded (including installed + manually-dropped)
+fraggle skills list
+
+# Search across loaded skills
+fraggle skills find commit message
+
+# Refresh every tracked skill from its original source
+fraggle skills update
+
+# Refresh specific skills, showing what would change without touching disk
+fraggle skills update commit-message --dry-run
+
+# Uninstall one or more skills
+fraggle skills remove pr-review code-review
+
+# Validate a directory before shipping (CI-friendly)
+fraggle skills validate ./skills
+```
+
+### Notes on `update`
+
+`update` re-resolves each tracked skill by parsing its manifest `source` label back into the original spec, fetches a fresh copy, and reinstalls over the existing directory with `force=true`. Per-entry rules:
+
+- **Local sources installed by copy** — re-copies from the current source, so authoring changes propagate.
+- **Local sources installed with `--symlink`** — skipped with a `= nothing to do` message. The symlink already points at live content, so re-copying would defeat the point.
+- **GitHub and git URL sources** — always re-fetched. GitHub sources with no `@ref` pull the default branch; pinning `@ref` to a tag/SHA makes update idempotent.
+- **Stale or unparseable manifest entries** — fail with a clear message and bump the command's exit code to `1` so scripts notice.
+
+`update` is non-atomic: if the fetch succeeds but the install step fails partway, the old destination may already have been deleted. For pinned (`@ref`) installs this is essentially never seen; for `HEAD`-tracking installs the risk is the same as any other in-place package manager upgrade. If you need atomicity, run against a temporary target (`--path /tmp/staging`) and swap directories yourself.
+
+### Exit codes
+
+| Code | Meaning |
+|---|---|
+| `0` | Success (including idempotent `add` reruns that skip only on collision). |
+| `1` | Validation or install failure — e.g. source had no valid skills, remote fetch failed, partial `remove`. |
+| `2` | Usage error — unparseable source, missing local path, bad `--path`. |
+
 ## Example
 
-A copyable reference skill lives at [`docs/examples/skills/commit-message/`](https://github.com/drewcarlson/Fraggle/tree/main/docs/examples/skills/commit-message). Copy the directory into `~/.fraggle/skills/` to install it globally, or into `./config/skills/` for a single project.
+A copyable reference skill lives at [`docs/examples/skills/commit-message/`](https://github.com/drewcarlson/Fraggle/tree/main/docs/examples/skills/commit-message). Copy the directory into `~/.fraggle/skills/` to install it globally, or into `./config/skills/` for a single project — or just run:
+
+```bash
+fraggle skills add docs/examples/skills/commit-message
+```
