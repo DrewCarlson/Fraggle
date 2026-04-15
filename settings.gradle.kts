@@ -4,6 +4,12 @@ dependencyResolutionManagement {
     repositories {
         mavenCentral()
         google()
+        maven("https://central.sonatype.com/repository/maven-snapshots/") {
+            mavenContent { snapshotsOnly() }
+            content {
+                includeGroup("com.jakewharton.mosaic")
+            }
+        }
     }
     versionCatalogs {
         create("ktorLibs") {
@@ -41,5 +47,6 @@ include(":fraggle-signal")
 include(":fraggle-discord")
 include(":fraggle-tools")
 include(":fraggle-api")
+include(":fraggle-coding-agent")
 include(":fraggle-cli")
 include(":fraggle-dashboard")
