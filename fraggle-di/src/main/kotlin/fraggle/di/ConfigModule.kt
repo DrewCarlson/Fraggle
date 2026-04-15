@@ -73,4 +73,8 @@ interface ConfigModule {
     @Provides
     @SingleIn(AppScope::class)
     fun provideTracingConfig(settings: FraggleSettings): TracingConfig = settings.tracing
+
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideSkillsConfig(settings: FraggleSettings): SkillsConfig = settings.skills
 }

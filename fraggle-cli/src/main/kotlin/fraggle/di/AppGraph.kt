@@ -11,6 +11,7 @@ import fraggle.FraggleServicesImpl
 import fraggle.ServiceOrchestrator
 import fraggle.agent.FraggleAgent
 import fraggle.agent.InlineImageProcessor
+import fraggle.agent.skill.SkillRegistry
 import fraggle.chat.BridgeInitializerRegistry
 import fraggle.chat.ChatBridgeManager
 import fraggle.chat.ChatCommandProcessor
@@ -124,6 +125,9 @@ interface AppGraph {
 
     /** Trace store (null when tracing is off) */
     val traceStore: TraceStore?
+
+    /** Agent skills registry (empty when skills are disabled) */
+    val skillRegistry: SkillRegistry
 
     /** Event bus */
     val eventBus: EventBus
