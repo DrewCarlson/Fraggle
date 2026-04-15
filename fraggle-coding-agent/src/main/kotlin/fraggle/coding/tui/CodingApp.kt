@@ -66,6 +66,16 @@ fun CodingApp(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var confirmExit by remember { mutableStateOf(false) }
 
+    // Auto-clear the confirmExit warning 1s after it's armed. If the user
+    // presses the quit key again before then we've already exited; if they
+    // don't, the warning quietly disappears.
+    LaunchedEffect(confirmExit) {
+        if (confirmExit) {
+            kotlinx.coroutines.delay(1000)
+            confirmExit = false
+        }
+    }
+
     // Pending tool-call approval, projected from the handler's state flow.
     var pendingApproval by remember { mutableStateOf<fraggle.coding.tui.PendingApproval?>(null) }
 
@@ -235,12 +245,6 @@ fun CodingApp(
             }
         }
 
-        if (confirmExit) {
-            Row {
-                Text("  ⚠ press Esc or Ctrl+C again to exit", color = Theme.warning)
-            }
-        }
-
         Footer(
             FooterInfo(
                 cwd = options.workDir,
@@ -249,6 +253,7 @@ fun CodingApp(
                 contextRatio = usage.ratio,
                 status = status,
                 supervisionLabel = supervisionLabel,
+                confirmExit = confirmExit,
             ),
         )
     }

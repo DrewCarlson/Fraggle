@@ -44,8 +44,11 @@ fun Footer(info: FooterInfo) {
             Text(info.status.label, color = info.status.color)
             Text(" ", color = Theme.dim)
         }
-        if (info.supervisionLabel.isNotBlank()) {
-            Row {
+        when {
+            info.confirmExit -> Row {
+                Text(" ⚠ press Esc or Ctrl+C again to exit", color = Theme.warning)
+            }
+            info.supervisionLabel.isNotBlank() -> Row {
                 Text(" supervision: ", color = Theme.veryDim)
                 Text(info.supervisionLabel, color = Theme.dim)
             }
@@ -61,6 +64,8 @@ data class FooterInfo(
     val contextRatio: Double,
     val status: FooterStatus,
     val supervisionLabel: String = "",
+    /** When true, the supervision row is replaced with a quit-confirmation warning. */
+    val confirmExit: Boolean = false,
 )
 
 enum class FooterStatus(val label: String, val color: Color) {
