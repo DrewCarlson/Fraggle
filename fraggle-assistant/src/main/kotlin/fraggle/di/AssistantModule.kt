@@ -6,6 +6,7 @@ import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
 import fraggle.FraggleEnvironment
 import fraggle.agent.FraggleAgent
+import fraggle.agent.skill.SkillCommandExpander
 import fraggle.agent.skill.SkillRegistry
 import fraggle.agent.loop.LlmBridge
 import fraggle.agent.loop.ProviderLlmBridge
@@ -170,8 +171,15 @@ interface AssistantModule {
 
     @Provides
     @SingleIn(AppScope::class)
-    fun provideChatCommandProcessor(eventBus: EventBus): ChatCommandProcessor =
-        ChatCommandProcessor(eventBus)
+    fun provideChatCommandProcessor(
+        eventBus: EventBus,
+        skillRegistry: SkillRegistry,
+        skillsConfig: SkillsConfig,
+    ): ChatCommandProcessor = ChatCommandProcessor(
+        eventBus = eventBus,
+        skillExpander = SkillCommandExpander(skillRegistry),
+        skillCommandsEnabled = skillsConfig.enabled && skillsConfig.enableSlashCommands,
+    )
 
     @Provides
     @SingleIn(AppScope::class)
