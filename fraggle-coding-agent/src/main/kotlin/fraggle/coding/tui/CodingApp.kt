@@ -139,6 +139,11 @@ fun CodingApp(
                             busy = true
                             try {
                                 agent.prompt(text)
+                            } catch (e: kotlinx.coroutines.CancellationException) {
+                                // User hit escape — treat as a normal early
+                                // return, not an error. Swallow silently; the
+                                // partial session was already persisted by
+                                // CodingAgent.prompt's finally block.
                             } catch (e: Exception) {
                                 errorMessage = e.message ?: e::class.simpleName ?: "error"
                             } finally {

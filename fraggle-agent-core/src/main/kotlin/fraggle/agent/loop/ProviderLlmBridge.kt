@@ -12,6 +12,7 @@ import fraggle.provider.ChatStreamEvent
 import fraggle.provider.LMStudioProvider
 import fraggle.provider.Message
 import fraggle.provider.FunctionCall
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonElement
 
 /**
@@ -64,6 +65,11 @@ class ProviderLlmBridge(
                     TokenUsage(it.promptTokens, it.completionTokens, it.totalTokens)
                 },
             )
+        } catch (e: CancellationException) {
+            // Cancellation (e.g. user pressed escape) must propagate so the
+            // coroutine tree can unwind cleanly. Do NOT persist it as an
+            // "LLM error" assistant message.
+            throw e
         } catch (e: Exception) {
             AgentMessage.Assistant(
                 content = listOf(ContentPart.Text("LLM error: ${e.message}")),
@@ -135,6 +141,8 @@ class ProviderLlmBridge(
                 stopReason = StopReason.STOP,
                 usage = usage,
             )
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             AgentMessage.Assistant(
                 content = listOf(ContentPart.Text("LLM error: ${e.message}")),
