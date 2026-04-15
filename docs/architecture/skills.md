@@ -1,0 +1,166 @@
+# Agent Skills
+
+Skills are self-contained capability bundles the Fraggle agent can discover and invoke. A skill packages a workflow — step-by-step instructions, scripts, reference material — into a directory containing a `SKILL.md` file with YAML frontmatter. Skills are portable: Fraggle follows the [agentskills.io](https://agentskills.io) specification, so a skill authored for Fraggle also works with other agent platforms that implement the spec (and vice versa).
+
+## How they work
+
+Skills use **progressive disclosure**: only skill metadata (name, description, path) is injected into the system prompt at startup. The model reads the full `SKILL.md` body on demand via the built-in `read_file` tool when a user request matches a skill's description. This keeps the context window small no matter how many skills you install.
+
+The model never runs a skill in a sandbox — a skill is just a markdown document with instructions the model chooses to follow. Any side effects (running scripts, editing files, shell commands) happen through the normal tool system under the same supervision rules as any other tool call.
+
+## Skill layout
+
+A skill is a directory containing at minimum a `SKILL.md` file:
+
+```
+config/skills/
+├── code-review/
+│   ├── SKILL.md
+│   ├── scripts/
+│   │   └── check-style.sh
+│   └── references/
+│       └── style-guide.md
+└── commit-message/
+    └── SKILL.md
+```
+
+The directory name must match the `name` field in the frontmatter.
+
+## SKILL.md format
+
+```markdown
+---
+name: code-review
+description: Review a pull request for correctness, style, and potential bugs.
+license: MIT
+---
+
+# Code Review
+
+When the user asks for a code review:
+
+1. Read the diff with `git diff main...HEAD`.
+2. For each changed file, read the full file to understand context.
+3. Check for:
+   - Missing error handling
+   - Inconsistent naming
+   - Tests for new behavior
+4. Report findings as a bulleted list.
+
+Style rules for this repo are in `references/style-guide.md` (relative to this skill).
+```
+
+### Required frontmatter fields
+
+| Field         | Type   | Rules                                                                                     |
+|---------------|--------|-------------------------------------------------------------------------------------------|
+| `name`        | string | 1–64 chars, lowercase `a–z`, digits, hyphens only; must match parent directory name       |
+| `description` | string | 1–1024 chars. Describes what the skill does *and when to use it*. Shown to the model.     |
+
+### Optional frontmatter fields
+
+| Field                       | Type        | Meaning                                                                                           |
+|-----------------------------|-------------|---------------------------------------------------------------------------------------------------|
+| `license`                   | string      | SPDX identifier. Metadata only.                                                                   |
+| `compatibility`             | string      | Agent platform compatibility hint. Metadata only.                                                 |
+| `allowed-tools`             | string list | Declared tool allowlist (parsed but not enforced in the current release).                         |
+| `disable-model-invocation`  | boolean     | If `true`, hide the skill from the auto-catalog. Still reachable via `/skill:name` explicitly.    |
+
+Validation is lenient: bad names or over-long descriptions produce a warning in the logs but the skill still loads. Missing `description` is the only hard failure — the skill is skipped.
+
+## Discovery
+
+At startup, Fraggle scans these locations in order and builds a combined registry:
+
+| Source     | Path                                | Precedence (higher wins) |
+|------------|-------------------------------------|--------------------------|
+| `PACKAGE`  | Bundled skills (JAR resources)      | 1 (lowest)               |
+| `GLOBAL`   | `~/.fraggle/skills/`                | 2                        |
+| `PROJECT`  | `./config/skills/` (Fraggle root)   | 3                        |
+| `EXPLICIT` | `extra_paths` from config           | 4 (highest)              |
+
+When two sources define a skill with the same name, the higher-precedence source wins — so you can ship a default skill in `~/.fraggle/skills/` and override it per project in `./config/skills/` without editing the original.
+
+**Discovery rule**: if a directory contains a `SKILL.md`, Fraggle treats it as a skill root and does **not** recurse into it. This means nested `SKILL.md` files under an existing skill are ignored — useful if a skill bundles reference material that itself contains markdown. For directories without a `SKILL.md`, Fraggle recurses looking for nested skill roots, so you can organise skills into categories:
+
+```
+config/skills/
+├── review/
+│   ├── code-review/SKILL.md
+│   └── docs-review/SKILL.md
+└── writing/
+    └── commit-message/SKILL.md
+```
+
+## Invocation
+
+### Automatic (model-initiated)
+
+At startup, the catalog of visible skills is rendered into the system prompt as an XML block:
+
+```xml
+<available_skills>
+  <skill>
+    <name>code-review</name>
+    <description>Review a pull request for correctness, style, and potential bugs.</description>
+    <location>/home/you/.fraggle/skills/code-review/SKILL.md</location>
+  </skill>
+  ...
+</available_skills>
+```
+
+The model is told to use the `read_file` tool to load a skill's body when the user's request matches one of the descriptions. After reading, it follows the instructions just like any other markdown guide. Relative paths inside a skill are resolved against the skill's directory.
+
+### Explicit (`/skill:name`)
+
+In chat bridges, users can invoke a skill directly:
+
+```
+/skill:code-review please look at the changes in main.kt
+```
+
+Fraggle parses the command, reads the skill body, strips the frontmatter, and rewrites the user message as:
+
+```
+<skill name="code-review" location="/…/code-review/SKILL.md">
+References inside this skill are relative to /…/code-review.
+
+# Code Review
+
+When the user asks for a code review:
+...
+</skill>
+
+please look at the changes in main.kt
+```
+
+That rewritten message then flows through the normal agent loop.
+
+**Hidden skills** (those with `disable-model-invocation: true`) are *not* in the catalog, so the model won't pick them up automatically — but they remain reachable via explicit `/skill:name`. Use this for skills you want to keep off the default surface (e.g. destructive operations) while still having them available on request.
+
+## Configuration
+
+All skill behaviour is controlled from `config/fraggle.yaml`:
+
+```yaml
+fraggle:
+  skills:
+    enabled: true                        # Load and advertise skills
+    skills_dir: ./config/skills          # Project-scoped directory (PROJECT precedence)
+    global_dir: ~/.fraggle/skills        # Cross-project directory (null to disable)
+    extra_paths: []                      # Additional files or directories (EXPLICIT precedence)
+    enable_slash_commands: true          # Enable /skill:name in chat bridges
+```
+
+Setting `enabled: false` wires an empty registry — no catalog block is injected into the system prompt and `/skill:name` commands fall through as unknown. Setting `enable_slash_commands: false` keeps auto-invocation working but disables the explicit `/skill:name` path.
+
+## Authoring tips
+
+- **Write the description for the model, not for humans.** The description is the only part the model sees until it chooses to read the body, and it is what triggers automatic invocation. Include *what* the skill does and *when to use it* — keywords that will appear in user requests.
+- **Keep SKILL.md skimmable.** The model will read the whole file; short numbered steps work better than long prose.
+- **Use relative paths to bundled assets.** Scripts or reference docs shipped alongside `SKILL.md` can be referenced with plain relative paths — the expander tells the model they resolve against the skill's directory.
+- **Test with `/skill:name` first.** Explicit invocation forces the skill body into context without having to rely on the model's automatic match. Once the workflow itself works, tweak the description until automatic invocation kicks in reliably.
+
+## Example
+
+A copyable reference skill lives at [`docs/examples/skills/commit-message/`](https://github.com/drewcarlson/Fraggle/tree/main/docs/examples/skills/commit-message). Copy the directory into `~/.fraggle/skills/` to install it globally, or into `./config/skills/` for a single project.

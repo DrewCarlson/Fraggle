@@ -86,6 +86,7 @@ nav:
       - Overview: architecture/overview.md
       - Agent System: architecture/agent.md
       - Tools: architecture/tools.md
+      - Skills: architecture/skills.md
       - Memory: architecture/memory.md
   - Development:
       - Building: development/building.md

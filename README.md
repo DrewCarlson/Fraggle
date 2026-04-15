@@ -10,6 +10,7 @@ An AI-powered assistant framework that connects LLMs to messaging platforms with
 - **Local LLM Support** - Works with LM Studio for fully local, private AI
 - **Cloud Providers** - Also supports OpenAI and Anthropic APIs
 - **Built-in Tools** - File operations, web fetching, shell execution, task scheduling, time/timezone
+- **Agent Skills** - Portable [agentskills.io](https://agentskills.io) bundles loaded on demand (`/skill:name` or automatic)
 - **Persistent Memory** - Remembers context across conversations
 - **Tool Supervision** - Approve or deny tool calls interactively via CLI or dashboard
 - **Remote Execution** - Offload tool execution to a lightweight worker process
@@ -51,6 +52,7 @@ Full documentation available at **[drewcarlson.github.io/Fraggle](https://drewca
 - [Signal Setup](https://drewcarlson.github.io/Fraggle/installation/signal-setup/)
 - [Architecture](https://drewcarlson.github.io/Fraggle/architecture/overview/)
 - [Tools Reference](https://drewcarlson.github.io/Fraggle/architecture/tools/)
+- [Agent Skills](https://drewcarlson.github.io/Fraggle/architecture/skills/)
 
 ## Project Structure
 
