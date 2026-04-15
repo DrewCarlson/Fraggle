@@ -1,11 +1,11 @@
 package fraggle.api
 
 import kotlinx.coroutines.flow.SharedFlow
+import fraggle.agent.skill.SkillRegistry
 import fraggle.agent.tool.FraggleToolRegistry
 import fraggle.chat.ChatBridgeManager
 import fraggle.memory.MemoryStore
 import fraggle.models.*
-import fraggle.tracing.TraceStore
 
 /**
  * Services exposed by Fraggle to the API backend.
@@ -22,6 +22,11 @@ interface FraggleServices {
      * Access to the Fraggle tool registry.
      */
     val toolRegistry: FraggleToolRegistry
+
+    /**
+     * Access to the loaded skill registry.
+     */
+    val skillRegistry: SkillRegistry
 
     /**
      * Access to chat bridge management.

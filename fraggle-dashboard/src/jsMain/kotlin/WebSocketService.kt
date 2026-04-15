@@ -274,6 +274,7 @@ enum class RefreshTrigger {
     Chats,
     Bridges,
     Tools,
+    Skills,
     Memory,
     Scheduler,
     Tracing,

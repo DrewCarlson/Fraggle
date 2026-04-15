@@ -1,6 +1,7 @@
 package fraggle.di
 
 import dev.zacsweers.metro.ContributesTo
+import fraggle.agent.skill.SkillRegistry
 import fraggle.agent.tool.FraggleToolRegistry
 import dev.zacsweers.metro.Provides
 import dev.zacsweers.metro.SingleIn
@@ -33,6 +34,7 @@ interface ApiModule {
     fun provideFraggleServices(
         memory: MemoryStore,
         toolRegistry: FraggleToolRegistry,
+        skillRegistry: SkillRegistry,
         bridges: ChatBridgeManager,
         taskScheduler: TaskScheduler,
         config: FraggleConfig,
@@ -47,6 +49,7 @@ interface ApiModule {
     ): FraggleServicesImpl = FraggleServicesImpl(
         memory = memory,
         toolRegistry = toolRegistry,
+        skillRegistry = skillRegistry,
         bridges = bridges,
         taskScheduler = taskScheduler,
         fraggleConfig = config,

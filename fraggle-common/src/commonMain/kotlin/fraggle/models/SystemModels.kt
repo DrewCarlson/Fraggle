@@ -12,6 +12,7 @@ data class SystemStatus(
     val totalChats: Long,
     val connectedBridges: Int,
     val availableTools: Int,
+    val availableSkills: Int,
     val scheduledTasks: Int,
     val memoryUsage: MemoryUsage,
     val uninitializedBridges: List<String> = emptyList(),
