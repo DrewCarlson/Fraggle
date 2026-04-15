@@ -250,20 +250,36 @@ class ServiceOrchestrator(
                 launch {
                     val chatId = bridgedMessage.qualifiedChatId
                     val messageText = (bridgedMessage.message.content as? MessageContent.Text)?.text.orEmpty()
+                    var effectiveMessage = bridgedMessage
                     if (messageText.isNotEmpty() && chatCommandProcessor.isCommand(messageText)) {
-                        val response = when (val result = chatCommandProcessor.handleCommand(chatId, messageText)) {
-                            is CommandResult.Approved -> "Tool execution approved."
-                            is CommandResult.Denied -> "Tool execution denied."
-                            is CommandResult.NoPermissionPending -> "No pending permission request."
-                            is CommandResult.Unknown -> "Unknown command: ${result.command}"
+                        when (val result = chatCommandProcessor.handleCommand(chatId, messageText)) {
+                            is CommandResult.Expanded -> {
+                                val original = bridgedMessage.message
+                                val rewritten = original.copy(content = MessageContent.Text(result.newText))
+                                effectiveMessage = bridgedMessage.copy(message = rewritten)
+                                logger.info("Expanded /skill:${result.skillName} for $chatId")
+                            }
+                            else -> {
+                                val response = when (result) {
+                                    is CommandResult.Approved -> "Tool execution approved."
+                                    is CommandResult.Denied -> "Tool execution denied."
+                                    is CommandResult.NoPermissionPending -> "No pending permission request."
+                                    is CommandResult.Unknown -> "Unknown command: ${result.command}"
+                                    is CommandResult.UnknownSkill -> "Unknown skill: ${result.name}"
+                                    is CommandResult.MalformedSkill -> "Malformed skill command: ${result.reason}"
+                                    is CommandResult.SkillReadError ->
+                                        "Failed to load skill **${result.name}**: ${result.reason}"
+                                    is CommandResult.Expanded -> error("handled above")
+                                }
+                                bridgeManager.send(chatId, OutgoingMessage.Text(response))
+                                return@launch
+                            }
                         }
-                        bridgeManager.send(chatId, OutgoingMessage.Text(response))
-                        return@launch
                     }
 
                     val mutex = chatMutexes.getOrPut(chatId) { Mutex() }
                     mutex.withLock {
-                        handleMessage(bridgedMessage)
+                        handleMessage(effectiveMessage)
                     }
                 }
             }

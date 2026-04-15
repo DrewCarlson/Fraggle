@@ -3,10 +3,18 @@ package fraggle.chat
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
+import fraggle.agent.skill.InMemorySkillRegistry
+import fraggle.agent.skill.SkillCommandExpander
+import fraggle.agent.skill.SkillLoader
+import fraggle.agent.skill.SkillSource
 import fraggle.events.EventBus
 import fraggle.models.FraggleEvent
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Path
+import kotlin.io.path.createDirectories
+import kotlin.io.path.writeText
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
@@ -124,6 +132,69 @@ class ChatCommandProcessorTest {
             val result = processor.handleCommand("chat1", "/approve")
             assertIs<CommandResult.Approved>(result)
             eventJob.join()
+        }
+    }
+
+    @Nested
+    inner class SkillCommands {
+
+        private fun writeSkill(tmp: Path, name: String, description: String, body: String): Path {
+            val dir = tmp.resolve(name)
+            dir.createDirectories()
+            val file = dir.resolve("SKILL.md")
+            file.writeText("---\nname: $name\ndescription: $description\n---\n\n$body\n")
+            return file
+        }
+
+        private fun buildProcessor(tmp: Path, enabled: Boolean = true): ChatCommandProcessor {
+            writeSkill(tmp, "code-review", "Review code changes.", "# Code Review\n\nStep 1. Read the diff.")
+            val loaded = SkillLoader().loadFromDirectory(tmp, SkillSource.PROJECT)
+            val registry = InMemorySkillRegistry(loaded.skills)
+            return ChatCommandProcessor(
+                eventBus = eventBus,
+                skillExpander = SkillCommandExpander(registry),
+                skillCommandsEnabled = enabled,
+            )
+        }
+
+        @Test
+        fun `skill command returns Expanded with rewritten text`(@TempDir tmp: Path) = runTest {
+            val processor = buildProcessor(tmp)
+            val result = processor.handleCommand("chat1", "/skill:code-review please look at main.kt")
+            assertIs<CommandResult.Expanded>(result)
+            assertEquals("code-review", result.skillName)
+            assertTrue("Step 1. Read the diff." in result.newText)
+            assertTrue("please look at main.kt" in result.newText)
+        }
+
+        @Test
+        fun `unknown skill returns UnknownSkill`(@TempDir tmp: Path) = runTest {
+            val processor = buildProcessor(tmp)
+            val result = processor.handleCommand("chat1", "/skill:missing")
+            assertIs<CommandResult.UnknownSkill>(result)
+            assertEquals("missing", result.name)
+        }
+
+        @Test
+        fun `bare skill prefix returns MalformedSkill`(@TempDir tmp: Path) = runTest {
+            val processor = buildProcessor(tmp)
+            val result = processor.handleCommand("chat1", "/skill:")
+            assertIs<CommandResult.MalformedSkill>(result)
+        }
+
+        @Test
+        fun `skill commands disabled falls through to Unknown`(@TempDir tmp: Path) = runTest {
+            val processor = buildProcessor(tmp, enabled = false)
+            val result = processor.handleCommand("chat1", "/skill:code-review")
+            assertIs<CommandResult.Unknown>(result)
+        }
+
+        @Test
+        fun `approve still works with skill expander wired`(@TempDir tmp: Path) = runTest {
+            val processor = buildProcessor(tmp)
+            processor.trackPermissionRequest("chat1", "req-x")
+            val result = processor.handleCommand("chat1", "/approve")
+            assertIs<CommandResult.Approved>(result)
         }
     }
 
