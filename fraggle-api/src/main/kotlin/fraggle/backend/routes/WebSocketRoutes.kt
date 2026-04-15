@@ -5,26 +5,20 @@ import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import dev.zacsweers.metro.binding
 import fraggle.api.FraggleServices
+import fraggle.backend.websocket.configureWebSockets
 import fraggle.di.AppScope
-import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
 /**
- * Settings and configuration routes.
+ * WebSocket endpoint for real-time event streaming.
  */
 @SingleIn(AppScope::class)
 @ContributesIntoSet(scope = AppScope::class, binding = binding<RoutingController>())
 @Inject
-class SettingsRoutes(
+class WebSocketRoutes(
     private val services: FraggleServices,
 ) : RoutingController {
     override fun init(parent: Route) {
-        parent.apply {
-            route("/settings") {
-                get("/config") {
-                    call.respond(services.config.getConfig())
-                }
-            }
-        }
+        parent.configureWebSockets(services)
     }
 }

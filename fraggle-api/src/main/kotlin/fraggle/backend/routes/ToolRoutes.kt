@@ -1,5 +1,9 @@
 package fraggle.backend.routes
 
+import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
+import dev.zacsweers.metro.binding
 import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -9,6 +13,7 @@ import kotlinx.serialization.descriptors.SerialKind
 import kotlinx.serialization.descriptors.StructureKind
 import fraggle.agent.tool.AgentToolDef
 import fraggle.api.FraggleServices
+import fraggle.di.AppScope
 import fraggle.models.ErrorResponse
 import fraggle.models.ParameterInfo
 import fraggle.models.ToolDetail
@@ -17,29 +22,30 @@ import fraggle.models.ToolInfo
 /**
  * Tool registry routes — reads from the FraggleToolRegistry.
  */
-fun Route.toolRoutes(services: FraggleServices) {
-    route("/tools") {
-        /**
-         * GET /api/v1/tools
-         * List all available tools.
-         */
-        get {
-            val tools = services.toolRegistry.tools.map { it.toToolInfo() }
-            call.respond(tools)
-        }
+@SingleIn(AppScope::class)
+@ContributesIntoSet(scope = AppScope::class, binding = binding<RoutingController>())
+@Inject
+class ToolRoutes(
+    private val services: FraggleServices,
+) : RoutingController {
+    override fun init(parent: Route) {
+        parent.apply {
+            route("/tools") {
+                get {
+                    val tools = services.toolRegistry.tools.map { it.toToolInfo() }
+                    call.respond(tools)
+                }
 
-        /**
-         * GET /api/v1/tools/{name}
-         * Get detailed information about a specific tool.
-         */
-        get("/{name}") {
-            val name = call.parameters["name"]
-                ?: return@get call.respond(HttpStatusCode.BadRequest, ErrorResponse("Missing tool name"))
+                get("/{name}") {
+                    val name = call.parameters["name"]
+                        ?: return@get call.respond(HttpStatusCode.BadRequest, ErrorResponse("Missing tool name"))
 
-            val tool = services.toolRegistry.findTool(name)
-                ?: return@get call.respond(HttpStatusCode.NotFound, ErrorResponse("Tool not found"))
+                    val tool = services.toolRegistry.findTool(name)
+                        ?: return@get call.respond(HttpStatusCode.NotFound, ErrorResponse("Tool not found"))
 
-            call.respond(tool.toDetail())
+                    call.respond(tool.toDetail())
+                }
+            }
         }
     }
 }

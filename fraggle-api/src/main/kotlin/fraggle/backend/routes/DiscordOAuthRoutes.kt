@@ -1,18 +1,30 @@
 package fraggle.backend.routes
 
+import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
+import dev.zacsweers.metro.binding
 import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import fraggle.api.FraggleServices
 import fraggle.api.OAuthCallbackResult
+import fraggle.di.AppScope
 import fraggle.models.ErrorResponse
 
 /**
  * Discord OAuth routes for user installation flow.
  */
-fun Route.discordOAuthRoutes(services: FraggleServices) {
-    route("/discord/oauth") {
+@SingleIn(AppScope::class)
+@ContributesIntoSet(scope = AppScope::class, binding = binding<RoutingController>())
+@Inject
+class DiscordOAuthRoutes(
+    private val services: FraggleServices,
+) : RoutingController {
+    override fun init(parent: Route) {
+        parent.apply {
+            route("/discord/oauth") {
         /**
          * GET /api/v1/discord/oauth/status
          * Check if Discord OAuth is configured.
@@ -90,6 +102,8 @@ fun Route.discordOAuthRoutes(services: FraggleServices) {
                         ErrorResponse(result.message)
                     )
                 }
+            }
+        }
             }
         }
     }

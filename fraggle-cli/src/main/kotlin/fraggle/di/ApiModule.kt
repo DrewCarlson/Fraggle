@@ -10,7 +10,9 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import kotlinx.coroutines.CoroutineScope
 import fraggle.FraggleServicesImpl
+import fraggle.api.FraggleServices
 import fraggle.backend.createApiServer
+import fraggle.backend.routes.RoutingControllers
 import fraggle.chat.BridgeInitializerRegistry
 import fraggle.chat.ChatBridgeManager
 import fraggle.db.ChatHistoryStore
@@ -65,12 +67,16 @@ interface ApiModule {
 
     @Provides
     @SingleIn(AppScope::class)
+    fun provideFraggleServicesInterface(impl: FraggleServicesImpl): FraggleServices = impl
+
+    @Provides
+    @SingleIn(AppScope::class)
     fun provideApiServer(
         apiConfig: ApiConfig,
         dashboardConfig: DashboardConfig,
-        services: FraggleServicesImpl,
+        routingControllers: RoutingControllers,
     ): EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration>? {
         if (!apiConfig.enabled) return null
-        return createApiServer(services, apiConfig, dashboardConfig)
+        return createApiServer(routingControllers, apiConfig, dashboardConfig)
     }
 }

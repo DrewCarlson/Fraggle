@@ -1,9 +1,14 @@
 package fraggle.backend.routes
 
+import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
+import dev.zacsweers.metro.binding
 import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import fraggle.api.FraggleServices
+import fraggle.di.AppScope
 import fraggle.models.BridgeDetail
 import fraggle.models.BridgeInfo
 import fraggle.models.ErrorResponse
@@ -11,8 +16,15 @@ import fraggle.models.ErrorResponse
 /**
  * Bridge management routes.
  */
-fun Route.bridgeRoutes(services: FraggleServices) {
-    route("/bridges") {
+@SingleIn(AppScope::class)
+@ContributesIntoSet(scope = AppScope::class, binding = binding<RoutingController>())
+@Inject
+class BridgeRoutes(
+    private val services: FraggleServices,
+) : RoutingController {
+    override fun init(parent: Route) {
+        parent.apply {
+            route("/bridges") {
         /**
          * GET /api/v1/bridges
          * List all configured bridges and their status.
@@ -90,6 +102,8 @@ fun Route.bridgeRoutes(services: FraggleServices) {
                 call.respond(HttpStatusCode.OK, mapOf("disconnected" to true))
             } catch (e: Exception) {
                 call.respond(HttpStatusCode.InternalServerError, ErrorResponse("Disconnect failed: ${e.message}"))
+            }
+        }
             }
         }
     }

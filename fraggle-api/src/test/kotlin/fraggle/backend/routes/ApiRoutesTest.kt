@@ -10,7 +10,6 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.plugins.contentnegotiation.*
-import io.ktor.server.routing.*
 import io.ktor.server.testing.*
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -68,19 +67,18 @@ class ApiRoutesTest {
 
     private fun Application.configureTestApp() {
         install(ContentNegotiation) { json(json) }
-        routing {
-            route("/api/v1") {
-                statusRoutes(services)
-                chatRoutes(services)
-                bridgeRoutes(services)
-                toolRoutes(services)
-                memoryRoutes(services)
-                schedulerRoutes(services)
-                tracingRoutes(services)
-                settingsRoutes(services)
-                discordOAuthRoutes(services)
-            }
-        }
+        val controllers: Set<RoutingController> = setOf(
+            StatusRoutes(services),
+            ChatRoutes(services),
+            BridgeRoutes(services),
+            ToolRoutes(services),
+            MemoryRoutes(services),
+            SchedulerRoutes(services),
+            TracingRoutes(services),
+            SettingsRoutes(services),
+            DiscordOAuthRoutes(services),
+        )
+        RoutingControllers(controllers).init(this)
     }
 
     // -- Health & Status --

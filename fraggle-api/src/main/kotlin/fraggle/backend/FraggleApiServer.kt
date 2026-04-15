@@ -14,9 +14,8 @@ import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import kotlinx.serialization.json.Json
-import fraggle.api.FraggleServices
-import fraggle.backend.routes.*
-import fraggle.backend.websocket.configureWebSockets
+import fraggle.backend.routes.RoutingControllers
+import fraggle.backend.routes.configureDashboard
 import fraggle.models.ApiConfig
 import fraggle.models.DashboardConfig
 import org.slf4j.LoggerFactory
@@ -32,7 +31,7 @@ import kotlin.time.Duration.Companion.seconds
  * @return An embedded server ready to be started.
  */
 fun createApiServer(
-    services: FraggleServices,
+    routingControllers: RoutingControllers,
     apiConfig: ApiConfig,
     dashboardConfig: DashboardConfig,
 ): EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration> {
@@ -99,23 +98,8 @@ fun createApiServer(
             })
         }
 
-        // Routing
-        routing {
-            // API routes
-            route("/api/v1") {
-                statusRoutes(services)
-                chatRoutes(services)
-                bridgeRoutes(services)
-                discordOAuthRoutes(services)
-                toolRoutes(services)
-                skillRoutes(services)
-                memoryRoutes(services)
-                schedulerRoutes(services)
-                tracingRoutes(services)
-                settingsRoutes(services)
-                configureWebSockets(services)
-            }
-        }
+        // Routing — all contributed RoutingControllers are installed under /api/v1.
+        routingControllers.init(this)
 
         // Dashboard static files
         if (dashboardConfig.enabled) {

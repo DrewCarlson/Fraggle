@@ -1,10 +1,15 @@
 package fraggle.backend.routes
 
+import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
+import dev.zacsweers.metro.binding
 import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import fraggle.api.FraggleServices
+import fraggle.di.AppScope
 import fraggle.memory.MemoryScope
 import fraggle.models.ErrorResponse
 import fraggle.models.FactInfo
@@ -16,8 +21,15 @@ import fraggle.models.UpdateFactRequest
 /**
  * Memory store routes.
  */
-fun Route.memoryRoutes(services: FraggleServices) {
-    route("/memory") {
+@SingleIn(AppScope::class)
+@ContributesIntoSet(scope = AppScope::class, binding = binding<RoutingController>())
+@Inject
+class MemoryRoutes(
+    private val services: FraggleServices,
+) : RoutingController {
+    override fun init(parent: Route) {
+        parent.apply {
+            route("/memory") {
         /**
          * GET /api/v1/memory/scopes
          * List all available memory scopes with fact counts.
@@ -197,6 +209,8 @@ fun Route.memoryRoutes(services: FraggleServices) {
             }
 
             call.respond(HttpStatusCode.OK, mapOf("deleted" to true))
+        }
+            }
         }
     }
 }
