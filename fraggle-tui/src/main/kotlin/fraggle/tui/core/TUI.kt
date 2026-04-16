@@ -38,6 +38,26 @@ interface TerminalOutput {
 
     /** Restore terminal state (undo raw mode etc.). Called from [TUI.stop]. */
     fun reset()
+
+    /**
+     * Query the terminal's current size directly. Intended for the first
+     * frame, before Mosaic has seen a resize event.
+     *
+     * Mosaic's [com.jakewharton.mosaic.terminal.Terminal.state] exposes size
+     * as a [kotlinx.coroutines.flow.StateFlow] that starts at
+     * `Terminal.Size.Default` (80×24) and only updates when a resize event
+     * fires. That means the first render draws at 80×24 regardless of the
+     * actual terminal size; users with larger terminals see content clipped
+     * or mis-wrapped until they resize manually.
+     *
+     * Implementations that can query the OS directly (e.g. via `ioctl
+     * TIOCGWINSZ` inside [Tty.currentSize]) should return the real size here.
+     * Return null when unavailable — callers fall back to
+     * `terminal.state.size.value`.
+     *
+     * Default: null (unavailable).
+     */
+    fun currentSize(): Terminal.Size? = null
 }
 
 /** [TerminalOutput] backed by a real [Tty]. */
@@ -58,6 +78,28 @@ class TtyOutput(private val tty: Tty) : TerminalOutput {
 
     override fun reset() {
         tty.reset()
+    }
+
+    /**
+     * Queries `Tty.currentSize()` which is implemented via `ioctl TIOCGWINSZ`
+     * on POSIX and `GetConsoleScreenBufferInfo` on Windows. Cheap (microseconds)
+     * — safe to call once per render without measurable overhead. Any thrown
+     * exception or malformed response collapses to null so callers can fall
+     * back to the state-flow value.
+     */
+    override fun currentSize(): Terminal.Size? {
+        val arr = try {
+            tty.currentSize()
+        } catch (_: Throwable) {
+            return null
+        }
+        if (arr.size < 2) return null
+        val columns = arr[0]
+        val rows = arr[1]
+        if (columns <= 0 || rows <= 0) return null
+        val width = if (arr.size >= 3) arr[2] else 0
+        val height = if (arr.size >= 4) arr[3] else 0
+        return Terminal.Size(columns, rows, width, height)
     }
 }
 
@@ -313,7 +355,12 @@ class TUI(
 
     private fun doRender(forceParam: Boolean) {
         renderCount += 1
-        val size = terminal.state.size.value
+        // Prefer the output's direct ioctl-backed size query. Mosaic's
+        // state.size flow starts at Size.Default (80x24) and only updates
+        // on resize events — using it alone would render the first frame
+        // at the wrong dimensions on any non-80x24 terminal. See the
+        // [TerminalOutput.currentSize] docs for the full story.
+        val size = output.currentSize() ?: terminal.state.size.value
         val width = max(1, size.columns)
         val height = max(1, size.rows)
 
