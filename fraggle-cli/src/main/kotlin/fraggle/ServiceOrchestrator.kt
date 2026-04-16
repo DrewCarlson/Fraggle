@@ -1,6 +1,7 @@
 package fraggle
 
 import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 import fraggle.agent.tool.FraggleToolRegistry
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
@@ -11,6 +12,7 @@ import fraggle.agent.*
 import fraggle.chat.*
 import fraggle.events.EventBus
 import fraggle.db.*
+import fraggle.di.AppScope
 import fraggle.discord.DiscordBridge
 import fraggle.discord.DiscordBridgeInitializer
 import fraggle.models.ApiConfig
@@ -33,6 +35,7 @@ import kotlin.time.measureTimedValue
  * All services are constructor-injected. This class is responsible
  * for registering bridges, starting/stopping services, and the message loop.
  */
+@SingleIn(AppScope::class)
 @Inject
 class ServiceOrchestrator(
     private val scope: CoroutineScope,
@@ -132,8 +135,8 @@ class ServiceOrchestrator(
                         if (executorConfig.bridgeApproval && event.chatId.isNotEmpty()) {
                             chatCommandProcessor.trackPermissionRequest(event.chatId, event.requestId)
                             val msg = "Tool **${event.toolName}** wants to execute.\n" +
-                                "Args: `${event.argsJson}`\n\n" +
-                                "Reply `/approve` or `/deny`"
+                                    "Args: `${event.argsJson}`\n\n" +
+                                    "Reply `/approve` or `/deny`"
                             try {
                                 bridgeManager.send(event.chatId, OutgoingMessage.Text(msg))
                             } catch (e: Exception) {
@@ -141,12 +144,15 @@ class ServiceOrchestrator(
                             }
                         }
                     }
+
                     is FraggleEvent.ToolPermissionGranted -> {
                         chatCommandProcessor.clearPermissionRequest(event.requestId)
                     }
+
                     is FraggleEvent.ToolPermissionTimeout -> {
                         chatCommandProcessor.clearPermissionRequest(event.requestId)
                     }
+
                     else -> {}
                 }
             }
@@ -218,13 +224,13 @@ class ServiceOrchestrator(
         // Update conversation history
         val responseText = result.response.contentOrError()
         val updatedMessages = result.conversation.messages +
-            ConversationMessage(ConversationRole.USER, text) +
-            // Don't persist LLM errors as assistant messages.
-            if (result.response is AgentResponse.Success) {
-                listOf(ConversationMessage(ConversationRole.ASSISTANT, responseText))
-            } else {
-                emptyList()
-            }
+                ConversationMessage(ConversationRole.USER, text) +
+                // Don't persist LLM errors as assistant messages.
+                if (result.response is AgentResponse.Success) {
+                    listOf(ConversationMessage(ConversationRole.ASSISTANT, responseText))
+                } else {
+                    emptyList()
+                }
         conversations[chatId] = result.conversation.copy(messages = updatedMessages)
 
         return responseText
@@ -258,6 +264,7 @@ class ServiceOrchestrator(
                                 effectiveMessage = bridgedMessage.copy(message = rewritten)
                                 logger.info("Expanded /skill:${result.skillName} for $chatId")
                             }
+
                             else -> {
                                 val response = when (result) {
                                     is CommandResult.Approved -> "Tool execution approved."
@@ -268,6 +275,7 @@ class ServiceOrchestrator(
                                     is CommandResult.MalformedSkill -> "Malformed skill command: ${result.reason}"
                                     is CommandResult.SkillReadError ->
                                         "Failed to load skill **${result.name}**: ${result.reason}"
+
                                     is CommandResult.Expanded -> error("handled above")
                                 }
                                 bridgeManager.send(chatId, OutgoingMessage.Text(response))
@@ -291,21 +299,7 @@ class ServiceOrchestrator(
         val platform = bridgedMessage.bridge.platform
 
         // Apply message routing (trigger filtering, etc.)
-        val routedMessage = messageRouter?.let { router ->
-            // Convert back to original format for router
-            val (_, originalChatId) = bridgeManager.parseQualifiedChatId(chatId)
-            val originalMessage = message.copy(chatId = originalChatId)
-
-            // Check if message should be processed
-            val shouldProcess = router.shouldProcess(originalMessage)
-            if (!shouldProcess) {
-                logger.debug("Message filtered by router: $chatId")
-                return
-            }
-
-            // Get the processed message (with trigger stripped)
-            router.process(originalMessage)?.copy(chatId = chatId)
-        } ?: message
+        val routedMessage = message.applyRouting(chatId) ?: return
 
         // Start a job that keeps the typing indicator active
         val typingJob = launch {
@@ -322,13 +316,15 @@ class ServiceOrchestrator(
         try {
             // Emit message received event
             val messageText = (routedMessage.content as? MessageContent.Text)?.text.orEmpty()
-            fraggleServices.emitEvent(FraggleEvent.MessageReceived(
-                timestamp = Clock.System.now(),
-                chatId = chatId,
-                senderId = routedMessage.sender.id,
-                senderName = routedMessage.sender.name,
-                content = messageText,
-            ))
+            fraggleServices.emitEvent(
+                FraggleEvent.MessageReceived(
+                    timestamp = Clock.System.now(),
+                    chatId = chatId,
+                    senderId = routedMessage.sender.id,
+                    senderName = routedMessage.sender.name,
+                    content = messageText,
+                )
+            )
 
             // Record incoming message metadata
             val chatRecord = chatHistoryStore.getOrCreateChat(
@@ -336,16 +332,18 @@ class ServiceOrchestrator(
                 platform = platform.name.lowercase(),
                 isGroup = false,
             )
-            chatHistoryStore.recordMessage(MessageRecord(
-                chatId = chatRecord.id,
-                externalId = routedMessage.id,
-                senderId = routedMessage.sender.id,
-                senderName = routedMessage.sender.name,
-                senderIsBot = routedMessage.sender.isBot,
-                contentType = routedMessage.content.toContentType(),
-                direction = MessageDirection.INCOMING,
-                timestamp = routedMessage.timestamp,
-            ))
+            chatHistoryStore.recordMessage(
+                MessageRecord(
+                    chatId = chatRecord.id,
+                    externalId = routedMessage.id,
+                    senderId = routedMessage.sender.id,
+                    senderName = routedMessage.sender.name,
+                    senderIsBot = routedMessage.sender.isBot,
+                    contentType = routedMessage.content.toContentType(),
+                    direction = MessageDirection.INCOMING,
+                    timestamp = routedMessage.timestamp,
+                )
+            )
 
             // Get or create conversation
             val conversation = conversations.getOrPut(chatId) {
@@ -392,7 +390,7 @@ class ServiceOrchestrator(
             // Collect all images: inline images first, then tool-generated images
             val toolImages = toolAttachments.filterIsInstance<ResponseAttachment.Image>()
             val allImages = inlineImages.map { it.data to it.mimeType } +
-                toolImages.map { it.data to it.mimeType }
+                    toolImages.map { it.data to it.mimeType }
 
             // Discord: Send multiple images in one message with text
             // Signal: Send single image with text
@@ -406,22 +404,25 @@ class ServiceOrchestrator(
                     // Single image - use standard OutgoingMessage.Image
                     val (imageData, mimeType) = imagesToSend.first()
                     logger.info("Sending response with image (${imageData.size / 1024}KB)")
-                    bridgeManager.send(chatId, OutgoingMessage.Image(
-                        data = imageData,
-                        mimeType = mimeType,
-                        caption = finalText.takeIf { it.isNotBlank() },
-                    ))
+                    bridgeManager.send(
+                        chatId, OutgoingMessage.Image(
+                            data = imageData,
+                            mimeType = mimeType,
+                            caption = finalText.takeIf { it.isNotBlank() },
+                        )
+                    )
                 } else {
                     // Multiple images - for Discord, send first with caption, rest without
                     // TODO: Use discord bridge sendMultiple images method
                     logger.info("Sending response with ${imagesToSend.size} images")
                     imagesToSend.forEachIndexed { index, (imageData, mimeType) ->
-                        bridgeManager.send(chatId, OutgoingMessage.Image(
-                            data = imageData,
-                            mimeType = mimeType,
-                            // Only first image gets the caption
-                            caption = if (index == 0) finalText.takeIf { it.isNotBlank() } else null,
-                        ))
+                        bridgeManager.send(
+                            chatId, OutgoingMessage.Image(
+                                data = imageData,
+                                mimeType = mimeType,
+                                // Only first image gets the caption
+                                caption = if (index == 0) finalText.takeIf { it.isNotBlank() } else null,
+                            ))
                     }
                 }
             } else {
@@ -430,11 +431,13 @@ class ServiceOrchestrator(
             }
 
             // Emit response sent event
-            fraggleServices.emitEvent(FraggleEvent.ResponseSent(
-                timestamp = Clock.System.now(),
-                chatId = chatId,
-                content = finalText,
-            ))
+            fraggleServices.emitEvent(
+                FraggleEvent.ResponseSent(
+                    timestamp = Clock.System.now(),
+                    chatId = chatId,
+                    content = finalText,
+                )
+            )
 
             // Send any remaining file attachments
             for (attachment in toolAttachments) {
@@ -442,13 +445,16 @@ class ServiceOrchestrator(
                     is ResponseAttachment.Image -> {
                         // Already handled above
                     }
+
                     is ResponseAttachment.File -> {
                         logger.info("Sending file attachment: ${attachment.filename}")
-                        bridgeManager.send(chatId, OutgoingMessage.File(
-                            data = attachment.data,
-                            filename = attachment.filename,
-                            mimeType = attachment.mimeType,
-                        ))
+                        bridgeManager.send(
+                            chatId, OutgoingMessage.File(
+                                data = attachment.data,
+                                filename = attachment.filename,
+                                mimeType = attachment.mimeType,
+                            )
+                        )
                     }
                 }
             }
@@ -459,26 +465,28 @@ class ServiceOrchestrator(
             } else {
                 MessageContentType.TEXT
             }
-            chatHistoryStore.recordMessage(MessageRecord(
-                chatId = chatRecord.id,
-                senderId = "fraggle",
-                senderName = "Fraggle",
-                senderIsBot = true,
-                contentType = outContentType,
-                direction = MessageDirection.OUTGOING,
-                timestamp = Clock.System.now(),
-                processingDuration = duration,
-            ))
+            chatHistoryStore.recordMessage(
+                MessageRecord(
+                    chatId = chatRecord.id,
+                    senderId = "fraggle",
+                    senderName = "Fraggle",
+                    senderIsBot = true,
+                    contentType = outContentType,
+                    direction = MessageDirection.OUTGOING,
+                    timestamp = Clock.System.now(),
+                    processingDuration = duration,
+                )
+            )
 
             // Update conversation history.
             // Don't persist LLM errors as assistant messages.
             val updatedMessages = processResult.conversation.messages +
-                ConversationMessage(ConversationRole.USER, messageText) +
-                if (response is AgentResponse.Success) {
-                    listOf(ConversationMessage(ConversationRole.ASSISTANT, finalText))
-                } else {
-                    emptyList()
-                }
+                    ConversationMessage(ConversationRole.USER, messageText) +
+                    if (response is AgentResponse.Success) {
+                        listOf(ConversationMessage(ConversationRole.ASSISTANT, finalText))
+                    } else {
+                        emptyList()
+                    }
             conversations[chatId] = processResult.conversation.copy(messages = updatedMessages)
 
             logger.info("Response sent to $chatId")
@@ -487,11 +495,13 @@ class ServiceOrchestrator(
             typingJob.cancel()
 
             // Emit error event
-            fraggleServices.emitEvent(FraggleEvent.Error(
-                timestamp = Clock.System.now(),
-                source = "message_processing",
-                message = e.message ?: "Unknown error",
-            ))
+            fraggleServices.emitEvent(
+                FraggleEvent.Error(
+                    timestamp = Clock.System.now(),
+                    source = "message_processing",
+                    message = e.message ?: "Unknown error",
+                )
+            )
 
             try {
                 bridgeManager.setTyping(chatId, false)
@@ -503,6 +513,30 @@ class ServiceOrchestrator(
                 logger.error("Failed to send error message: ${sendError.message}")
             }
         }
+    }
+
+    fun IncomingMessage.applyRouting(chatId: String): IncomingMessage? {
+        // Synthetic messages (e.g. scheduled tasks) bypass trigger filtering —
+        // they are internal system messages, not user input.
+        val isSynthetic = id.startsWith("synthetic-")
+        if (isSynthetic) {
+            return this
+        }
+        return messageRouter?.let { router ->
+            // Convert back to original format for router
+            val (_, originalChatId) = bridgeManager.parseQualifiedChatId(chatId)
+            val originalMessage = copy(chatId = originalChatId)
+
+            // Check if message should be processed
+            val shouldProcess = router.shouldProcess(originalMessage)
+            if (!shouldProcess) {
+                logger.debug("Message filtered by router: $chatId")
+                return null
+            }
+
+            // Get the processed message (with trigger stripped)
+            router.process(originalMessage)?.copy(chatId = chatId)
+        } ?: this
     }
 
     private fun MessageContent.toContentType(): MessageContentType = when (this) {
