@@ -14,6 +14,7 @@ import fraggle.agent.skill.SkillRegistryLoader
 import fraggle.agent.skill.SkillSecretsStore
 import fraggle.models.SkillsConfig
 import fraggle.agent.tracing.AgentEventTracer
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -55,6 +56,7 @@ class FraggleAgent(
     private val skillSecretsStore: SkillSecretsStore,
     private val traceStore: TraceStore?,
     private val eventBus: EventBus?,
+    private val scope: CoroutineScope,
 ) : Closeable {
     private val logger = LoggerFactory.getLogger(FraggleAgent::class.java)
 
@@ -157,7 +159,7 @@ class FraggleAgent(
             val content = lastAssistant?.textContent.orEmpty()
 
             if (config.autoMemory && content.isNotBlank()) {
-                extractMemoryViaLLM(message, content)
+                scope.launch { extractMemoryViaLLM(message, content) }
             }
 
             AgentResponse.Success(

@@ -238,6 +238,7 @@ interface AssistantModule {
         skillSecretsStore: SkillSecretsStore,
         traceStore: TraceStore?,
         eventBus: EventBus,
+        scope: CoroutineScope,
     ): FraggleAgent = FraggleAgent(
         lmStudioProvider = lmStudioProvider,
         llmBridge = llmBridge,
@@ -250,5 +251,6 @@ interface AssistantModule {
         skillSecretsStore = skillSecretsStore,
         traceStore = traceStore,
         eventBus = eventBus,
+        scope = scope,
     )
 }
