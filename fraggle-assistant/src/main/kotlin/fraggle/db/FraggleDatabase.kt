@@ -18,7 +18,7 @@ class FraggleDatabase(private val dbPath: Path) {
     fun connect() {
         dbPath.parent?.createDirectories()
         // Enable WAL mode and foreign keys via SQLite JDBC connection properties
-        val url = "jdbc:sqlite:$dbPath?journal_mode=WAL&foreign_keys=ON"
+        val url = "jdbc:sqlite:$dbPath?journal_mode=WAL&foreign_keys=ON&busy_timeout=5000"
         logger.info("Connecting to database: $url")
 
         database = Database.connect(
