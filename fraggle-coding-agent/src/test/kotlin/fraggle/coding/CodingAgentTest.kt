@@ -15,8 +15,8 @@ import fraggle.coding.session.Session
 import fraggle.coding.session.SessionEntry
 import fraggle.coding.session.SessionFile
 import fraggle.coding.session.SessionManager
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -368,11 +368,12 @@ class CodingAgentTest {
             val agent = CodingAgent(options(bridge), session)
 
             val eventTypes = mutableListOf<String>()
-            agent.events()
-                .onEach { event ->
-                    eventTypes += event::class.simpleName ?: "?"
-                }
-                .launchIn(backgroundScope)
+            backgroundScope.launch(start = CoroutineStart.UNDISPATCHED) {
+                agent.events()
+                    .collect { event ->
+                        eventTypes += event::class.simpleName ?: "?"
+                    }
+            }
 
             agent.prompt("hello")
 
