@@ -1,5 +1,6 @@
 package fraggle.agent.skill
 
+import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -44,7 +45,7 @@ class DefaultSkillExecutionContextTest {
     inner class ResolveEnvironment {
 
         @Test
-        fun `returns null for unknown skill`(@TempDir tmp: Path) {
+        fun `returns null for unknown skill`(@TempDir tmp: Path) = runTest {
             val ctx = DefaultSkillExecutionContext(
                 registry = InMemorySkillRegistry(emptyList()),
                 secretsStore = SkillSecretsStore(tmp.resolve("secrets")),
@@ -54,7 +55,7 @@ class DefaultSkillExecutionContextTest {
         }
 
         @Test
-        fun `injects secrets as env vars`(@TempDir tmp: Path) {
+        fun `injects secrets as env vars`(@TempDir tmp: Path) = runTest {
             val skillDir = tmp.resolve("skills/my-skill")
             val skill = makeSkill(skillDir, "my-skill")
             val secretsDir = tmp.resolve("secrets")
@@ -76,7 +77,7 @@ class DefaultSkillExecutionContextTest {
         }
 
         @Test
-        fun `no venv when not set up`(@TempDir tmp: Path) {
+        fun `no venv when skill has no requirements`(@TempDir tmp: Path) = runTest {
             val skillDir = tmp.resolve("skills/my-skill")
             val skill = makeSkill(skillDir, "my-skill")
 
@@ -88,12 +89,39 @@ class DefaultSkillExecutionContextTest {
 
             val env = ctx.resolveEnvironment("my-skill")
             assertNotNull(env)
+            // No requirements.txt → no venv created
             assertNull(env.venvBinDir)
             assertTrue("VIRTUAL_ENV" !in env.envVars)
         }
 
         @Test
-        fun `empty env vars when no secrets configured`(@TempDir tmp: Path) {
+        fun `auto-creates venv when skill has requirements`(@TempDir tmp: Path) = runTest {
+            val skillDir = tmp.resolve("skills/my-skill")
+            val skill = makeSkill(skillDir, "my-skill")
+            // Create a requirements.txt so hasPythonDeps is true
+            skillDir.resolve("requirements.txt").writeText("requests>=2.28.0\n")
+
+            val venvManager = SkillVenvManager(tmp.resolve("venvs"))
+
+            val ctx = DefaultSkillExecutionContext(
+                registry = InMemorySkillRegistry(listOf(skill)),
+                secretsStore = SkillSecretsStore(tmp.resolve("secrets")),
+                venvManager = venvManager,
+            )
+
+            // Venv doesn't exist yet
+            assertTrue(!venvManager.isSetUp("my-skill"))
+
+            val env = ctx.resolveEnvironment("my-skill")
+            assertNotNull(env)
+            // Venv should now be auto-created
+            assertNotNull(env.venvBinDir)
+            assertTrue("VIRTUAL_ENV" in env.envVars)
+            assertTrue(venvManager.isSetUp("my-skill"))
+        }
+
+        @Test
+        fun `empty env vars when no secrets configured`(@TempDir tmp: Path) = runTest {
             val skillDir = tmp.resolve("skills/my-skill")
             val skill = makeSkill(skillDir, "my-skill")
 
@@ -109,7 +137,7 @@ class DefaultSkillExecutionContextTest {
         }
 
         @Test
-        fun `workDir is skill baseDir`(@TempDir tmp: Path) {
+        fun `workDir is skill baseDir`(@TempDir tmp: Path) = runTest {
             val skillDir = tmp.resolve("skills/my-skill")
             val skill = makeSkill(skillDir, "my-skill")
 

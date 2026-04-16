@@ -17,8 +17,12 @@ interface SkillExecutionContext {
     /**
      * Resolve the execution environment for [skillName].
      * Returns null if the skill is not found in the registry.
+     *
+     * If the skill has Python dependencies (a `requirements.txt`) and no
+     * venv has been set up yet, the implementation may create and populate
+     * the venv automatically before returning.
      */
-    fun resolveEnvironment(skillName: String): SkillEnvironment?
+    suspend fun resolveEnvironment(skillName: String): SkillEnvironment?
 }
 
 /**

@@ -16,12 +16,17 @@ class DefaultSkillExecutionContext(
     private val venvManager: SkillVenvManager,
 ) : SkillExecutionContext {
 
-    override fun resolveEnvironment(skillName: String): SkillEnvironment? {
+    override suspend fun resolveEnvironment(skillName: String): SkillEnvironment? {
         val skill = registry.findByName(skillName) ?: return null
         val envVars = mutableMapOf<String, String>()
 
         // Inject configured secrets.
         envVars.putAll(secretsStore.loadEnvVars(skillName))
+
+        // Auto-setup venv on first use if the skill has Python dependencies.
+        if (!venvManager.isSetUp(skillName) && skill.hasPythonDeps) {
+            venvManager.setup(skill)
+        }
 
         // Venv activation.
         val venvBinDir = if (venvManager.isSetUp(skillName)) {
