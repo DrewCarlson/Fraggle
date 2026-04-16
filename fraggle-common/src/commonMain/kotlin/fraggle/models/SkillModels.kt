@@ -34,11 +34,13 @@ data class SkillDetail(
 
 /**
  * Request body for POST /skills/preview — resolves a source and reports
- * what skills would be installed without touching disk.
+ * what skills would be installed without touching disk. `scope` controls
+ * which target dir's manifest is consulted for previously-ignored names.
  */
 @Serializable
 data class SkillPreviewRequest(
     val source: String,
+    val scope: String = "global",
 )
 
 /**
@@ -57,21 +59,31 @@ data class SkillPreviewEntry(
 
 /**
  * Response for POST /skills/preview.
+ *
+ * `previouslyIgnored` reports skill names that were ignored in a prior
+ * install from this source (reading the target manifest). The dashboard
+ * uses this to pre-check the "ignore" boxes when updating a known source.
  */
 @Serializable
 data class SkillPreviewResponse(
     val sourceLabel: String,
     val skills: List<SkillPreviewEntry>,
     val diagnostics: List<String> = emptyList(),
+    val previouslyIgnored: List<String> = emptyList(),
 )
 
 /**
  * Request body for POST /skills/install.
+ *
+ * `ignored` lists skill names discovered at the source that should NOT be
+ * installed. The choice is persisted in the manifest keyed by source label,
+ * so future updates from the same source will keep them out.
  */
 @Serializable
 data class SkillInstallRequest(
     val source: String,
     val scope: String = "global",
+    val ignored: List<String> = emptyList(),
 )
 
 /**

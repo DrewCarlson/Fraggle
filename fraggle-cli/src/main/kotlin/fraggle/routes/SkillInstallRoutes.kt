@@ -7,6 +7,7 @@ import dev.zacsweers.metro.binding
 import fraggle.SkillInstaller
 import fraggle.SkillSourceResolver
 import fraggle.SkillSourceSpec
+import fraggle.SkillsManifest
 import fraggle.agent.skill.SkillLoader
 import fraggle.agent.skill.SkillSource
 import fraggle.backend.routes.RoutingController
@@ -22,6 +23,7 @@ import fraggle.models.SkillPreviewRequest
 import fraggle.models.SkillPreviewResponse
 import fraggle.models.SkillsConfig
 import fraggle.projectSkillsDir
+import java.nio.file.Path
 import io.ktor.client.HttpClient
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.request.receive
@@ -57,6 +59,12 @@ class SkillInstallRoutes(
                             ErrorResponse("Source must not be empty"),
                         )
                     }
+
+                    val targetDir = resolveTarget(request.scope)
+                        ?: return@post call.respond(
+                            HttpStatusCode.BadRequest,
+                            ErrorResponse("Invalid scope: ${request.scope}. Use 'global' or 'project'."),
+                        )
 
                     val spec = SkillSourceSpec.parse(source)
                         ?: return@post call.respond(
@@ -104,11 +112,17 @@ class SkillInstallRoutes(
 
                         val diagnosticMessages = loadResult.diagnostics.map { it.toString() }
 
+                        // Look up any prior ignore list for this resolved source
+                        // label so the UI can restore the user's choices.
+                        val manifest = SkillsManifest.read(SkillInstaller.manifestPath(targetDir))
+                        val previouslyIgnored = manifest.ignoredFor(staged.label).toList().sorted()
+
                         call.respond(
                             SkillPreviewResponse(
                                 sourceLabel = staged.label,
                                 skills = entries,
                                 diagnostics = diagnosticMessages,
+                                previouslyIgnored = previouslyIgnored,
                             ),
                         )
                     } finally {
@@ -126,14 +140,11 @@ class SkillInstallRoutes(
                         )
                     }
 
-                    val targetDir = when (request.scope) {
-                        "global" -> globalSkillsDir(skillsConfig)
-                        "project" -> projectSkillsDir(skillsConfig)
-                        else -> return@post call.respond(
+                    val targetDir = resolveTarget(request.scope)
+                        ?: return@post call.respond(
                             HttpStatusCode.BadRequest,
                             ErrorResponse("Invalid scope: ${request.scope}. Use 'global' or 'project'."),
                         )
-                    }
 
                     val spec = SkillSourceSpec.parse(source)
                         ?: return@post call.respond(
@@ -153,7 +164,11 @@ class SkillInstallRoutes(
 
                     try {
                         val installer = SkillInstaller(targetDir = targetDir, force = false)
-                        val result = installer.install(staged.path, staged.label)
+                        val result = installer.install(
+                            source = staged.path,
+                            sourceLabel = staged.label,
+                            ignored = request.ignored.toSet(),
+                        )
 
                         call.respond(
                             SkillInstallResponse(
@@ -173,5 +188,11 @@ class SkillInstallRoutes(
                 }
             }
         }
+    }
+
+    private fun resolveTarget(scope: String): Path? = when (scope) {
+        "global" -> globalSkillsDir(skillsConfig)
+        "project" -> projectSkillsDir(skillsConfig)
+        else -> null
     }
 }

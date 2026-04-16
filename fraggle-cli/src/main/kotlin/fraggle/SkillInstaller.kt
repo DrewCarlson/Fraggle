@@ -92,7 +92,11 @@ class SkillInstaller(
      * about URL schemes.
      */
     @OptIn(ExperimentalTime::class)
-    fun install(source: Path, sourceLabel: String): Result {
+    fun install(
+        source: Path,
+        sourceLabel: String,
+        ignored: Set<String> = emptySet(),
+    ): Result {
         val loader = SkillLoader()
         val loadResult = when {
             source.isRegularFile() && source.fileName.toString() == SkillLoader.SKILL_FILE_NAME ->
@@ -135,7 +139,23 @@ class SkillInstaller(
             .map { (_, group) -> group.minWith(dedupePriority(relativeRoot)) }
             .sortedBy { it.name }
 
+        val now = Clock.System.now().toString()
+        val seenIgnored = mutableSetOf<String>()
+
         for (skill in uniqueSkills) {
+            if (skill.name in ignored) {
+                skipped += Skipped(skill.name, "ignored by user")
+                seenIgnored += skill.name
+                // If a previous install of this skill exists, remove it so
+                // the ignore list is the single source of truth going forward.
+                val existing = targetDir.resolve(skill.name)
+                if (existing.exists()) {
+                    runCatching { deleteRecursively(existing) }
+                    entries.remove(skill.name)
+                }
+                continue
+            }
+
             val destination = targetDir.resolve(skill.name)
             if (destination.exists()) {
                 if (!force) {
@@ -166,14 +186,29 @@ class SkillInstaller(
             entries[skill.name] = SkillsManifest.Entry(
                 name = skill.name,
                 source = sourceLabel,
-                installedAt = Clock.System.now().toString(),
+                installedAt = now,
                 mode = mode.name.lowercase(),
             )
             installed += Installed(skill.name, destination, sourceLabel, mode)
         }
 
-        SkillsManifest(skills = entries.values.sortedBy { it.name })
-            .write(manifestPath(targetDir))
+        // Rewrite this source's ignore list. Entries for *other* source labels
+        // are preserved so a shared target dir can track ignores per source.
+        val previousForOtherSources = manifest.ignored.filter { it.source != sourceLabel }
+        val previousByNameForThisSource = manifest.ignored
+            .filter { it.source == sourceLabel }
+            .associateBy { it.name }
+        val newIgnoredForThisSource = seenIgnored.map { name ->
+            previousByNameForThisSource[name]
+                ?: SkillsManifest.Ignored(name = name, source = sourceLabel, ignoredAt = now)
+        }
+        val mergedIgnored = (previousForOtherSources + newIgnoredForThisSource)
+            .sortedWith(compareBy({ it.source }, { it.name }))
+
+        SkillsManifest(
+            skills = entries.values.sortedBy { it.name },
+            ignored = mergedIgnored,
+        ).write(manifestPath(targetDir))
 
         return Result(
             installed = installed,
@@ -287,6 +322,13 @@ class SkillInstaller(
 data class SkillsManifest(
     val version: Int = VERSION,
     val skills: List<Entry> = emptyList(),
+    /**
+     * Skills intentionally excluded from a source. When `update` re-runs a
+     * source, names listed here stay out. The `source` field matches the
+     * label on [Entry.source] so multiple sources can each have their own
+     * ignore list.
+     */
+    val ignored: List<Ignored> = emptyList(),
 ) {
     @Serializable
     data class Entry(
@@ -296,14 +338,25 @@ data class SkillsManifest(
         val mode: String,
     )
 
+    @Serializable
+    data class Ignored(
+        val name: String,
+        val source: String,
+        @SerialName("ignored_at") val ignoredAt: String,
+    )
+
+    /** Names ignored for the given source label. */
+    fun ignoredFor(source: String): Set<String> =
+        ignored.filter { it.source == source }.map { it.name }.toSet()
+
     fun write(path: Path) {
         path.parent?.createDirectories()
         path.writeText(JSON.encodeToString(this))
     }
 
     companion object {
-        const val VERSION = 1
-        private val JSON = Json { prettyPrint = true; encodeDefaults = true }
+        const val VERSION = 2
+        private val JSON = Json { prettyPrint = true; encodeDefaults = true; ignoreUnknownKeys = true }
 
         fun read(path: Path): SkillsManifest {
             if (!path.exists()) return SkillsManifest()

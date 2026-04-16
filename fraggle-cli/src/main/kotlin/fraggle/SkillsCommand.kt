@@ -571,7 +571,8 @@ class SkillsUpdateCommand : CliktCommand(name = "update") {
             try {
                 val resolver = SkillSourceResolver(httpClient = client)
                 for (entry in entries) {
-                    val outcome = updateOne(entry, target, resolver)
+                    val ignored = manifest.ignoredFor(entry.source)
+                    val outcome = updateOne(entry, target, resolver, ignored)
                     when (outcome) {
                         is UpdateOutcome.Updated ->
                             println("↻ ${entry.name}  →  updated from ${entry.source}")
@@ -597,6 +598,7 @@ class SkillsUpdateCommand : CliktCommand(name = "update") {
         entry: SkillsManifest.Entry,
         target: Path,
         resolver: SkillSourceResolver,
+        ignored: Set<String>,
     ): UpdateOutcome {
         val spec = SkillSourceSpec.parseLabel(entry.source)
             ?: return UpdateOutcome.Failed("unparseable source label: ${entry.source}")
@@ -628,7 +630,7 @@ class SkillsUpdateCommand : CliktCommand(name = "update") {
             }
         }
 
-        val outcome = installFromSpec(spec, target, mode, force = true, resolver = resolver)
+        val outcome = installFromSpec(spec, target, mode, force = true, resolver = resolver, ignored = ignored)
         return when (outcome) {
             is StagedInstallOutcome.ResolveFailed -> UpdateOutcome.Failed(outcome.reason)
             is StagedInstallOutcome.Success -> {
@@ -682,6 +684,7 @@ internal suspend fun installFromSpec(
     mode: SkillInstaller.InstallMode,
     force: Boolean,
     resolver: SkillSourceResolver,
+    ignored: Set<String> = emptySet(),
 ): StagedInstallOutcome {
     val staged = try {
         resolver.resolve(spec)
@@ -690,7 +693,7 @@ internal suspend fun installFromSpec(
     }
     return try {
         val installer = SkillInstaller(target, mode, force)
-        val result = installer.install(staged.path, sourceLabel = staged.label)
+        val result = installer.install(staged.path, sourceLabel = staged.label, ignored = ignored)
         StagedInstallOutcome.Success(staged.label, result)
     } finally {
         staged.cleanup()
