@@ -13,6 +13,7 @@ import fraggle.agent.skill.SkillPromptFormatter
 import fraggle.agent.skill.SkillRegistryLoader
 import fraggle.models.SkillsConfig
 import fraggle.agent.tracing.AgentEventTracer
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -138,7 +139,6 @@ class FraggleAgent(
                 )
             )
 
-            // Wire tracing if enabled
             val tracer = traceStore?.let {
                 AgentEventTracer(it, eventBus, message.chatId)
             }
@@ -146,7 +146,9 @@ class FraggleAgent(
             withContext(ToolExecutionContext.asContextElement(executionContext)) {
                 coroutineScope {
                     val tracerJob = tracer?.let {
-                        launch { agent.events().collect(it::processEvent) }
+                        launch(start = CoroutineStart.UNDISPATCHED) {
+                            agent.events().collect(it::processEvent)
+                        }
                     }
                     try {
                         agent.prompt(listOf(AgentMessage.User(userInput)))

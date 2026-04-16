@@ -201,4 +201,54 @@ class AgentEventTracerTest {
             assertEquals("2", turnStarts[1].data["turn"])
         }
     }
+
+    @Nested
+    inner class MultipleSessions {
+        /**
+         * Regression: every message in a chat produces its own fresh tracer + session.
+         * Used to silently drop events on the second session when tracer listeners
+         * subscribed asynchronously via [Agent.events] and raced past the initial
+         * `AgentStart`. The assistant path now uses direct listener registration via
+         * [fraggle.agent.Agent.addEventListener], which this test mirrors by driving
+         * two fresh tracers against a shared [TraceStore].
+         */
+        @Test
+        fun `two sequential tracer cycles both record events`() = runTest {
+            val store = TraceStore()
+
+            // Cycle 1 — first message.
+            val tracer1 = AgentEventTracer(store, eventBus = null, chatId = "chat-1")
+            tracer1.processEvent(AgentEvent.AgentStart)
+            tracer1.processEvent(AgentEvent.TurnStart)
+            tracer1.processEvent(AgentEvent.MessageStart(AgentMessage.User("hello")))
+            tracer1.processEvent(AgentEvent.MessageEnd(AgentMessage.User("hello")))
+            tracer1.processEvent(AgentEvent.MessageStart(AgentMessage.Assistant()))
+            tracer1.processEvent(AgentEvent.MessageEnd(AgentMessage.Assistant()))
+            tracer1.processEvent(AgentEvent.TurnEnd(AgentMessage.Assistant(), emptyList()))
+            tracer1.processEvent(AgentEvent.AgentEnd(emptyList()))
+
+            // Cycle 2 — second message. Fresh tracer, same store.
+            val tracer2 = AgentEventTracer(store, eventBus = null, chatId = "chat-1")
+            tracer2.processEvent(AgentEvent.AgentStart)
+            tracer2.processEvent(AgentEvent.TurnStart)
+            tracer2.processEvent(AgentEvent.MessageStart(AgentMessage.User("again")))
+            tracer2.processEvent(AgentEvent.MessageEnd(AgentMessage.User("again")))
+            tracer2.processEvent(AgentEvent.MessageStart(AgentMessage.Assistant()))
+            tracer2.processEvent(AgentEvent.MessageEnd(AgentMessage.Assistant()))
+            tracer2.processEvent(AgentEvent.TurnEnd(AgentMessage.Assistant(), emptyList()))
+            tracer2.processEvent(AgentEvent.AgentEnd(emptyList()))
+
+            val sessions = store.listSessions()
+            assertEquals(2, sessions.size)
+            for (session in sessions) {
+                assertEquals("completed", session.status)
+                val events = store.getSessionEvents(session.id)
+                assertTrue(events.any { it.eventType == "agent" && it.phase == "start" })
+                assertTrue(events.any { it.eventType == "agent" && it.phase == "end" })
+                assertTrue(events.any { it.eventType == "turn" && it.phase == "start" })
+                assertTrue(events.any { it.eventType == "turn" && it.phase == "end" })
+                assertTrue(events.filter { it.eventType == "message" }.size >= 4)
+            }
+        }
+    }
 }

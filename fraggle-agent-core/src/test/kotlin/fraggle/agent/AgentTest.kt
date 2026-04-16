@@ -10,7 +10,9 @@ import fraggle.agent.message.AgentMessage
 import fraggle.agent.message.ContentPart
 import fraggle.agent.message.StopReason
 import fraggle.agent.message.ToolCall
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -187,6 +189,26 @@ class AgentTest {
 
             assertEquals(events1.size, events2.size)
             assertTrue(events1.isNotEmpty())
+        }
+
+        @Test
+        fun `UNDISPATCHED collector receives events for every prompt without yield`() = runTest {
+            val events = mutableListOf<AgentEvent>()
+            val agent = simpleAgent()
+
+            coroutineScope {
+                val job = launch(start = CoroutineStart.UNDISPATCHED) {
+                    agent.events().collect { events.add(it) }
+                }
+
+                agent.prompt("first")
+                assertEquals(1, events.count { it is AgentEvent.AgentStart })
+
+                agent.prompt("second")
+                assertEquals(2, events.count { it is AgentEvent.AgentStart })
+
+                job.cancel()
+            }
         }
     }
 
