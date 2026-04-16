@@ -40,12 +40,12 @@ class AgentEventTracer(
     /**
      * Start timestamps for in-flight spans, keyed by (eventType, correlationKey).
      * Populated on `start` phase, drained on `end` phase to compute [TraceEventRecord.durationMs].
-     * Messages and turns have no explicit id so they use a monotonic counter to match the
+     * Assistant messages and turns have no explicit id so they use a monotonic counter to match the
      * most recent unpaired start within the same type.
      */
     private val pendingSpanStarts = mutableMapOf<String, Instant>()
-    private var messageStartCount = 0
-    private var messageEndCount = 0
+    private var assistantStartCount = 0
+    private var assistantEndCount = 0
 
     private fun spanKey(eventType: String, correlationKey: String): String =
         "$eventType:$correlationKey"
@@ -62,7 +62,21 @@ class AgentEventTracer(
                 ))
                 val now = Clock.System.now()
                 pendingSpanStarts[spanKey("agent", "0")] = now
-                addRecord("agent", "start", timestamp = now)
+                addRecord(
+                    eventType = "agent",
+                    phase = "start",
+                    data = buildMap {
+                        event.systemPrompt?.let {
+                            put("system_prompt_length", it.length.toString())
+                        }
+                    },
+                    detail = event.systemPrompt?.let { prompt ->
+                        buildJsonObject {
+                            put("system_prompt", prompt)
+                        }.toJsonString()
+                    },
+                    timestamp = now,
+                )
             }
 
             is AgentEvent.AgentEnd -> {
@@ -113,9 +127,9 @@ class AgentEventTracer(
 
             is AgentEvent.MessageStart -> {
                 val type = messageType(event.message)
-                messageStartCount++
+                assistantStartCount++
                 val now = Clock.System.now()
-                pendingSpanStarts[spanKey("message", messageStartCount.toString())] = now
+                pendingSpanStarts[spanKey("message", assistantStartCount.toString())] = now
                 addRecord(
                     eventType = "message",
                     phase = "start",
@@ -144,9 +158,9 @@ class AgentEventTracer(
                         }
                     }
                 }
-                messageEndCount++
+                assistantEndCount++
                 val end = Clock.System.now()
-                val duration = pendingSpanStarts.remove(spanKey("message", messageEndCount.toString()))
+                val duration = pendingSpanStarts.remove(spanKey("message", assistantEndCount.toString()))
                     ?.let { end - it }
                 addRecord(
                     eventType = "message",
@@ -155,6 +169,37 @@ class AgentEventTracer(
                     detail = buildJsonObject { encodeMessage(this, event.message) }.toJsonString(),
                     duration = duration,
                     timestamp = end,
+                )
+            }
+
+            is AgentEvent.MessageRecord -> {
+                val type = messageType(event.message)
+                val msg = event.message
+                val data = buildMap<String, String> {
+                    put("type", type)
+                    if (msg is AgentMessage.ToolResult) {
+                        put("tool_call_id", msg.toolCallId)
+                        put("tool_name", msg.toolName)
+                        put("is_error", msg.isError.toString())
+                    }
+                }
+                // For tool_result, the full payload already lives in the tool:end event —
+                // only include a reference here. For other types, include the content.
+                val detail = if (msg is AgentMessage.ToolResult) {
+                    buildJsonObject {
+                        put("type", type)
+                        put("tool_call_id", msg.toolCallId)
+                        put("tool_name", msg.toolName)
+                        put("is_error", msg.isError)
+                    }.toJsonString()
+                } else {
+                    buildJsonObject { encodeMessage(this, msg) }.toJsonString()
+                }
+                addRecord(
+                    eventType = "message",
+                    phase = "instant",
+                    data = data,
+                    detail = detail,
                 )
             }
 

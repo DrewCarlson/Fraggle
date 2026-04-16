@@ -71,12 +71,11 @@ class AgentLoopTest {
             // Check event sequence
             assertIs<AgentEvent.AgentStart>(events[0])
             assertIs<AgentEvent.TurnStart>(events[1])
-            assertIs<AgentEvent.MessageStart>(events[2]) // user
-            assertIs<AgentEvent.MessageEnd>(events[3])   // user
-            assertIs<AgentEvent.MessageStart>(events[4]) // assistant
-            assertIs<AgentEvent.MessageEnd>(events[5])   // assistant
-            assertIs<AgentEvent.TurnEnd>(events[6])
-            assertIs<AgentEvent.AgentEnd>(events[7])
+            assertIs<AgentEvent.MessageRecord>(events[2]) // user (instant)
+            assertIs<AgentEvent.MessageStart>(events[3])  // assistant
+            assertIs<AgentEvent.MessageEnd>(events[4])    // assistant
+            assertIs<AgentEvent.TurnEnd>(events[5])
+            assertIs<AgentEvent.AgentEnd>(events[6])
         }
 
         @Test
@@ -712,10 +711,10 @@ class AgentLoopTest {
 
             // Expected sequence:
             // AgentStart, TurnStart,
-            // MessageStart(user), MessageEnd(user),
+            // MessageRecord(user),
             // MessageStart(assistant+tool), MessageEnd(assistant+tool),
             // ToolExecutionStart, ToolExecutionEnd,
-            // MessageStart(tool result), MessageEnd(tool result),
+            // MessageRecord(tool result),
             // TurnEnd,
             // TurnStart,
             // MessageStart(final assistant), MessageEnd(final assistant),
@@ -726,6 +725,7 @@ class AgentLoopTest {
             assertTrue(eventTypes.contains("AgentEnd"))
             assertTrue(eventTypes.contains("ToolExecutionStart"))
             assertTrue(eventTypes.contains("ToolExecutionEnd"))
+            assertTrue(eventTypes.contains("MessageRecord"))
             assertTrue(eventTypes.count { it == "TurnStart" } >= 2)
             assertTrue(eventTypes.count { it == "TurnEnd" } >= 2)
         }

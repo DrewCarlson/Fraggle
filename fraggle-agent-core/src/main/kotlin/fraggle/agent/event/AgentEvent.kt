@@ -8,7 +8,7 @@ import fraggle.agent.message.AgentMessage
  */
 sealed class AgentEvent {
     // Agent lifecycle
-    data object AgentStart : AgentEvent()
+    data class AgentStart(val systemPrompt: String? = null) : AgentEvent()
     data class AgentEnd(val messages: List<AgentMessage>) : AgentEvent()
 
     // Turn lifecycle (one LLM call + its tool executions)
@@ -18,13 +18,16 @@ sealed class AgentEvent {
         val toolResults: List<AgentMessage.ToolResult>,
     ) : AgentEvent()
 
-    // Message lifecycle
+    // Message lifecycle — streaming (assistant only)
     data class MessageStart(val message: AgentMessage) : AgentEvent()
     data class MessageUpdate(
         val message: AgentMessage.Assistant,
         val delta: StreamDelta,
     ) : AgentEvent()
     data class MessageEnd(val message: AgentMessage) : AgentEvent()
+
+    // Message lifecycle — instant (user, tool_result, platform)
+    data class MessageRecord(val message: AgentMessage) : AgentEvent()
 
     // Tool execution lifecycle
     data class ToolExecutionStart(

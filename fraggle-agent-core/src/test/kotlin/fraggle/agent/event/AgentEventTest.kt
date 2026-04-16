@@ -14,10 +14,22 @@ class AgentEventTest {
     @Nested
     inner class AgentLifecycle {
         @Test
-        fun `AgentStart is a singleton`() {
-            val a = AgentEvent.AgentStart
-            val b = AgentEvent.AgentStart
+        fun `AgentStart with same prompt are equal`() {
+            val a = AgentEvent.AgentStart("prompt")
+            val b = AgentEvent.AgentStart("prompt")
             assertEquals(a, b)
+        }
+
+        @Test
+        fun `AgentStart carries system prompt`() {
+            val event = AgentEvent.AgentStart("You are helpful.")
+            assertEquals("You are helpful.", event.systemPrompt)
+        }
+
+        @Test
+        fun `AgentStart defaults to null system prompt`() {
+            val event = AgentEvent.AgentStart()
+            assertEquals(null, event.systemPrompt)
         }
 
         @Test
@@ -76,6 +88,20 @@ class AgentEventTest {
             val msg = AgentMessage.Assistant(content = listOf(ContentPart.Text("done")))
             val event = AgentEvent.MessageEnd(msg)
             assertIs<AgentMessage.Assistant>(event.message)
+        }
+
+        @Test
+        fun `MessageRecord with user message`() {
+            val msg = AgentMessage.User("hello")
+            val event = AgentEvent.MessageRecord(msg)
+            assertIs<AgentMessage.User>(event.message)
+        }
+
+        @Test
+        fun `MessageRecord with tool result`() {
+            val msg = AgentMessage.ToolResult(toolCallId = "tc-1", toolName = "search", text = "found")
+            val event = AgentEvent.MessageRecord(msg)
+            assertIs<AgentMessage.ToolResult>(event.message)
         }
     }
 
@@ -160,13 +186,14 @@ class AgentEventTest {
         @Test
         fun `exhaustive when matching on AgentEvent`() {
             val events: List<AgentEvent> = listOf(
-                AgentEvent.AgentStart,
+                AgentEvent.AgentStart(),
                 AgentEvent.AgentEnd(emptyList()),
                 AgentEvent.TurnStart,
                 AgentEvent.TurnEnd(AgentMessage.Assistant(), emptyList()),
-                AgentEvent.MessageStart(AgentMessage.User("x")),
+                AgentEvent.MessageStart(AgentMessage.Assistant()),
                 AgentEvent.MessageUpdate(AgentMessage.Assistant(), StreamDelta.TextDelta("")),
-                AgentEvent.MessageEnd(AgentMessage.User("x")),
+                AgentEvent.MessageEnd(AgentMessage.Assistant()),
+                AgentEvent.MessageRecord(AgentMessage.User("x")),
                 AgentEvent.ToolExecutionStart("1", "t", "{}"),
                 AgentEvent.ToolExecutionEnd("1", "t", "", false),
             )
@@ -180,11 +207,12 @@ class AgentEventTest {
                     is AgentEvent.MessageStart -> "message_start"
                     is AgentEvent.MessageUpdate -> "message_update"
                     is AgentEvent.MessageEnd -> "message_end"
+                    is AgentEvent.MessageRecord -> "message_record"
                     is AgentEvent.ToolExecutionStart -> "tool_exec_start"
                     is AgentEvent.ToolExecutionEnd -> "tool_exec_end"
                 }
             }
-            assertEquals(9, types.size)
+            assertEquals(10, types.size)
         }
     }
 }

@@ -157,8 +157,10 @@ class StreamingLoopTest {
                 emit = sink,
             )
 
-            // Find the assistant message lifecycle events
-            val assistantEvents = events.dropWhile { event -> event !is AgentEvent.MessageStart || event.message !is AgentMessage.Assistant }
+            // Find the assistant message lifecycle events (skip the user MessageRecord)
+            val assistantEvents = events.dropWhile { event ->
+                event !is AgentEvent.MessageStart || event.message !is AgentMessage.Assistant
+            }
             assertTrue(assistantEvents.isNotEmpty(), "Should have assistant events")
 
             assertIs<AgentEvent.MessageStart>(assistantEvents[0])
@@ -222,11 +224,13 @@ class StreamingLoopTest {
             val updates = events.filterIsInstance<AgentEvent.MessageUpdate>()
             assertTrue(updates.isEmpty(), "Non-streaming bridge should not emit MessageUpdate")
 
-            // Should still have MessageStart and MessageEnd
+            // Should still have MessageStart and MessageEnd for assistant, MessageRecord for user
             val starts = events.filterIsInstance<AgentEvent.MessageStart>()
             val ends = events.filterIsInstance<AgentEvent.MessageEnd>()
-            assertTrue(starts.isNotEmpty())
-            assertTrue(ends.isNotEmpty())
+            val records = events.filterIsInstance<AgentEvent.MessageRecord>()
+            assertTrue(starts.isNotEmpty(), "Should have assistant MessageStart")
+            assertTrue(ends.isNotEmpty(), "Should have assistant MessageEnd")
+            assertTrue(records.isNotEmpty(), "Should have user MessageRecord")
 
             assertEquals("response", (newMessages[1] as AgentMessage.Assistant).textContent)
         }

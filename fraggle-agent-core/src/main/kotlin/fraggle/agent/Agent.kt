@@ -176,6 +176,9 @@ class Agent(private val options: AgentOptions) {
                 _state.streamingMessage = null
                 _state.pushMessage(event.message)
             }
+            is AgentEvent.MessageRecord -> {
+                _state.pushMessage(event.message)
+            }
             is AgentEvent.ToolExecutionStart -> {
                 _state.pendingToolCalls = _state.pendingToolCalls + event.toolCallId
             }

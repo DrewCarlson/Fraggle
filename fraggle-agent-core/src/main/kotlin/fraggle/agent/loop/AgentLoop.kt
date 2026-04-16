@@ -36,11 +36,10 @@ suspend fun runAgentLoop(
     allMessages.addAll(prompts)
     val newMessages = prompts.toMutableList()
 
-    emit(AgentEvent.AgentStart)
+    emit(AgentEvent.AgentStart(systemPrompt))
     emit(AgentEvent.TurnStart)
     for (prompt in prompts) {
-        emit(AgentEvent.MessageStart(prompt))
-        emit(AgentEvent.MessageEnd(prompt))
+        emit(AgentEvent.MessageRecord(prompt))
     }
 
     runLoop(allMessages, newMessages, systemPrompt, chatId, config, emit)
@@ -65,7 +64,7 @@ suspend fun runAgentLoopContinue(
     val allMessages = messages.toMutableList()
     val newMessages = mutableListOf<AgentMessage>()
 
-    emit(AgentEvent.AgentStart)
+    emit(AgentEvent.AgentStart(systemPrompt))
     emit(AgentEvent.TurnStart)
 
     runLoop(allMessages, newMessages, systemPrompt, chatId, config, emit)
@@ -100,8 +99,7 @@ private suspend fun runLoop(
                 )
                 messages.add(errorMsg)
                 newMessages.add(errorMsg)
-                emit(AgentEvent.MessageStart(errorMsg))
-                emit(AgentEvent.MessageEnd(errorMsg))
+                emit(AgentEvent.MessageRecord(errorMsg))
                 emit(AgentEvent.TurnEnd(errorMsg, emptyList()))
                 emit(AgentEvent.AgentEnd(newMessages.toList()))
                 return
@@ -111,8 +109,7 @@ private suspend fun runLoop(
 
             // Inject pending steering messages
             for (msg in pendingMessages) {
-                emit(AgentEvent.MessageStart(msg))
-                emit(AgentEvent.MessageEnd(msg))
+                emit(AgentEvent.MessageRecord(msg))
                 messages.add(msg)
                 newMessages.add(msg)
             }
@@ -275,8 +272,7 @@ private suspend fun executeSingleToolCall(
         text = content,
         isError = isError,
     )
-    emit(AgentEvent.MessageStart(toolResult))
-    emit(AgentEvent.MessageEnd(toolResult))
+    emit(AgentEvent.MessageRecord(toolResult))
 
     return toolResult
 }

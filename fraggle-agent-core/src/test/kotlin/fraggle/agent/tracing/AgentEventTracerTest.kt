@@ -27,7 +27,7 @@ class AgentEventTracerTest {
         fun `AgentStart creates a trace session`() = runTest {
             val (store, tracer) = createTracer()
 
-            tracer.processEvent(AgentEvent.AgentStart)
+            tracer.processEvent(AgentEvent.AgentStart())
 
             val sessions = store.listSessions()
             assertEquals(1, sessions.size)
@@ -36,10 +36,24 @@ class AgentEventTracerTest {
         }
 
         @Test
+        fun `AgentStart records system prompt in detail`() = runTest {
+            val (store, tracer) = createTracer()
+
+            tracer.processEvent(AgentEvent.AgentStart("You are helpful."))
+
+            val sessions = store.listSessions()
+            val events = store.getSessionEvents(sessions[0].id)
+            val agentStart = events.first { it.eventType == "agent" && it.phase == "start" }
+            assertEquals("16", agentStart.data["system_prompt_length"])
+            assertNotNull(agentStart.detail)
+            assertTrue(agentStart.detail!!.contains("You are helpful."))
+        }
+
+        @Test
         fun `AgentEnd completes the session`() = runTest {
             val (store, tracer) = createTracer()
 
-            tracer.processEvent(AgentEvent.AgentStart)
+            tracer.processEvent(AgentEvent.AgentStart())
             tracer.processEvent(AgentEvent.AgentEnd(emptyList()))
 
             val sessions = store.listSessions()
@@ -54,7 +68,7 @@ class AgentEventTracerTest {
         @Test
         fun `records turn events`() = runTest {
             val (store, tracer) = createTracer()
-            tracer.processEvent(AgentEvent.AgentStart)
+            tracer.processEvent(AgentEvent.AgentStart())
 
             tracer.processEvent(AgentEvent.TurnStart)
             tracer.processEvent(AgentEvent.TurnEnd(
@@ -71,25 +85,69 @@ class AgentEventTracerTest {
         }
 
         @Test
-        fun `records message events`() = runTest {
+        fun `records instant message event for user`() = runTest {
             val (store, tracer) = createTracer()
-            tracer.processEvent(AgentEvent.AgentStart)
+            tracer.processEvent(AgentEvent.AgentStart())
 
             val userMsg = AgentMessage.User("hello")
-            tracer.processEvent(AgentEvent.MessageStart(userMsg))
-            tracer.processEvent(AgentEvent.MessageEnd(userMsg))
+            tracer.processEvent(AgentEvent.MessageRecord(userMsg))
 
             val sessions = store.listSessions()
             val events = store.getSessionEvents(sessions[0].id)
             val messageEvents = events.filter { it.eventType == "message" }
-            assertEquals(2, messageEvents.size) // start + end
+            assertEquals(1, messageEvents.size)
+            assertEquals("instant", messageEvents[0].phase)
             assertEquals("user", messageEvents[0].data["type"])
+        }
+
+        @Test
+        fun `records start and end for assistant message`() = runTest {
+            val (store, tracer) = createTracer()
+            tracer.processEvent(AgentEvent.AgentStart())
+
+            val assistant = AgentMessage.Assistant(
+                content = listOf(ContentPart.Text("hi")),
+            )
+            tracer.processEvent(AgentEvent.MessageStart(assistant))
+            tracer.processEvent(AgentEvent.MessageEnd(assistant))
+
+            val sessions = store.listSessions()
+            val events = store.getSessionEvents(sessions[0].id)
+            val messageEvents = events.filter { it.eventType == "message" }
+            assertEquals(2, messageEvents.size)
+            assertEquals("start", messageEvents[0].phase)
+            assertEquals("end", messageEvents[1].phase)
+        }
+
+        @Test
+        fun `tool result instant message references tool call id without full payload`() = runTest {
+            val (store, tracer) = createTracer()
+            tracer.processEvent(AgentEvent.AgentStart())
+
+            val toolResult = AgentMessage.ToolResult(
+                toolCallId = "tc-1",
+                toolName = "search",
+                text = "very long result that should not be duplicated",
+            )
+            tracer.processEvent(AgentEvent.MessageRecord(toolResult))
+
+            val sessions = store.listSessions()
+            val events = store.getSessionEvents(sessions[0].id)
+            val messageEvents = events.filter { it.eventType == "message" }
+            assertEquals(1, messageEvents.size)
+            assertEquals("instant", messageEvents[0].phase)
+            assertEquals("tool_result", messageEvents[0].data["type"])
+            assertEquals("tc-1", messageEvents[0].data["tool_call_id"])
+            assertEquals("search", messageEvents[0].data["tool_name"])
+            // Detail should NOT contain the full result text
+            assertNotNull(messageEvents[0].detail)
+            assertTrue(!messageEvents[0].detail!!.contains("very long result"))
         }
 
         @Test
         fun `records assistant message with usage`() = runTest {
             val (store, tracer) = createTracer()
-            tracer.processEvent(AgentEvent.AgentStart)
+            tracer.processEvent(AgentEvent.AgentStart())
 
             val assistant = AgentMessage.Assistant(
                 content = listOf(ContentPart.Text("hi")),
@@ -106,7 +164,7 @@ class AgentEventTracerTest {
         @Test
         fun `records assistant message with tool calls`() = runTest {
             val (store, tracer) = createTracer()
-            tracer.processEvent(AgentEvent.AgentStart)
+            tracer.processEvent(AgentEvent.AgentStart())
 
             val assistant = AgentMessage.Assistant(
                 toolCalls = listOf(
@@ -125,7 +183,7 @@ class AgentEventTracerTest {
         @Test
         fun `records tool execution events`() = runTest {
             val (store, tracer) = createTracer()
-            tracer.processEvent(AgentEvent.AgentStart)
+            tracer.processEvent(AgentEvent.AgentStart())
 
             tracer.processEvent(AgentEvent.ToolExecutionStart("tc-1", "search", """{"q":"test"}"""))
             tracer.processEvent(AgentEvent.ToolExecutionEnd("tc-1", "search", "found", false))
@@ -141,7 +199,7 @@ class AgentEventTracerTest {
         @Test
         fun `records tool error`() = runTest {
             val (store, tracer) = createTracer()
-            tracer.processEvent(AgentEvent.AgentStart)
+            tracer.processEvent(AgentEvent.AgentStart())
 
             tracer.processEvent(AgentEvent.ToolExecutionEnd("tc-1", "fail", "error", true))
 
@@ -157,27 +215,27 @@ class AgentEventTracerTest {
         @Test
         fun `maps all message types correctly`() = runTest {
             val (store, tracer) = createTracer()
-            tracer.processEvent(AgentEvent.AgentStart)
+            tracer.processEvent(AgentEvent.AgentStart())
 
-            val messages = listOf(
-                AgentMessage.User("hi") to "user",
-                AgentMessage.Assistant() to "assistant",
-                AgentMessage.ToolResult("tc-1", "t", text = "r") to "tool_result",
-                AgentMessage.Platform("test", Unit) to "platform",
-            )
-
-            for ((msg, expectedType) in messages) {
-                tracer.processEvent(AgentEvent.MessageStart(msg))
-            }
+            // Instant messages (user, tool_result, platform)
+            tracer.processEvent(AgentEvent.MessageRecord(AgentMessage.User("hi")))
+            tracer.processEvent(AgentEvent.MessageRecord(AgentMessage.ToolResult("tc-1", "t", text = "r")))
+            tracer.processEvent(AgentEvent.MessageRecord(AgentMessage.Platform("test", Unit)))
+            // Streaming message (assistant)
+            tracer.processEvent(AgentEvent.MessageStart(AgentMessage.Assistant()))
 
             val sessions = store.listSessions()
             val events = store.getSessionEvents(sessions[0].id)
-            val messageEvents = events.filter { it.eventType == "message" && it.phase == "start" }
+            val messageEvents = events.filter { it.eventType == "message" }
             assertEquals(4, messageEvents.size)
             assertEquals("user", messageEvents[0].data["type"])
-            assertEquals("assistant", messageEvents[1].data["type"])
-            assertEquals("tool_result", messageEvents[2].data["type"])
-            assertEquals("platform", messageEvents[3].data["type"])
+            assertEquals("instant", messageEvents[0].phase)
+            assertEquals("tool_result", messageEvents[1].data["type"])
+            assertEquals("instant", messageEvents[1].phase)
+            assertEquals("platform", messageEvents[2].data["type"])
+            assertEquals("instant", messageEvents[2].phase)
+            assertEquals("assistant", messageEvents[3].data["type"])
+            assertEquals("start", messageEvents[3].phase)
         }
     }
 
@@ -186,7 +244,7 @@ class AgentEventTracerTest {
         @Test
         fun `tracks turn numbers`() = runTest {
             val (store, tracer) = createTracer()
-            tracer.processEvent(AgentEvent.AgentStart)
+            tracer.processEvent(AgentEvent.AgentStart())
 
             tracer.processEvent(AgentEvent.TurnStart)
             tracer.processEvent(AgentEvent.TurnEnd(AgentMessage.Assistant(), emptyList()))
@@ -218,10 +276,9 @@ class AgentEventTracerTest {
 
             // Cycle 1 — first message.
             val tracer1 = AgentEventTracer(store, eventBus = null, chatId = "chat-1")
-            tracer1.processEvent(AgentEvent.AgentStart)
+            tracer1.processEvent(AgentEvent.AgentStart())
             tracer1.processEvent(AgentEvent.TurnStart)
-            tracer1.processEvent(AgentEvent.MessageStart(AgentMessage.User("hello")))
-            tracer1.processEvent(AgentEvent.MessageEnd(AgentMessage.User("hello")))
+            tracer1.processEvent(AgentEvent.MessageRecord(AgentMessage.User("hello")))
             tracer1.processEvent(AgentEvent.MessageStart(AgentMessage.Assistant()))
             tracer1.processEvent(AgentEvent.MessageEnd(AgentMessage.Assistant()))
             tracer1.processEvent(AgentEvent.TurnEnd(AgentMessage.Assistant(), emptyList()))
@@ -229,10 +286,9 @@ class AgentEventTracerTest {
 
             // Cycle 2 — second message. Fresh tracer, same store.
             val tracer2 = AgentEventTracer(store, eventBus = null, chatId = "chat-1")
-            tracer2.processEvent(AgentEvent.AgentStart)
+            tracer2.processEvent(AgentEvent.AgentStart())
             tracer2.processEvent(AgentEvent.TurnStart)
-            tracer2.processEvent(AgentEvent.MessageStart(AgentMessage.User("again")))
-            tracer2.processEvent(AgentEvent.MessageEnd(AgentMessage.User("again")))
+            tracer2.processEvent(AgentEvent.MessageRecord(AgentMessage.User("again")))
             tracer2.processEvent(AgentEvent.MessageStart(AgentMessage.Assistant()))
             tracer2.processEvent(AgentEvent.MessageEnd(AgentMessage.Assistant()))
             tracer2.processEvent(AgentEvent.TurnEnd(AgentMessage.Assistant(), emptyList()))
@@ -247,7 +303,7 @@ class AgentEventTracerTest {
                 assertTrue(events.any { it.eventType == "agent" && it.phase == "end" })
                 assertTrue(events.any { it.eventType == "turn" && it.phase == "start" })
                 assertTrue(events.any { it.eventType == "turn" && it.phase == "end" })
-                assertTrue(events.filter { it.eventType == "message" }.size >= 4)
+                assertTrue(events.filter { it.eventType == "message" }.size >= 3)
             }
         }
     }

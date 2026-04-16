@@ -124,6 +124,9 @@ fun CodingApp(
                     streamingMessage = null
                     messages += event.message
                 }
+                is AgentEvent.MessageRecord -> {
+                    messages += event.message
+                }
                 is AgentEvent.TurnEnd -> {
                     val msg = event.message
                     if (msg is AgentMessage.Assistant && msg.errorMessage != null) {
