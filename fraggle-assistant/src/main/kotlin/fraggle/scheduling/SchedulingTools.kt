@@ -42,7 +42,9 @@ class ScheduleTaskTool(private val scheduler: TaskScheduler) : AgentToolDef<Sche
     name = "schedule_task",
     description = """Schedule a task for later execution.
 You can schedule one-time tasks or recurring tasks.
-Tasks will execute the specified action when triggered.""",
+Tasks will execute the specified action when triggered.
+Each task name must be unique per chat — duplicate names return the existing task.
+Only call this tool ONCE per task you want to create.""",
     argsSerializer = Args.serializer(),
 ) {
     @Serializable
@@ -254,7 +256,8 @@ class TaskScheduler(
     }
 
     /**
-     * Schedule a new task.
+     * Schedule a new task. Returns an existing active task if one with the same name
+     * already exists for the given chat.
      */
     fun schedule(
         name: String,
@@ -263,6 +266,17 @@ class TaskScheduler(
         delay: Duration,
         repeatInterval: Duration? = null,
     ): ScheduledTask {
+        // Deduplicate: if an active task with the same name exists for this chat, return it
+        val existing = tasks.values.find {
+            it.chatId == chatId &&
+                it.name == name &&
+                (it.status == TaskStatus.PENDING || it.status == TaskStatus.RUNNING)
+        }
+        if (existing != null) {
+            logger.info("Task already exists: ${existing.name} (id=${existing.id}), skipping duplicate")
+            return existing
+        }
+
         val id = "task-${idCounter.incrementAndGet()}"
         val now = Clock.System.now()
 
