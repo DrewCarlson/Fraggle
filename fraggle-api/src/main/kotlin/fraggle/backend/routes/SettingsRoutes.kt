@@ -19,12 +19,12 @@ class SettingsRoutes(
     private val services: FraggleServices,
 ) : RoutingController {
     override fun init(parent: Route) {
-        parent.apply {
-            route("/settings") {
-                get("/config") {
-                    call.respond(services.config.getConfig())
-                }
-            }
+        parent.route("/settings") {
+            get("/config") { getConfig() }
         }
+    }
+
+    suspend fun RoutingContext.getConfig() {
+        call.respond(services.config.getConfig())
     }
 }

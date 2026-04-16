@@ -20,13 +20,15 @@ class StatusRoutes(
     private val services: FraggleServices,
 ) : RoutingController {
     override fun init(parent: Route) {
-        parent.apply {
-            get("/status") {
-                call.respond(services.getStatus())
-            }
-            get("/health") {
-                call.respond(HttpStatusCode.OK, mapOf("status" to "ok"))
-            }
-        }
+        parent.get("/status") { getStatus() }
+        parent.get("/health") { getHealth() }
+    }
+
+    suspend fun RoutingContext.getStatus() {
+        call.respond(services.getStatus())
+    }
+
+    suspend fun RoutingContext.getHealth() {
+        call.respond(HttpStatusCode.OK, mapOf("status" to "ok"))
     }
 }

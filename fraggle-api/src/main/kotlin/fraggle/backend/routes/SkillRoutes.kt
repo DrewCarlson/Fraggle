@@ -29,26 +29,27 @@ class SkillRoutes(
     private val registryLoader: SkillRegistryLoader,
 ) : RoutingController {
     override fun init(parent: Route) {
-        parent.apply {
-            route("/skills") {
-                get {
-                    val registry = registryLoader.load(skillsConfig)
-                    call.respond(registry.skills.map { it.toInfo() })
-                }
-
-                get("/{name}") {
-                    val name = call.parameters["name"]
-                        ?: return@get call.respond(HttpStatusCode.BadRequest, ErrorResponse("Missing skill name"))
-
-                    val registry = registryLoader.load(skillsConfig)
-                    val skill = registry.findByName(name)
-                        ?: return@get call.respond(HttpStatusCode.NotFound, ErrorResponse("Skill not found"))
-
-                    val body = runCatching { skill.filePath.readText() }.getOrElse { "" }
-                    call.respond(skill.toDetail(body))
-                }
-            }
+        parent.route("/skills") {
+            get { listSkills() }
+            get("/{name}") { getSkill() }
         }
+    }
+
+    suspend fun RoutingContext.listSkills() {
+        val registry = registryLoader.load(skillsConfig)
+        call.respond(registry.skills.map { it.toInfo() })
+    }
+
+    suspend fun RoutingContext.getSkill() {
+        val name = call.parameters["name"]
+            ?: return call.respond(HttpStatusCode.BadRequest, ErrorResponse("Missing skill name"))
+
+        val registry = registryLoader.load(skillsConfig)
+        val skill = registry.findByName(name)
+            ?: return call.respond(HttpStatusCode.NotFound, ErrorResponse("Skill not found"))
+
+        val body = runCatching { skill.filePath.readText() }.getOrElse { "" }
+        call.respond(skill.toDetail(body))
     }
 }
 

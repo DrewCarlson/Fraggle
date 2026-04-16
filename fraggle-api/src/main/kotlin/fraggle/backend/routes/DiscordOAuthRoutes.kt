@@ -23,87 +23,74 @@ class DiscordOAuthRoutes(
     private val services: FraggleServices,
 ) : RoutingController {
     override fun init(parent: Route) {
-        parent.apply {
-            route("/discord/oauth") {
-        /**
-         * GET /api/v1/discord/oauth/status
-         * Check if Discord OAuth is configured.
-         */
-        get("/status") {
-            val discordOAuth = services.discordOAuth
-            call.respond(DiscordOAuthStatus(
-                configured = discordOAuth?.isConfigured() ?: false,
-            ))
+        parent.route("/discord/oauth") {
+            get("/status") { getStatus() }
+            get("/authorize") { getAuthorize() }
+            get("/callback") { getCallback() }
+        }
+    }
+
+    suspend fun RoutingContext.getStatus() {
+        val discordOAuth = services.discordOAuth
+        call.respond(DiscordOAuthStatus(
+            configured = discordOAuth?.isConfigured() ?: false,
+        ))
+    }
+
+    suspend fun RoutingContext.getAuthorize() {
+        val discordOAuth = services.discordOAuth
+            ?: return call.respond(
+                HttpStatusCode.ServiceUnavailable,
+                ErrorResponse("Discord OAuth not configured")
+            )
+
+        val state = call.request.queryParameters["state"]
+        val url = discordOAuth.getAuthorizationUrl(state)
+            ?: return call.respond(
+                HttpStatusCode.InternalServerError,
+                ErrorResponse("Failed to generate authorization URL")
+            )
+
+        call.respond(DiscordOAuthAuthorizeResponse(url))
+    }
+
+    suspend fun RoutingContext.getCallback() {
+        val discordOAuth = services.discordOAuth
+            ?: return call.respond(
+                HttpStatusCode.ServiceUnavailable,
+                ErrorResponse("Discord OAuth not configured")
+            )
+
+        val code = call.request.queryParameters["code"]
+            ?: return call.respond(
+                HttpStatusCode.BadRequest,
+                ErrorResponse("Missing authorization code")
+            )
+
+        val state = call.request.queryParameters["state"]
+
+        val error = call.request.queryParameters["error"]
+        if (error != null) {
+            val errorDescription = call.request.queryParameters["error_description"]
+                ?: "Authorization denied"
+            return call.respond(
+                HttpStatusCode.BadRequest,
+                ErrorResponse("Discord authorization failed: $errorDescription")
+            )
         }
 
-        /**
-         * GET /api/v1/discord/oauth/authorize
-         * Get the OAuth authorization URL for user installation.
-         */
-        get("/authorize") {
-            val discordOAuth = services.discordOAuth
-                ?: return@get call.respond(
-                    HttpStatusCode.ServiceUnavailable,
-                    ErrorResponse("Discord OAuth not configured")
+        when (val result = discordOAuth.handleCallback(code, state)) {
+            is OAuthCallbackResult.Success -> {
+                call.respondText(
+                    contentType = ContentType.Text.Html,
+                    text = buildSuccessPage(result.username)
                 )
-
-            val state = call.request.queryParameters["state"]
-            val url = discordOAuth.getAuthorizationUrl(state)
-                ?: return@get call.respond(
+            }
+            is OAuthCallbackResult.Error -> {
+                call.respond(
                     HttpStatusCode.InternalServerError,
-                    ErrorResponse("Failed to generate authorization URL")
+                    ErrorResponse(result.message)
                 )
-
-            call.respond(DiscordOAuthAuthorizeResponse(url))
-        }
-
-        /**
-         * GET /api/v1/discord/oauth/callback
-         * Handle the OAuth callback from Discord.
-         * This endpoint is typically configured as the redirect URI in Discord.
-         */
-        get("/callback") {
-            val discordOAuth = services.discordOAuth
-                ?: return@get call.respond(
-                    HttpStatusCode.ServiceUnavailable,
-                    ErrorResponse("Discord OAuth not configured")
-                )
-
-            val code = call.request.queryParameters["code"]
-                ?: return@get call.respond(
-                    HttpStatusCode.BadRequest,
-                    ErrorResponse("Missing authorization code")
-                )
-
-            val state = call.request.queryParameters["state"]
-
-            // Check for error from Discord
-            val error = call.request.queryParameters["error"]
-            if (error != null) {
-                val errorDescription = call.request.queryParameters["error_description"]
-                    ?: "Authorization denied"
-                return@get call.respond(
-                    HttpStatusCode.BadRequest,
-                    ErrorResponse("Discord authorization failed: $errorDescription")
-                )
-            }
-
-            when (val result = discordOAuth.handleCallback(code, state)) {
-                is OAuthCallbackResult.Success -> {
-                    // Return a success page that can close itself or redirect
-                    call.respondText(
-                        contentType = ContentType.Text.Html,
-                        text = buildSuccessPage(result.username)
-                    )
-                }
-                is OAuthCallbackResult.Error -> {
-                    call.respond(
-                        HttpStatusCode.InternalServerError,
-                        ErrorResponse(result.message)
-                    )
-                }
-            }
-        }
             }
         }
     }

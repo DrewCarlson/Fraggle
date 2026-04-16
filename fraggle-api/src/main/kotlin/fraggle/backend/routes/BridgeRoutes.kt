@@ -23,88 +23,75 @@ class BridgeRoutes(
     private val services: FraggleServices,
 ) : RoutingController {
     override fun init(parent: Route) {
-        parent.apply {
-            route("/bridges") {
-        /**
-         * GET /api/v1/bridges
-         * List all configured bridges and their status.
-         */
-        get {
-            val bridges = services.bridges.registeredBridges().mapNotNull { name ->
-                val bridge = services.bridges.getBridge(name) ?: return@mapNotNull null
-                val initialized = services.bridgeInit.isInitialized(name)
-                BridgeInfo(
-                    name = name,
-                    platform = bridge.platform.name,
-                    connected = bridge.isConnected(),
-                    initialized = initialized,
-                    persistentActivation = bridge.platform.persistentActivation,
-                )
-            }
-            call.respond(bridges)
+        parent.route("/bridges") {
+            get { listBridges() }
+            get("/{name}") { getBridge() }
+            post("/{name}/connect") { connectBridge() }
+            post("/{name}/disconnect") { disconnectBridge() }
         }
+    }
 
-        /**
-         * GET /api/v1/bridges/{name}
-         * Get detailed status for a specific bridge.
-         */
-        get("/{name}") {
-            val name = call.parameters["name"]
-                ?: return@get call.respond(HttpStatusCode.BadRequest, ErrorResponse("Missing bridge name"))
-
-            val bridge = services.bridges.getBridge(name)
-                ?: return@get call.respond(HttpStatusCode.NotFound, ErrorResponse("Bridge not found"))
-
+    suspend fun RoutingContext.listBridges() {
+        val bridges = services.bridges.registeredBridges().mapNotNull { name ->
+            val bridge = services.bridges.getBridge(name) ?: return@mapNotNull null
             val initialized = services.bridgeInit.isInitialized(name)
-            val info = BridgeDetail(
+            BridgeInfo(
                 name = name,
                 platform = bridge.platform.name,
                 connected = bridge.isConnected(),
                 initialized = initialized,
-                supportsAttachments = bridge.platform.supportsAttachments,
-                supportsInlineImages = bridge.platform.supportsInlineImages,
+                persistentActivation = bridge.platform.persistentActivation,
             )
-            call.respond(info)
         }
+        call.respond(bridges)
+    }
 
-        /**
-         * POST /api/v1/bridges/{name}/connect
-         * Trigger a bridge connection attempt.
-         */
-        post("/{name}/connect") {
-            val name = call.parameters["name"]
-                ?: return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse("Missing bridge name"))
+    suspend fun RoutingContext.getBridge() {
+        val name = call.parameters["name"]
+            ?: return call.respond(HttpStatusCode.BadRequest, ErrorResponse("Missing bridge name"))
 
-            services.bridges.getBridge(name)
-                ?: return@post call.respond(HttpStatusCode.NotFound, ErrorResponse("Bridge not found"))
+        val bridge = services.bridges.getBridge(name)
+            ?: return call.respond(HttpStatusCode.NotFound, ErrorResponse("Bridge not found"))
 
-            try {
-                services.bridges.connect(name)
-                call.respond(HttpStatusCode.OK, mapOf("connected" to true))
-            } catch (e: Exception) {
-                call.respond(HttpStatusCode.InternalServerError, ErrorResponse("Connection failed: ${e.message}"))
-            }
+        val initialized = services.bridgeInit.isInitialized(name)
+        val info = BridgeDetail(
+            name = name,
+            platform = bridge.platform.name,
+            connected = bridge.isConnected(),
+            initialized = initialized,
+            supportsAttachments = bridge.platform.supportsAttachments,
+            supportsInlineImages = bridge.platform.supportsInlineImages,
+        )
+        call.respond(info)
+    }
+
+    suspend fun RoutingContext.connectBridge() {
+        val name = call.parameters["name"]
+            ?: return call.respond(HttpStatusCode.BadRequest, ErrorResponse("Missing bridge name"))
+
+        services.bridges.getBridge(name)
+            ?: return call.respond(HttpStatusCode.NotFound, ErrorResponse("Bridge not found"))
+
+        try {
+            services.bridges.connect(name)
+            call.respond(HttpStatusCode.OK, mapOf("connected" to true))
+        } catch (e: Exception) {
+            call.respond(HttpStatusCode.InternalServerError, ErrorResponse("Connection failed: ${e.message}"))
         }
+    }
 
-        /**
-         * POST /api/v1/bridges/{name}/disconnect
-         * Disconnect a bridge.
-         */
-        post("/{name}/disconnect") {
-            val name = call.parameters["name"]
-                ?: return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse("Missing bridge name"))
+    suspend fun RoutingContext.disconnectBridge() {
+        val name = call.parameters["name"]
+            ?: return call.respond(HttpStatusCode.BadRequest, ErrorResponse("Missing bridge name"))
 
-            services.bridges.getBridge(name)
-                ?: return@post call.respond(HttpStatusCode.NotFound, ErrorResponse("Bridge not found"))
+        services.bridges.getBridge(name)
+            ?: return call.respond(HttpStatusCode.NotFound, ErrorResponse("Bridge not found"))
 
-            try {
-                services.bridges.disconnect(name)
-                call.respond(HttpStatusCode.OK, mapOf("disconnected" to true))
-            } catch (e: Exception) {
-                call.respond(HttpStatusCode.InternalServerError, ErrorResponse("Disconnect failed: ${e.message}"))
-            }
-        }
-            }
+        try {
+            services.bridges.disconnect(name)
+            call.respond(HttpStatusCode.OK, mapOf("disconnected" to true))
+        } catch (e: Exception) {
+            call.respond(HttpStatusCode.InternalServerError, ErrorResponse("Disconnect failed: ${e.message}"))
         }
     }
 }

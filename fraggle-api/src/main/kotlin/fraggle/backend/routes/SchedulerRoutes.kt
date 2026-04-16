@@ -21,33 +21,35 @@ class SchedulerRoutes(
     private val services: FraggleServices,
 ) : RoutingController {
     override fun init(parent: Route) {
-        parent.apply {
-            route("/scheduler") {
-                get("/tasks") {
-                    call.respond(services.scheduler.getTasks())
-                }
+        parent.route("/scheduler") {
+            get("/tasks") { listTasks() }
+            get("/tasks/{id}") { getTask() }
+            delete("/tasks/{id}") { cancelTask() }
+        }
+    }
 
-                get("/tasks/{id}") {
-                    val id = call.parameters["id"]
-                        ?: return@get call.respond(HttpStatusCode.BadRequest, ErrorResponse("Missing task ID"))
+    suspend fun RoutingContext.listTasks() {
+        call.respond(services.scheduler.getTasks())
+    }
 
-                    val task = services.scheduler.getTask(id)
-                        ?: return@get call.respond(HttpStatusCode.NotFound, ErrorResponse("Task not found"))
+    suspend fun RoutingContext.getTask() {
+        val id = call.parameters["id"]
+            ?: return call.respond(HttpStatusCode.BadRequest, ErrorResponse("Missing task ID"))
 
-                    call.respond(task)
-                }
+        val task = services.scheduler.getTask(id)
+            ?: return call.respond(HttpStatusCode.NotFound, ErrorResponse("Task not found"))
 
-                delete("/tasks/{id}") {
-                    val id = call.parameters["id"]
-                        ?: return@delete call.respond(HttpStatusCode.BadRequest, ErrorResponse("Missing task ID"))
+        call.respond(task)
+    }
 
-                    if (services.scheduler.cancelTask(id)) {
-                        call.respond(HttpStatusCode.OK, mapOf("cancelled" to true))
-                    } else {
-                        call.respond(HttpStatusCode.NotFound, ErrorResponse("Task not found"))
-                    }
-                }
-            }
+    suspend fun RoutingContext.cancelTask() {
+        val id = call.parameters["id"]
+            ?: return call.respond(HttpStatusCode.BadRequest, ErrorResponse("Missing task ID"))
+
+        if (services.scheduler.cancelTask(id)) {
+            call.respond(HttpStatusCode.OK, mapOf("cancelled" to true))
+        } else {
+            call.respond(HttpStatusCode.NotFound, ErrorResponse("Task not found"))
         }
     }
 }

@@ -29,6 +29,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
+import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 
@@ -48,145 +49,144 @@ class SkillInstallRoutes(
     @param:DefaultHttpClient private val httpClient: HttpClient,
 ) : RoutingController {
     override fun init(parent: Route) {
-        parent.apply {
-            route("/skills") {
-                post("/preview") {
-                    val request = call.receive<SkillPreviewRequest>()
-                    val source = request.source.trim()
-                    if (source.isEmpty()) {
-                        return@post call.respond(
-                            HttpStatusCode.BadRequest,
-                            ErrorResponse("Source must not be empty"),
-                        )
-                    }
+        parent.route("/skills") {
+            post("/preview") { preview() }
+            post("/install") { install() }
+        }
+    }
 
-                    val targetDir = resolveTarget(request.scope)
-                        ?: return@post call.respond(
-                            HttpStatusCode.BadRequest,
-                            ErrorResponse("Invalid scope: ${request.scope}. Use 'global' or 'project'."),
-                        )
+    suspend fun RoutingContext.preview() {
+        val request = call.receive<SkillPreviewRequest>()
+        val source = request.source.trim()
+        if (source.isEmpty()) {
+            return call.respond(
+                HttpStatusCode.BadRequest,
+                ErrorResponse("Source must not be empty"),
+            )
+        }
 
-                    val spec = SkillSourceSpec.parse(source)
-                        ?: return@post call.respond(
-                            HttpStatusCode.BadRequest,
-                            ErrorResponse("Could not parse source: $source"),
-                        )
+        val targetDir = resolveTarget(request.scope)
+            ?: return call.respond(
+                HttpStatusCode.BadRequest,
+                ErrorResponse("Invalid scope: ${request.scope}. Use 'global' or 'project'."),
+            )
 
-                    val resolver = SkillSourceResolver(httpClient)
-                    val staged = try {
-                        resolver.resolve(spec)
-                    } catch (e: Exception) {
-                        return@post call.respond(
-                            HttpStatusCode.UnprocessableEntity,
-                            ErrorResponse("Failed to resolve source: ${e.message}"),
-                        )
-                    }
+        val spec = SkillSourceSpec.parse(source)
+            ?: return call.respond(
+                HttpStatusCode.BadRequest,
+                ErrorResponse("Could not parse source: $source"),
+            )
 
-                    try {
-                        val loader = SkillLoader()
-                        val loadResult = when {
-                            staged.path.toFile().isFile &&
-                                staged.path.fileName.toString() == SkillLoader.SKILL_FILE_NAME ->
-                                loader.loadFromFile(staged.path, SkillSource.EXPLICIT)
-                            staged.path.toFile().isDirectory ->
-                                loader.loadFromDirectory(staged.path, SkillSource.EXPLICIT)
-                            else -> {
-                                return@post call.respond(
-                                    HttpStatusCode.UnprocessableEntity,
-                                    ErrorResponse("Source is neither a SKILL.md nor a directory"),
-                                )
-                            }
-                        }
+        val resolver = SkillSourceResolver(httpClient)
+        val staged = try {
+            resolver.resolve(spec)
+        } catch (e: Exception) {
+            return call.respond(
+                HttpStatusCode.UnprocessableEntity,
+                ErrorResponse("Failed to resolve source: ${e.message}"),
+            )
+        }
 
-                        val entries = loadResult.skills.map { skill ->
-                            SkillPreviewEntry(
-                                name = skill.name,
-                                description = skill.description,
-                                license = skill.frontmatter.license,
-                                compatibility = skill.frontmatter.compatibility,
-                                allowedTools = skill.frontmatter.allowedTools,
-                                hasPythonDeps = skill.hasPythonDeps,
-                                requiredEnv = skill.requiredEnv,
-                            )
-                        }
-
-                        val diagnosticMessages = loadResult.diagnostics.map { it.toString() }
-
-                        // Look up any prior ignore list for this resolved source
-                        // label so the UI can restore the user's choices.
-                        val manifest = SkillsManifest.read(SkillInstaller.manifestPath(targetDir))
-                        val previouslyIgnored = manifest.ignoredFor(staged.label).toList().sorted()
-
-                        call.respond(
-                            SkillPreviewResponse(
-                                sourceLabel = staged.label,
-                                skills = entries,
-                                diagnostics = diagnosticMessages,
-                                previouslyIgnored = previouslyIgnored,
-                            ),
-                        )
-                    } finally {
-                        staged.cleanup()
-                    }
-                }
-
-                post("/install") {
-                    val request = call.receive<SkillInstallRequest>()
-                    val source = request.source.trim()
-                    if (source.isEmpty()) {
-                        return@post call.respond(
-                            HttpStatusCode.BadRequest,
-                            ErrorResponse("Source must not be empty"),
-                        )
-                    }
-
-                    val targetDir = resolveTarget(request.scope)
-                        ?: return@post call.respond(
-                            HttpStatusCode.BadRequest,
-                            ErrorResponse("Invalid scope: ${request.scope}. Use 'global' or 'project'."),
-                        )
-
-                    val spec = SkillSourceSpec.parse(source)
-                        ?: return@post call.respond(
-                            HttpStatusCode.BadRequest,
-                            ErrorResponse("Could not parse source: $source"),
-                        )
-
-                    val resolver = SkillSourceResolver(httpClient)
-                    val staged = try {
-                        resolver.resolve(spec)
-                    } catch (e: Exception) {
-                        return@post call.respond(
-                            HttpStatusCode.UnprocessableEntity,
-                            ErrorResponse("Failed to resolve source: ${e.message}"),
-                        )
-                    }
-
-                    try {
-                        val installer = SkillInstaller(targetDir = targetDir, force = false)
-                        val result = installer.install(
-                            source = staged.path,
-                            sourceLabel = staged.label,
-                            ignored = request.ignored.toSet(),
-                        )
-
-                        call.respond(
-                            SkillInstallResponse(
-                                installed = result.installed.map { inst ->
-                                    SkillInstalledEntry(
-                                        name = inst.name,
-                                        destination = inst.destination.toString(),
-                                    )
-                                },
-                                skipped = result.skipped.map { "${it.name}: ${it.reason}" },
-                                diagnostics = result.diagnostics.map { it.toString() },
-                            ),
-                        )
-                    } finally {
-                        staged.cleanup()
-                    }
+        try {
+            val loader = SkillLoader()
+            val loadResult = when {
+                staged.path.toFile().isFile &&
+                    staged.path.fileName.toString() == SkillLoader.SKILL_FILE_NAME ->
+                    loader.loadFromFile(staged.path, SkillSource.EXPLICIT)
+                staged.path.toFile().isDirectory ->
+                    loader.loadFromDirectory(staged.path, SkillSource.EXPLICIT)
+                else -> {
+                    return call.respond(
+                        HttpStatusCode.UnprocessableEntity,
+                        ErrorResponse("Source is neither a SKILL.md nor a directory"),
+                    )
                 }
             }
+
+            val entries = loadResult.skills.map { skill ->
+                SkillPreviewEntry(
+                    name = skill.name,
+                    description = skill.description,
+                    license = skill.frontmatter.license,
+                    compatibility = skill.frontmatter.compatibility,
+                    allowedTools = skill.frontmatter.allowedTools,
+                    hasPythonDeps = skill.hasPythonDeps,
+                    requiredEnv = skill.requiredEnv,
+                )
+            }
+
+            val diagnosticMessages = loadResult.diagnostics.map { it.toString() }
+
+            val manifest = SkillsManifest.read(SkillInstaller.manifestPath(targetDir))
+            val previouslyIgnored = manifest.ignoredFor(staged.label).toList().sorted()
+
+            call.respond(
+                SkillPreviewResponse(
+                    sourceLabel = staged.label,
+                    skills = entries,
+                    diagnostics = diagnosticMessages,
+                    previouslyIgnored = previouslyIgnored,
+                ),
+            )
+        } finally {
+            staged.cleanup()
+        }
+    }
+
+    suspend fun RoutingContext.install() {
+        val request = call.receive<SkillInstallRequest>()
+        val source = request.source.trim()
+        if (source.isEmpty()) {
+            return call.respond(
+                HttpStatusCode.BadRequest,
+                ErrorResponse("Source must not be empty"),
+            )
+        }
+
+        val targetDir = resolveTarget(request.scope)
+            ?: return call.respond(
+                HttpStatusCode.BadRequest,
+                ErrorResponse("Invalid scope: ${request.scope}. Use 'global' or 'project'."),
+            )
+
+        val spec = SkillSourceSpec.parse(source)
+            ?: return call.respond(
+                HttpStatusCode.BadRequest,
+                ErrorResponse("Could not parse source: $source"),
+            )
+
+        val resolver = SkillSourceResolver(httpClient)
+        val staged = try {
+            resolver.resolve(spec)
+        } catch (e: Exception) {
+            return call.respond(
+                HttpStatusCode.UnprocessableEntity,
+                ErrorResponse("Failed to resolve source: ${e.message}"),
+            )
+        }
+
+        try {
+            val installer = SkillInstaller(targetDir = targetDir, force = false)
+            val result = installer.install(
+                source = staged.path,
+                sourceLabel = staged.label,
+                ignored = request.ignored.toSet(),
+            )
+
+            call.respond(
+                SkillInstallResponse(
+                    installed = result.installed.map { inst ->
+                        SkillInstalledEntry(
+                            name = inst.name,
+                            destination = inst.destination.toString(),
+                        )
+                    },
+                    skipped = result.skipped.map { "${it.name}: ${it.reason}" },
+                    diagnostics = result.diagnostics.map { it.toString() },
+                ),
+            )
+        } finally {
+            staged.cleanup()
         }
     }
 

@@ -29,24 +29,25 @@ class ToolRoutes(
     private val services: FraggleServices,
 ) : RoutingController {
     override fun init(parent: Route) {
-        parent.apply {
-            route("/tools") {
-                get {
-                    val tools = services.toolRegistry.tools.map { it.toToolInfo() }
-                    call.respond(tools)
-                }
-
-                get("/{name}") {
-                    val name = call.parameters["name"]
-                        ?: return@get call.respond(HttpStatusCode.BadRequest, ErrorResponse("Missing tool name"))
-
-                    val tool = services.toolRegistry.findTool(name)
-                        ?: return@get call.respond(HttpStatusCode.NotFound, ErrorResponse("Tool not found"))
-
-                    call.respond(tool.toDetail())
-                }
-            }
+        parent.route("/tools") {
+            get { listTools() }
+            get("/{name}") { getTool() }
         }
+    }
+
+    suspend fun RoutingContext.listTools() {
+        val tools = services.toolRegistry.tools.map { it.toToolInfo() }
+        call.respond(tools)
+    }
+
+    suspend fun RoutingContext.getTool() {
+        val name = call.parameters["name"]
+            ?: return call.respond(HttpStatusCode.BadRequest, ErrorResponse("Missing tool name"))
+
+        val tool = services.toolRegistry.findTool(name)
+            ?: return call.respond(HttpStatusCode.NotFound, ErrorResponse("Tool not found"))
+
+        call.respond(tool.toDetail())
     }
 }
 

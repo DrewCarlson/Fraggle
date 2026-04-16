@@ -18,24 +18,25 @@ class TracingRoutes(
     private val services: FraggleServices,
 ) : RoutingController {
     override fun init(parent: Route) {
-        parent.apply {
-            route("/tracing") {
-                get("/sessions") {
-                    val limit = call.parameters["limit"]?.toIntOrNull() ?: 50
-                    val offset = call.parameters["offset"]?.toIntOrNull() ?: 0
-                    call.respond(services.tracing.listSessions(limit, offset))
-                }
-
-                get("/sessions/{id}") {
-                    val id = call.parameters["id"]
-                        ?: return@get call.respond(HttpStatusCode.BadRequest, ErrorResponse("Missing session ID"))
-
-                    val detail = services.tracing.getSession(id)
-                        ?: return@get call.respond(HttpStatusCode.NotFound, ErrorResponse("Session not found"))
-
-                    call.respond(detail)
-                }
-            }
+        parent.route("/tracing") {
+            get("/sessions") { listSessions() }
+            get("/sessions/{id}") { getSession() }
         }
+    }
+
+    suspend fun RoutingContext.listSessions() {
+        val limit = call.parameters["limit"]?.toIntOrNull() ?: 50
+        val offset = call.parameters["offset"]?.toIntOrNull() ?: 0
+        call.respond(services.tracing.listSessions(limit, offset))
+    }
+
+    suspend fun RoutingContext.getSession() {
+        val id = call.parameters["id"]
+            ?: return call.respond(HttpStatusCode.BadRequest, ErrorResponse("Missing session ID"))
+
+        val detail = services.tracing.getSession(id)
+            ?: return call.respond(HttpStatusCode.NotFound, ErrorResponse("Session not found"))
+
+        call.respond(detail)
     }
 }
