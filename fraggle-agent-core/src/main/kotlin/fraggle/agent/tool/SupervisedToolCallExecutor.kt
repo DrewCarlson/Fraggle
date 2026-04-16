@@ -11,12 +11,8 @@ import kotlinx.serialization.json.Json
 
 /**
  * Tool executor that integrates supervision (permission checks) and optional
- * remote forwarding into the loop.
- *
- * Supervision moves from ManagedTool into this executor, matching the plan's
- * design where permission checking is a loop concern. When [remoteClient] is
- * non-null, approved tool calls are forwarded to the remote worker instead of
- * being executed locally (LOCAL vs REMOTE executor modes).
+ * remote forwarding into the loop. When [remoteClient] is non-null, approved
+ * tool calls are forwarded to the remote worker instead of being executed locally.
  */
 class SupervisedToolCallExecutor(
     private val registry: FraggleToolRegistry,

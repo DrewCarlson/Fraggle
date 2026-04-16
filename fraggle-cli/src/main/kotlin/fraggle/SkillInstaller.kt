@@ -126,22 +126,9 @@ class SkillInstaller(
         val installed = mutableListOf<Installed>()
         val skipped = mutableListOf<Skipped>()
 
-        // Dedupe same-name skills that a single source surfaces more than once.
-        //
-        // Some repos ship the same SKILL.md under several layouts for different
-        // agent conventions — e.g. a root copy, a `plugins/<agent>/skills/`
-        // copy, and a canonical `skills/` copy (JuliusBrussee/caveman does all
-        // three). Without this, the walker installs one copy and then emits a
-        // spurious "destination already exists" skipped entry for every other
-        // copy of the same name from the same install batch.
-        //
-        // Priority (lowest wins, so lower number beats higher number):
-        //   1. path contains a `/skills/` segment  (canonical agentskills layout)
-        //   2. everything else
-        // Ties break on shortest relative path to keep root-level dirs above
-        // nested plugin/ wrappers, and finally on lexicographic order for full
-        // determinism. `loadResult.skills` order becomes irrelevant — the
-        // selected copy is a pure function of the on-disk paths.
+        // Dedupe same-name skills — repos may ship the same SKILL.md under
+        // multiple layouts. Prefer paths containing `/skills/`, then shortest
+        // relative path, then lexicographic order.
         val relativeRoot = if (source.isDirectory()) source else source.parent ?: source
         val uniqueSkills = loadResult.skills
             .groupBy { it.name }
@@ -255,9 +242,7 @@ class SkillInstaller(
                         target.parent?.createDirectories()
                         Files.copy(path, target, StandardCopyOption.REPLACE_EXISTING)
                     }
-                    // symlinks and other entries are skipped silently — skills
-                    // should be plain content, and following symlinks during
-                    // copy is a footgun.
+                    // Symlinks and other entries skipped.
                 }
             }
         }
@@ -265,7 +250,7 @@ class SkillInstaller(
 
     private fun deleteRecursively(path: Path) {
         if (!path.exists()) return
-        // Handle the symlink case first — we don't want to walk into the target.
+        // Handle symlinks before walking.
         val attrs = try {
             Files.readAttributes(path, BasicFileAttributes::class.java, java.nio.file.LinkOption.NOFOLLOW_LINKS)
         } catch (_: Exception) {
@@ -325,8 +310,7 @@ data class SkillsManifest(
             return try {
                 JSON.decodeFromString<SkillsManifest>(path.readText())
             } catch (e: Exception) {
-                // Never fail an install because the manifest is corrupt —
-                // start fresh and log via the caller if needed.
+                // Corrupt manifest — start fresh.
                 SkillsManifest()
             }
         }

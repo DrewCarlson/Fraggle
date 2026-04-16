@@ -313,11 +313,7 @@ class CodeCommand : CliktCommand(name = "code") {
                 header = header,
                 supervisionLabel = supervisionLabel,
                 onExitRequest = {
-                    // Blunt but reliable: Mosaic offers no composition-level
-                    // exit handle, and throwing CancellationException from the
-                    // key dispatcher gets swallowed before it reaches
-                    // runMosaicBlocking. The shutdown hook above releases the
-                    // HTTP client.
+                    // Mosaic has no composition-level exit; shutdown hook above handles cleanup.
                     exitProcess(0)
                 },
                 permissionHandler = permissionHandler,
@@ -357,12 +353,7 @@ class CodeCommand : CliktCommand(name = "code") {
             error("Choose at most one of: --continue, --resume, --session, --fork, --no-session")
         }
 
-        // --no-session: create a detached session file and never persist.
-        // MVP implementation: we still create a session file but mark it
-        // ephemeral by creating it under a temp-ish subdir. A more complete
-        // implementation would use an in-memory Session backend.
-        // For now: just start a fresh session. The user opted in to "don't
-        // resume anything;" not persisting is future work.
+        // --no-session: start a fresh session without resuming previous state.
         if (noSession) {
             return manager.createNew(model = model)
         }

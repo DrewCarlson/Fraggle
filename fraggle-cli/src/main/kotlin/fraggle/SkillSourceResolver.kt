@@ -196,11 +196,8 @@ sealed class SkillSourceSpec {
             val beforeHash = if (hashIdx >= 0) body.substring(0, hashIdx) else body
             val subpath = if (hashIdx >= 0) body.substring(hashIdx + 1).ifEmpty { null } else null
 
-            // Walk `@` positions from the right and pick the first split whose
-            // left-hand side actually looks like a valid git URL. This handles
-            // both `git@host:path` ssh shorthand and `https://user:tok@host/...`
-            // auth URLs where the naive "last @" approach would mis-bucket the
-            // embedded `@` as a ref delimiter.
+            // Walk `@` positions from right to find the ref delimiter, skipping
+            // `@` characters embedded in git SSH shorthand or auth URLs.
             var searchTo = beforeHash.length
             while (true) {
                 val atIdx = beforeHash.lastIndexOf('@', searchTo - 1)
@@ -382,7 +379,7 @@ class SkillSourceResolver(
                 }
                 val out = target.resolve(safeName).normalize()
                 if (!out.startsWith(target)) {
-                    // Zip slip — skip anything that would escape the target dir.
+                    // Zip slip protection.
                     zip.closeEntry()
                     continue
                 }

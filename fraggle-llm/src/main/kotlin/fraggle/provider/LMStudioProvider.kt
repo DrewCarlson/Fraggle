@@ -192,12 +192,9 @@ class LMStudioProvider(
         }
     }
 
-    // ── OpenAI-Compatible: Text Completions (Legacy) ────────────────────
+    // ── OpenAI-Compatible: Text Completions ──────────────────────────────
 
-    /**
-     * Legacy text completion via OpenAI-compatible endpoint.
-     * Best used with base (non-chat-tuned) models.
-     */
+    /** Text completion via OpenAI-compatible endpoint. Best used with base (non-chat-tuned) models. */
     suspend fun complete(request: CompletionRequest): CompletionResponse {
         val apiRequest = OpenAICompletionRequest(
             model = request.model.ifEmpty { defaultModel ?: error("No model specified") },

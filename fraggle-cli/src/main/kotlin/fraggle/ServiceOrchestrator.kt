@@ -215,12 +215,11 @@ class ServiceOrchestrator(
         // Process with agent
         val result = agent.process(conversation, message)
 
-        // Update conversation history (using potentially compressed conversation)
+        // Update conversation history
         val responseText = result.response.contentOrError()
         val updatedMessages = result.conversation.messages +
             ConversationMessage(ConversationRole.USER, text) +
-            // Don't persist LLM errors as assistant messages — they pollute the
-            // context and can cause cascading failures on subsequent requests.
+            // Don't persist LLM errors as assistant messages.
             if (result.response is AgentResponse.Success) {
                 listOf(ConversationMessage(ConversationRole.ASSISTANT, responseText))
             } else {
@@ -368,8 +367,7 @@ class ServiceOrchestrator(
             val responseText = response.contentOrError()
             val toolAttachments = response.collectAttachments()
 
-            // Determine if platform supports multiple images (Discord = 10, Signal = 1)
-            // TODO: Derive this from bridge implementation
+            // TODO: Derive max image count from bridge implementation
             val maxImages = when (platform.name) {
                 "Discord" -> 10
                 else -> 1
@@ -472,9 +470,8 @@ class ServiceOrchestrator(
                 processingDuration = duration,
             ))
 
-            // Update conversation (using potentially compressed conversation).
-            // Don't persist LLM errors as assistant messages — they pollute the
-            // context and can cause cascading failures on subsequent requests.
+            // Update conversation history.
+            // Don't persist LLM errors as assistant messages.
             val updatedMessages = processResult.conversation.messages +
                 ConversationMessage(ConversationRole.USER, messageText) +
                 if (response is AgentResponse.Success) {

@@ -183,9 +183,7 @@ class ChatCommand : CliktCommand(name = "chat") {
 
             if (input.isBlank()) continue
 
-            // Dispatch slash commands (/skill:name, /approve, /deny, …) the same
-            // way the bridged message loop does — otherwise `/skill:foo` would
-            // flow to the LLM as literal text.
+            // Dispatch slash commands before they reach the LLM.
             var effectiveInput = input
             if (chatCommandProcessor.isCommand(input)) {
                 when (val result = chatCommandProcessor.handleCommand(chatId, input)) {

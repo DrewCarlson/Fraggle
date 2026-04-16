@@ -63,16 +63,7 @@ class FraggleAgent(
 
     private val memoryExtractionJson = Json { ignoreUnknownKeys = true }
 
-    /**
-     * Shared compactor instance — reuses the agent-core compaction layer so
-     * the messenger assistant and the coding agent both exercise the same
-     * summarization algorithm. The assistant uses a message-count-based
-     * policy to preserve its historical behaviour of compacting whenever
-     * the stored conversation exceeds [AgentConfig.maxHistoryMessages].
-     *
-     * The keep-recent count is 2/3 of the max history, matching what
-     * `compressIfNeeded` used to hardcode.
-     */
+    /** Compacts when stored conversation exceeds [AgentConfig.maxHistoryMessages], keeping 2/3 recent. */
     private val compactor: LlmCompactor by lazy {
         LlmCompactor(
             llmBridge = llmBridge,
@@ -188,27 +179,14 @@ class FraggleAgent(
     /**
      * Compact conversation history if it exceeds the configured limit.
      *
-     * Delegates to the shared [LlmCompactor] in agent-core so the messenger
-     * assistant and the coding agent exercise the same summarization pipeline.
-     * The assistant stores the summary on [Conversation.historySummary] and
-     * injects it into the system prompt (see [buildBaseSystemPrompt]); the
-     * agent loop doesn't see the old history at all.
-     *
-     * Behaviour preserved from the previous in-class implementation:
-     *  - Trigger: `conversation.messages.size > config.maxHistoryMessages`
-     *    (policy = [MessageCountCompactionPolicy]).
-     *  - Keep-recent: 2/3 of the max.
-     *  - Cumulative summaries via [Conversation.historySummary] passed as
-     *    [LlmCompactor.compact]'s `previousSummary`.
-     *  - Compaction failures are logged and the original conversation is
-     *    returned unchanged so a turn never aborts because the summarizer
-     *    hiccupped.
+     * Stores the summary on [Conversation.historySummary] and injects it into the
+     * system prompt (see [buildBaseSystemPrompt]). Compaction failures are logged
+     * and the original conversation is returned unchanged.
      */
     private suspend fun compressIfNeeded(conversation: Conversation): Conversation {
         if (conversation.messages.size <= config.maxHistoryMessages) return conversation
 
-        // Stored conversation messages are simple role+text, so the round-trip
-        // through AgentMessage is lossless. No tool calls, no attachments.
+        // Convert simple role+text conversation messages to AgentMessage.
         val asAgentMessages: List<AgentMessage> = conversation.messages.map { cm ->
             if (cm.role == ConversationRole.USER) {
                 AgentMessage.User(cm.content)
@@ -531,9 +509,8 @@ class FraggleAgent(
     /**
      * Phase 2: Use LLM to reconcile existing facts with newly extracted facts.
      *
-     * The LLM merges related facts (e.g. two hobby lists become one), updates superseded facts
-     * (e.g. new job replaces old), preserves historical context (e.g. "previously worked at"),
-     * and removes duplicates — producing a single clean fact list with status annotations.
+     * Merges related facts, updates superseded facts, preserves historical context,
+     * and removes duplicates — producing a clean fact list with status annotations.
      */
     private suspend fun reconcileFacts(
         existingFacts: List<String>,
