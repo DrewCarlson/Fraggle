@@ -45,7 +45,7 @@ import kotlin.system.exitProcess
  */
 class SkillsCommand : CliktCommand(name = "skills") {
     override fun help(context: com.github.ajalt.clikt.core.Context) =
-        "Manage agent skills (list, validate, install, …)"
+        "Manage agent skills (list, validate, add, …)"
 
     override fun run() = Unit
 
