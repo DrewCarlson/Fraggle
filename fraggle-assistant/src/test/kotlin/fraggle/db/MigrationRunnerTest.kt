@@ -48,7 +48,10 @@ class MigrationRunnerTest {
             transaction(database) {
                 val versions = SchemaVersionTable.selectAll()
                     .map { it[SchemaVersionTable.version] to it[SchemaVersionTable.name] }
-                assertEquals(listOf(1 to "Initial schema"), versions)
+                assertEquals(
+                    listOf(1 to "Initial schema", 2 to "Scheduled tasks table"),
+                    versions,
+                )
             }
         }
 
@@ -150,7 +153,7 @@ class MigrationRunnerTest {
             transaction(database) {
                 val versions = SchemaVersionTable.selectAll()
                     .map { it[SchemaVersionTable.version] }
-                assertEquals(listOf(1), versions)
+                assertEquals(listOf(1, 2), versions)
             }
         }
     }

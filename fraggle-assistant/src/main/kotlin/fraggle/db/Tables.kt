@@ -1,6 +1,7 @@
 package fraggle.db
 
 import fraggle.db.ChatTable.externalId
+import fraggle.scheduling.TaskStatus
 import org.jetbrains.exposed.v1.core.Table
 
 /**
@@ -55,6 +56,23 @@ object MessageTable : Table("messages") {
     val direction = enumerationByName<MessageDirection>("direction", 20)
     val timestamp = instant("timestamp")
     val processingDuration = duration("processing_duration").nullable()
+
+    override val primaryKey = PrimaryKey(id)
+}
+
+/**
+ * Stores scheduled tasks for persistence across restarts.
+ */
+object ScheduledTaskTable : Table("scheduled_tasks") {
+    val id = varchar("id", 50)
+    val name = varchar("name", 255)
+    val action = text("action")
+    val chatId = varchar("chat_id", 255)
+    val createdAt = instant("created_at")
+    val nextRunTime = instant("next_run_time")
+    val repeatInterval = duration("repeat_interval").nullable()
+    val status = enumerationByName<TaskStatus>("status", 20)
+    val runCount = integer("run_count").default(0)
 
     override val primaryKey = PrimaryKey(id)
 }

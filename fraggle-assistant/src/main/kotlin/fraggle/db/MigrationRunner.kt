@@ -3,6 +3,7 @@
 package fraggle.db
 
 import fraggle.db.migrations.M001_InitialSchema
+import fraggle.db.migrations.M002_ScheduledTasks
 import org.jetbrains.exposed.v1.core.ExperimentalDatabaseMigrationApi
 import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.jdbc.Database
@@ -68,10 +69,11 @@ class MigrationRunner(
     }
 
     companion object {
-        val allTables: Array<Table> = arrayOf(ChatTable, MessageTable)
+        val allTables: Array<Table> = arrayOf(ChatTable, MessageTable, ScheduledTaskTable)
 
         val defaultMigrations: List<Migration> = listOf(
             M001_InitialSchema,
+            M002_ScheduledTasks,
         )
     }
 }

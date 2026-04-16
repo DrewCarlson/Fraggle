@@ -9,6 +9,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Test
@@ -380,6 +383,82 @@ class ChatBridgeManagerTest {
             val info = manager.getChatInfo("unknown:chat123")
 
             assertNull(info)
+        }
+    }
+
+    @Nested
+    inner class InjectMessage {
+
+        @Test
+        fun `injectMessage emits synthetic BridgedMessage`() = runBlocking {
+            val bridge = createMockBridge()
+            manager.register("signal", bridge)
+
+            val received = mutableListOf<BridgedMessage>()
+            val collectJob = launch {
+                manager.messages.collect { received.add(it) }
+            }
+            kotlinx.coroutines.delay(50) // ensure collector is subscribed
+
+            manager.injectMessage("signal:+1234567890", "Check the weather")
+            kotlinx.coroutines.delay(50)
+
+            assertEquals(1, received.size)
+            val msg = received.first()
+            assertEquals("signal:+1234567890", msg.qualifiedChatId)
+            assertEquals(bridge, msg.bridge)
+            assertEquals("Check the weather", (msg.message.content as MessageContent.Text).text)
+            assertEquals("scheduler", msg.message.sender.id)
+            assertTrue(msg.message.id.startsWith("synthetic-"))
+
+            collectJob.cancel()
+        }
+
+        @Test
+        fun `injectMessage uses custom sender name`() = runBlocking {
+            val bridge = createMockBridge()
+            manager.register("signal", bridge)
+
+            val received = mutableListOf<BridgedMessage>()
+            val collectJob = launch {
+                manager.messages.collect { received.add(it) }
+            }
+            kotlinx.coroutines.delay(50)
+
+            manager.injectMessage("signal:+1234567890", "Hello", senderName = "Daily Reminder")
+            kotlinx.coroutines.delay(50)
+
+            assertEquals("Daily Reminder", received.first().message.sender.name)
+
+            collectJob.cancel()
+        }
+
+        @Test
+        fun `injectMessage throws for unknown bridge`() = runTest {
+            assertThrows<IllegalArgumentException> {
+                manager.injectMessage("unknown:chat123", "Hello")
+            }
+        }
+
+        @Test
+        fun `injectMessage assigns unique IDs`() = runBlocking {
+            val bridge = createMockBridge()
+            manager.register("signal", bridge)
+
+            val received = mutableListOf<BridgedMessage>()
+            val collectJob = launch {
+                manager.messages.collect { received.add(it) }
+            }
+            kotlinx.coroutines.delay(50)
+
+            manager.injectMessage("signal:chat1", "First")
+            manager.injectMessage("signal:chat1", "Second")
+            kotlinx.coroutines.delay(50)
+
+            assertEquals(2, received.size)
+            assertNotEquals(received[0].message.id, received[1].message.id)
+
+            collectJob.cancel()
         }
     }
 }

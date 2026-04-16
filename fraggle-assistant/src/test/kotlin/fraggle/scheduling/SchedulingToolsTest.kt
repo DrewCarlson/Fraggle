@@ -1,5 +1,6 @@
 package fraggle.scheduling
 
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import fraggle.agent.ToolExecutionContext
@@ -93,6 +94,42 @@ class SchedulingToolsTest {
             assertTrue(result.contains("Error:"))
             assertTrue(result.contains("non-negative"))
         }
+
+        @Test
+        fun `schedule_task fails with repeat interval below minimum`() = runTest {
+            val tool = ScheduleTaskTool(scheduler)
+            val ctx = ToolExecutionContext(chatId = "chat", userId = "user")
+
+            val result = withContext(ToolExecutionContext.asContextElement(ctx)) {
+                tool.execute(ScheduleTaskTool.Args(
+                    name = "Too Fast",
+                    action = "Action",
+                    delay_seconds = 60,
+                    repeat_interval_seconds = 30,
+                ))
+            }
+
+            assertTrue(result.contains("Error:"))
+            assertTrue(result.contains("at least"))
+        }
+
+        @Test
+        fun `schedule_task accepts repeat interval at minimum`() = runTest {
+            val tool = ScheduleTaskTool(scheduler)
+            val ctx = ToolExecutionContext(chatId = "chat", userId = "user")
+
+            val result = withContext(ToolExecutionContext.asContextElement(ctx)) {
+                tool.execute(ScheduleTaskTool.Args(
+                    name = "Just Right",
+                    action = "Action",
+                    delay_seconds = 60,
+                    repeat_interval_seconds = 60,
+                ))
+            }
+
+            assertTrue(result.contains("Task scheduled successfully"))
+            assertTrue(result.contains("Repeats every"))
+        }
     }
 
     @Nested
@@ -133,6 +170,34 @@ class SchedulingToolsTest {
             val result = tool.execute(ListTasksTool.Args())
 
             assertTrue(result.contains("recurring"))
+        }
+
+        @Test
+        fun `list_tasks scoped to current chat when context available`() = runTest {
+            scheduler.schedule("Chat A Task", "action", "chat-a", kotlin.time.Duration.parse("1m"))
+            scheduler.schedule("Chat B Task", "action", "chat-b", kotlin.time.Duration.parse("1m"))
+
+            val tool = ListTasksTool(scheduler)
+            val ctx = ToolExecutionContext(chatId = "chat-a", userId = "user")
+
+            val result = withContext(ToolExecutionContext.asContextElement(ctx)) {
+                tool.execute(ListTasksTool.Args())
+            }
+
+            assertTrue(result.contains("Chat A Task"))
+            assertTrue(!result.contains("Chat B Task"))
+        }
+
+        @Test
+        fun `list_tasks shows all tasks when no context`() = runTest {
+            scheduler.schedule("Chat A Task", "action", "chat-a", kotlin.time.Duration.parse("1m"))
+            scheduler.schedule("Chat B Task", "action", "chat-b", kotlin.time.Duration.parse("1m"))
+
+            val tool = ListTasksTool(scheduler)
+            val result = tool.execute(ListTasksTool.Args())
+
+            assertTrue(result.contains("Chat A Task"))
+            assertTrue(result.contains("Chat B Task"))
         }
     }
 
@@ -203,6 +268,43 @@ class SchedulingToolsTest {
             val result = tool.execute(GetTaskTool.Args(task_id = task.id))
 
             assertTrue(result.contains("Repeat interval"))
+        }
+
+        @Test
+        fun `get_task hides next run for completed task`() = runBlocking {
+            // Schedule with zero delay so it completes immediately
+            val task = scheduler.schedule(
+                name = "Quick Task",
+                action = "done",
+                chatId = "chat",
+                delay = kotlin.time.Duration.ZERO,
+            )
+
+            // Wait for the task to execute and complete
+            kotlinx.coroutines.delay(500)
+
+            val tool = GetTaskTool(scheduler)
+            val result = tool.execute(GetTaskTool.Args(task_id = task.id))
+
+            assertTrue(result.contains("COMPLETED"))
+            assertTrue(!result.contains("Next run:"))
+        }
+
+        @Test
+        fun `get_task hides next run for cancelled task`() = runTest {
+            val task = scheduler.schedule(
+                name = "Cancel Me",
+                action = "action",
+                chatId = "chat",
+                delay = kotlin.time.Duration.parse("1m"),
+            )
+            scheduler.cancel(task.id)
+
+            val tool = GetTaskTool(scheduler)
+            val result = tool.execute(GetTaskTool.Args(task_id = task.id))
+
+            assertTrue(result.contains("CANCELLED"))
+            assertTrue(!result.contains("Next run:"))
         }
     }
 }

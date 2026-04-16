@@ -18,10 +18,11 @@ import fraggle.agent.tool.AgentToolDef
 import fraggle.chat.BridgeInitializerRegistry
 import fraggle.chat.ChatBridgeManager
 import fraggle.chat.ChatCommandProcessor
-import fraggle.chat.OutgoingMessage
 import fraggle.db.ChatHistoryStore
 import fraggle.db.ExposedChatHistoryStore
+import fraggle.db.ExposedScheduledTaskStore
 import fraggle.db.FraggleDatabase
+import fraggle.db.ScheduledTaskStore
 import fraggle.events.EventBus
 import fraggle.executor.RemoteToolClient
 import fraggle.executor.supervision.ToolSupervisor
@@ -128,22 +129,41 @@ interface AssistantModule {
     fun provideTaskScheduler(
         scope: CoroutineScope,
         bridgeManager: ChatBridgeManager,
-    ): TaskScheduler = TaskScheduler(
-        scope = scope,
-        onTaskTriggered = { task: ScheduledTask ->
-            assistantModuleLogger.info("Task triggered: ${task.name} - ${task.action}")
-            if (bridgeManager.hasConnectedBridge()) {
-                try {
-                    bridgeManager.send(task.chatId, OutgoingMessage.Text(task.action))
-                    assistantModuleLogger.info("Task message sent to ${task.chatId}: ${task.action}")
-                } catch (e: Exception) {
-                    assistantModuleLogger.error("Failed to send task message: ${e.message}", e)
+        eventBus: EventBus,
+        scheduledTaskStore: ScheduledTaskStore,
+    ): TaskScheduler {
+        val scheduler = TaskScheduler(
+            scope = scope,
+            store = scheduledTaskStore,
+            onTaskTriggered = { task: ScheduledTask ->
+                assistantModuleLogger.info("Task triggered: ${task.name} - ${task.action}")
+                eventBus.emit(
+                    FraggleEvent.TaskTriggered(
+                        timestamp = kotlin.time.Clock.System.now(),
+                        taskId = task.id,
+                        taskName = task.name,
+                        chatId = task.chatId,
+                    )
+                )
+                if (bridgeManager.hasConnectedBridge()) {
+                    try {
+                        bridgeManager.injectMessage(
+                            qualifiedChatId = task.chatId,
+                            text = task.action,
+                            senderName = "Scheduled Task: ${task.name}",
+                        )
+                        assistantModuleLogger.info("Task action injected for ${task.chatId}: ${task.action}")
+                    } catch (e: Exception) {
+                        assistantModuleLogger.error("Failed to inject task action: ${e.message}", e)
+                    }
+                } else {
+                    assistantModuleLogger.warn("Cannot inject task action: No chat bridge connected")
                 }
-            } else {
-                assistantModuleLogger.warn("Cannot send task message: No chat bridge connected")
-            }
-        },
-    )
+            },
+        )
+        scheduler.restoreFromStore()
+        return scheduler
+    }
 
     /**
      * Final [FraggleToolRegistry] for the messenger assistant — the base registry
@@ -195,6 +215,12 @@ interface AssistantModule {
     @SingleIn(AppScope::class)
     fun provideChatHistoryStore(database: FraggleDatabase): ChatHistoryStore {
         return ExposedChatHistoryStore(database.database)
+    }
+
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideScheduledTaskStore(database: FraggleDatabase): ScheduledTaskStore {
+        return ExposedScheduledTaskStore(database.database)
     }
 
     @Provides

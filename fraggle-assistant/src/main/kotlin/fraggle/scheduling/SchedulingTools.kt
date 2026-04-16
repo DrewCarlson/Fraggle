@@ -15,6 +15,8 @@ import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.*
+import kotlin.time.Duration.Companion.ZERO
+import kotlin.time.Duration.Companion.minutes
 
 @Suppress("ObjectPropertyName")
 private val _fullDateTimeFormat = LocalDateTime.Format {
@@ -33,6 +35,8 @@ private val _fullDateTimeFormat = LocalDateTime.Format {
 @Suppress("UnusedReceiverParameter")
 val LocalDateTime.Formats.fullDataTime: DateTimeFormat<LocalDateTime>
     get() = _fullDateTimeFormat
+
+private val MIN_REPEAT_INTERVAL = 1.minutes
 
 class ScheduleTaskTool(private val scheduler: TaskScheduler) : AgentToolDef<ScheduleTaskTool.Args>(
     name = "schedule_task",
@@ -64,12 +68,16 @@ Tasks will execute the specified action when triggered.""",
             return "Error: delay_seconds must be non-negative"
         }
 
+        if (repeatInterval > Duration.ZERO && repeatInterval < MIN_REPEAT_INTERVAL) {
+            return "Error: repeat_interval_seconds must be at least ${MIN_REPEAT_INTERVAL.inWholeSeconds} seconds"
+        }
+
         val task = scheduler.schedule(
             name = args.name,
             action = args.action,
             chatId = chatId,
             delay = delay,
-            repeatInterval = if (repeatInterval > Duration.ZERO) repeatInterval else null,
+            repeatInterval = repeatInterval.takeIf { it > ZERO },
         )
 
         val nextRun = task.nextRunTime
@@ -90,27 +98,35 @@ Tasks will execute the specified action when triggered.""",
 
 class ListTasksTool(private val scheduler: TaskScheduler) : AgentToolDef<ListTasksTool.Args>(
     name = "list_tasks",
-    description = "List all scheduled tasks.",
+    description = "List scheduled tasks for the current chat.",
     argsSerializer = Args.serializer(),
 ) {
     @Serializable
     class Args
 
     override suspend fun execute(args: Args): String {
-        val tasks = scheduler.listTasks()
+        val chatId = ToolExecutionContext.current()?.chatId
+        val tasks = if (chatId == null) {
+            scheduler.listTasks()
+        } else {
+            scheduler.listTasksForChat(chatId)
+        }
 
         if (tasks.isEmpty()) {
             return "No tasks scheduled."
         }
 
         val listing = tasks.map { task ->
-            val nextRun = task.nextRunTime
-                .toLocalDateTime(TimeZone.currentSystemDefault())
-                .format(LocalDateTime.Formats.fullDataTime)
+            val isActive = task.status == TaskStatus.PENDING || task.status == TaskStatus.RUNNING
 
             buildString {
                 append("- [${task.id}] ${task.name}")
-                append(" (next: $nextRun)")
+                if (isActive) {
+                    val nextRun = task.nextRunTime
+                        .toLocalDateTime(TimeZone.currentSystemDefault())
+                        .format(LocalDateTime.Formats.fullDataTime)
+                    append(" (next: $nextRun)")
+                }
                 if (task.repeatInterval != null) {
                     append(" [recurring: ${task.repeatInterval}]")
                 }
@@ -159,13 +175,11 @@ class GetTaskTool(private val scheduler: TaskScheduler) : AgentToolDef<GetTaskTo
         val task = scheduler.getTask(args.task_id)
             ?: return "Error: Task ${args.task_id} not found."
 
-        val nextRun = task.nextRunTime
-            .toLocalDateTime(TimeZone.currentSystemDefault())
-            .format(LocalDateTime.Formats.fullDataTime)
-
         val created = task.createdAt
             .toLocalDateTime(TimeZone.currentSystemDefault())
             .format(LocalDateTime.Formats.fullDataTime)
+
+        val isActive = task.status == TaskStatus.PENDING || task.status == TaskStatus.RUNNING
 
         return buildString {
             appendLine("Task Details:")
@@ -175,7 +189,12 @@ class GetTaskTool(private val scheduler: TaskScheduler) : AgentToolDef<GetTaskTo
             appendLine("  Action: ${task.action}")
             appendLine("  Chat ID: ${task.chatId}")
             appendLine("  Created: $created")
-            appendLine("  Next run: $nextRun")
+            if (isActive) {
+                val nextRun = task.nextRunTime
+                    .toLocalDateTime(TimeZone.currentSystemDefault())
+                    .format(LocalDateTime.Formats.fullDataTime)
+                appendLine("  Next run: $nextRun")
+            }
             if (task.repeatInterval != null) {
                 appendLine("  Repeat interval: ${task.repeatInterval}")
             }
@@ -186,9 +205,13 @@ class GetTaskTool(private val scheduler: TaskScheduler) : AgentToolDef<GetTaskTo
 
 /**
  * Task scheduler for managing scheduled tasks.
+ *
+ * @param store Optional persistence store. When provided, tasks survive restarts.
+ *   Call [restoreFromStore] after construction to reload and reschedule active tasks.
  */
 class TaskScheduler(
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob()),
+    private val store: fraggle.db.ScheduledTaskStore? = null,
     private val onTaskTriggered: suspend (ScheduledTask) -> Unit = {},
 ) {
     private val logger = LoggerFactory.getLogger(TaskScheduler::class.java)
@@ -196,6 +219,39 @@ class TaskScheduler(
     private val tasks = ConcurrentHashMap<String, ScheduledTask>()
     private val jobs = ConcurrentHashMap<String, Job>()
     private val idCounter = AtomicLong(0)
+
+    /**
+     * Restore active tasks from the persistent store and reschedule them.
+     * Tasks whose fire time has already passed are executed immediately.
+     */
+    fun restoreFromStore() {
+        val taskStore = store ?: return
+        val activeTasks = taskStore.listActive()
+        if (activeTasks.isEmpty()) return
+
+        logger.info("Restoring {} active task(s) from store", activeTasks.size)
+
+        // Advance the ID counter past any restored IDs
+        for (task in activeTasks) {
+            val num = task.id.removePrefix("task-").toLongOrNull() ?: continue
+            idCounter.updateAndGet { maxOf(it, num) }
+        }
+
+        val now = Clock.System.now()
+        for (task in activeTasks) {
+            // Reset any RUNNING tasks back to PENDING (they were interrupted)
+            val restored = if (task.status == TaskStatus.RUNNING) {
+                task.copy(status = TaskStatus.PENDING)
+            } else {
+                task
+            }
+            tasks[restored.id] = restored
+
+            val remainingDelay = (restored.nextRunTime - now).coerceAtLeast(Duration.ZERO)
+            startJob(restored.id, remainingDelay, restored.repeatInterval)
+            logger.info("Restored task: {} (id={}, fires in {})", restored.name, restored.id, remainingDelay)
+        }
+    }
 
     /**
      * Schedule a new task.
@@ -223,47 +279,76 @@ class TaskScheduler(
         )
 
         tasks[id] = task
+        persistSave(task)
+        startJob(id, delay, repeatInterval)
 
-        // Schedule the job
+        logger.info("Scheduled task: $name (id=$id, delay=${delay})")
+        return task
+    }
+
+    private fun startJob(id: String, initialDelay: Duration, repeatInterval: Duration?) {
         val job = scope.launch {
-            delay(delay)
+            delay(initialDelay)
 
             while (isActive) {
                 val currentTask = tasks[id] ?: break
 
                 // Update status
-                tasks[id] = currentTask.copy(
-                    status = TaskStatus.RUNNING,
-                    runCount = currentTask.runCount + 1,
-                )
+                updateTask(id) {
+                    it.copy(status = TaskStatus.RUNNING, runCount = it.runCount + 1)
+                }
 
-                try {
+                val success = try {
                     onTaskTriggered(currentTask)
                     logger.info("Task executed: ${currentTask.name}")
+                    true
                 } catch (e: Exception) {
-                    logger.error("Task execution failed: ${e.message}")
+                    logger.error("Task execution failed: ${e.message}", e)
+                    updateTask(id) { it.copy(status = TaskStatus.FAILED) }
+                    false
+                }
+
+                if (!success && (repeatInterval == null || repeatInterval <= Duration.ZERO)) {
+                    break
                 }
 
                 // Check if recurring
-                if (repeatInterval != null && repeatInterval > Duration.ZERO) {
-                    val updatedTask = tasks[id] ?: break
-                    tasks[id] = updatedTask.copy(
-                        status = TaskStatus.PENDING,
-                        nextRunTime = Clock.System.now() + repeatInterval,
-                    )
+                if (success && repeatInterval != null && repeatInterval > Duration.ZERO) {
+                    updateTask(id) {
+                        it.copy(
+                            status = TaskStatus.PENDING,
+                            nextRunTime = Clock.System.now() + repeatInterval,
+                        )
+                    }
                     delay(repeatInterval)
-                } else {
+                } else if (success) {
                     // One-time task, mark as completed
-                    tasks[id] = tasks[id]?.copy(status = TaskStatus.COMPLETED) ?: break
+                    updateTask(id) { it.copy(status = TaskStatus.COMPLETED) }
                     break
+                } else {
+                    // Recurring task failed, retry after interval
+                    updateTask(id) {
+                        it.copy(
+                            status = TaskStatus.PENDING,
+                            nextRunTime = Clock.System.now() + repeatInterval!!,
+                        )
+                    }
+                    delay(repeatInterval!!)
                 }
             }
         }
 
         jobs[id] = job
-        logger.info("Scheduled task: $name (id=$id, delay=${delay})")
+    }
 
-        return task
+    /**
+     * Update an in-memory task and persist the change.
+     */
+    private fun updateTask(id: String, transform: (ScheduledTask) -> ScheduledTask) {
+        val current = tasks[id] ?: return
+        val updated = transform(current)
+        tasks[id] = updated
+        persistUpdate(updated)
     }
 
     /**
@@ -275,6 +360,7 @@ class TaskScheduler(
 
         job?.cancel()
         tasks[taskId] = task.copy(status = TaskStatus.CANCELLED)
+        persistUpdate(tasks[taskId]!!)
 
         logger.info("Cancelled task: ${task.name}")
         return true
@@ -292,6 +378,13 @@ class TaskScheduler(
         .sortedBy { it.nextRunTime }
 
     /**
+     * List tasks for a specific chat.
+     */
+    fun listTasksForChat(chatId: String): List<ScheduledTask> = tasks.values
+        .filter { it.chatId == chatId }
+        .sortedBy { it.nextRunTime }
+
+    /**
      * List pending tasks.
      */
     fun listPendingTasks(): List<ScheduledTask> = tasks.values
@@ -306,6 +399,22 @@ class TaskScheduler(
         jobs.clear()
         scope.cancel()
         logger.info("Task scheduler shutdown")
+    }
+
+    private fun persistSave(task: ScheduledTask) {
+        try {
+            store?.save(task)
+        } catch (e: Exception) {
+            logger.error("Failed to persist task {}: {}", task.id, e.message)
+        }
+    }
+
+    private fun persistUpdate(task: ScheduledTask) {
+        try {
+            store?.update(task)
+        } catch (e: Exception) {
+            logger.error("Failed to update persisted task {}: {}", task.id, e.message)
+        }
     }
 }
 

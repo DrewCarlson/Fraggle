@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
+import kotlin.time.Clock
 
 /**
  * Incoming message with information about which bridge it came from.
@@ -44,6 +46,7 @@ class ChatBridgeManager(
     private val bridges = ConcurrentHashMap<String, ChatBridge>()
     private val chatIdToBridge = ConcurrentHashMap<String, String>()
     private val messageJobs = ConcurrentHashMap<String, Job>()
+    private val syntheticIdCounter = AtomicLong(0)
 
     private val _messages = MutableSharedFlow<BridgedMessage>(extraBufferCapacity = 64)
 
@@ -165,6 +168,38 @@ class ChatBridgeManager(
             ?: throw IllegalArgumentException("Bridge '$bridgeName' not found for chatId: $qualifiedChatId")
 
         bridge.send(chatId, message)
+    }
+
+    /**
+     * Inject a synthetic message into the message flow as if it came from a user.
+     * Used by the task scheduler to route actions through the assistant for processing.
+     *
+     * @param qualifiedChatId The qualified chat ID (e.g., "signal:+1234567890")
+     * @param text The message text to inject
+     * @param senderName Display name for the synthetic sender
+     */
+    suspend fun injectMessage(qualifiedChatId: String, text: String, senderName: String = "Scheduler") {
+        val (bridgeName, chatId) = parseQualifiedChatId(qualifiedChatId)
+        val bridge = bridges[bridgeName]
+            ?: throw IllegalArgumentException("Bridge '$bridgeName' not found for chatId: $qualifiedChatId")
+
+        val syntheticId = "synthetic-${syntheticIdCounter.incrementAndGet()}"
+        val message = IncomingMessage(
+            id = syntheticId,
+            chatId = qualifiedChatId,
+            sender = Sender(id = "scheduler", name = senderName),
+            content = MessageContent.Text(text),
+            timestamp = Clock.System.now(),
+        )
+
+        _messages.emit(
+            BridgedMessage(
+                message = message,
+                bridge = bridge,
+                qualifiedChatId = qualifiedChatId,
+            )
+        )
+        logger.info("Injected synthetic message into $qualifiedChatId: $text")
     }
 
     /**
