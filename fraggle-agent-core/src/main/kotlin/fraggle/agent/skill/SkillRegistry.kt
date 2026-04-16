@@ -21,7 +21,7 @@ interface SkillRegistry {
 /**
  * Default [SkillRegistry] backed by an immutable map. Collisions on `name` are resolved
  * by [SkillSource] precedence — later sources win: `PACKAGE < GLOBAL < PROJECT < EXPLICIT`.
- * Within the same source, the last entry wins (matching pi's "last write wins" rule).
+ * Within the same source, the last entry wins.
  */
 class InMemorySkillRegistry(
     entries: List<Skill>,

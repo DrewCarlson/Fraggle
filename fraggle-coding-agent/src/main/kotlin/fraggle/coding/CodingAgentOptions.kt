@@ -55,9 +55,9 @@ data class CodingAgentOptions(
 
     /**
      * Compaction policy. Defaults to [RatioCompactionPolicy] at 70% context
-     * usage — matches pi's proactive compaction. When context-window size is
-     * unknown (`ContextUsage.isUnknown`), this policy silently becomes a no-op
-     * so short LM Studio sessions don't get compacted unnecessarily.
+     * usage. When context-window size is unknown (`ContextUsage.isUnknown`),
+     * this policy silently becomes a no-op so short LM Studio sessions don't
+     * get compacted unnecessarily.
      */
     val compactionPolicy: CompactionPolicy = RatioCompactionPolicy(triggerRatio = 0.70),
 

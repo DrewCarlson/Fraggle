@@ -22,8 +22,8 @@ import io.ktor.client.HttpClient
  * 2. Append the coding-specific [EditFileTool] for targeted edits via exact-string
  *    replace.
  *
- * Optional [enabledTools] filtering mirrors pi's `--tools <list>` flag: when
- * non-null, only tools whose names are in the set survive. `null` means "all".
+ * Optional [enabledTools]: when non-null, only tools whose names are in the
+ * set survive. `null` means "all".
  *
  * Optional [playwrightFetcher] is passed through to the base registry for
  * `fetch_webpage` / `screenshot_page`; pass null to disable browser-automation

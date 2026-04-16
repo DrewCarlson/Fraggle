@@ -1,7 +1,6 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
-    alias(libs.plugins.compose.compiler)
     alias(libs.plugins.kover)
     alias(libs.plugins.shadow)
 }
@@ -19,11 +18,10 @@ dependencies {
     api(project(":fraggle-llm"))
     api(project(":fraggle-common"))
 
-    // Terminal UI — Compose-for-terminal (handles rendering AND key events)
-    implementation(libs.mosaic.runtime)
-
-    // Markdown parsing for styling LLM output in the TUI
-    implementation(libs.jetbrains.markdown)
+    // Owns rendering, event loop, layout primitives, the Editor,
+    // Markdown → ANSI, and all base components.
+    // Coding-agent-specific UI lives under fraggle.coding.ui on top of these.
+    api(project(":fraggle-tui"))
 
     // Kotlinx
     implementation(libs.kotlinx.coroutines.core)

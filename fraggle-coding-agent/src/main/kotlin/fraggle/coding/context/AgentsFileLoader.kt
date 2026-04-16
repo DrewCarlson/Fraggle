@@ -9,14 +9,14 @@ import kotlin.io.path.readText
 /**
  * Loads `AGENTS.md` context files from the project tree and a global location.
  *
- * Walking strategy, matching pi-coding-agent:
+ * Walking strategy:
  *
  * 1. Start at [cwd] and walk upward until either:
  *    - A directory containing `.git` is reached (the project root — we stop AFTER
  *      collecting its AGENTS.md), or
  *    - The filesystem root is reached.
  * 2. In each directory, look for `AGENTS.md`. If absent, fall back to `CLAUDE.md`
- *    as pi does (useful for Claude-Code compatible projects). If both exist,
+ *    (useful for Claude-Code compatible projects). If both exist,
  *    `AGENTS.md` wins and `CLAUDE.md` is ignored in that directory.
  * 3. Order the results outer→inner: outermost ancestor first, [cwd] last. When
  *    the prompt is built, this means the nearest AGENTS.md appears last in the

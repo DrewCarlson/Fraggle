@@ -17,7 +17,7 @@ import kotlin.io.path.readText
  * placeholders filled in from editor-prompted values.
  *
  * The loader is non-recursive: only files directly under the given directory
- * are picked up. This matches pi's behavior and keeps the namespace flat.
+ * are picked up.
  * Unreadable files and templates with malformed frontmatter (currently: no
  * frontmatter format; just raw Markdown) are skipped with a warning — no
  * exceptions bubble out of [loadFromDirectory], so a single bad file can't

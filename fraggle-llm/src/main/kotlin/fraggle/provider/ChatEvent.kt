@@ -23,7 +23,7 @@ enum class StopReason {
 /**
  * Event protocol for [LLMProvider.stream].
  *
- * Parallels pi-ai's `AssistantMessageEvent`. A well-formed stream emits:
+ * A well-formed stream emits:
  *
  * 1. [Start] once
  * 2. Zero or more content-block lifecycles: (`*Start` → `*Delta`* → `*End`)

@@ -52,6 +52,8 @@ clikt = { module = "com.github.ajalt.clikt:clikt", version.ref = "clikt" }
 
 # Terminal UI (Mosaic - Compose for terminal)
 mosaic-runtime = { module = "com.jakewharton.mosaic:mosaic-runtime", version.ref = "mosaic" }
+# Terminal UI — Mosaic's lower-level TTY + event-parser layers (no Compose)
+mosaic-tty-terminal = { module = "com.jakewharton.mosaic:mosaic-tty-terminal", version.ref = "mosaic" }
 
 # Markdown parsing (JetBrains CommonMark-compliant parser)
 jetbrains-markdown = { module = "org.jetbrains:markdown", version.ref = "jetbrains-markdown" }

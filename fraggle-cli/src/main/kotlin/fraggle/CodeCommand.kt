@@ -30,9 +30,9 @@ import fraggle.coding.session.replayCurrentBranch
 import fraggle.coding.settings.CodingSettingsDefaults
 import fraggle.coding.settings.SettingsStore
 import fraggle.coding.tools.CodingToolRegistry
-import fraggle.coding.tui.HeaderInfo
-import fraggle.coding.tui.TuiToolPermissionHandler
-import fraggle.coding.tui.runCodingApp
+import fraggle.coding.ui.HeaderInfo
+import fraggle.coding.ui.TuiToolPermissionHandler
+import fraggle.coding.ui.runCodingApp
 import fraggle.executor.LocalToolExecutor
 import fraggle.executor.supervision.InteractiveToolSupervisor
 import fraggle.executor.supervision.NoOpToolSupervisor
@@ -146,9 +146,6 @@ class CodeCommand : CliktCommand(name = "code") {
      * Positional arguments. Each may be:
      *  - `@path.md` → read the file and include its contents in the first user message
      *  - any other word → part of the initial user message text
-     *
-     * `@file` references match pi's convention so a user can drop files into
-     * the initial prompt without an editor round-trip.
      */
     private val messageArgs by argument(
         name = "message",

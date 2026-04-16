@@ -14,7 +14,7 @@ import kotlin.io.path.readLines
 /**
  * Scans a directory tree for `SKILL.md` files and parses them into [Skill] instances.
  *
- * Discovery rules (matching the agentskills.io spec and pi's implementation):
+ * Discovery rules (matching the agentskills.io spec):
  * - If a directory contains `SKILL.md`, it is treated as a skill root and **not**
  *   recursed into further. Nested SKILL.md files under a skill root are ignored.
  * - Otherwise, subdirectories are scanned recursively until a SKILL.md is found.

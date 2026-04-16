@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
  * A single piece of message content. Messages carry an ordered list of these,
  * allowing text, thinking, tool calls, and images to interleave.
  *
- * Mirrors the content-block model used by pi-ai / Anthropic / OpenAI Responses.
+ * Mirrors the content-block model used by Anthropic / OpenAI Responses.
  */
 @Serializable
 sealed interface ContentBlock {
