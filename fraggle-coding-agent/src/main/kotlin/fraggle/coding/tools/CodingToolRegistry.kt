@@ -1,5 +1,6 @@
 package fraggle.coding.tools
 
+import fraggle.agent.skill.SkillExecutionContext
 import fraggle.agent.tool.AgentToolDef
 import fraggle.agent.tool.FraggleToolRegistry
 import fraggle.executor.ToolExecutor
@@ -43,12 +44,14 @@ object CodingToolRegistry {
         toolExecutor: ToolExecutor,
         httpClient: HttpClient,
         playwrightFetcher: PlaywrightFetcher? = null,
+        skillExecutionContext: SkillExecutionContext? = null,
         enabledTools: Set<String>? = null,
     ): Built {
         val base = DefaultTools.createToolRegistry(
             toolExecutor = toolExecutor,
             httpClient = httpClient,
             playwrightFetcher = playwrightFetcher,
+            skillExecutionContext = skillExecutionContext,
         )
 
         val codingTools: List<AgentToolDef<*>> = listOf(

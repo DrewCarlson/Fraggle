@@ -1,6 +1,7 @@
 package fraggle.coding.tui
 
 import com.jakewharton.mosaic.runMosaicBlocking
+import fraggle.agent.skill.SkillCommandExpander
 import fraggle.coding.CodingAgent
 import fraggle.coding.CodingAgentOptions
 
@@ -22,6 +23,7 @@ fun runCodingApp(
     options: CodingAgentOptions,
     header: HeaderInfo,
     supervisionLabel: String,
+    skillExpander: SkillCommandExpander? = null,
     onExitRequest: () -> Unit,
     permissionHandler: TuiToolPermissionHandler? = null,
 ) {
@@ -31,6 +33,7 @@ fun runCodingApp(
             options = options,
             header = header,
             supervisionLabel = supervisionLabel,
+            skillExpander = skillExpander,
             onExitRequest = onExitRequest,
             permissionHandler = permissionHandler,
         )

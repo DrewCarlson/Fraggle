@@ -114,6 +114,32 @@ class SystemPromptBuilderTest {
     }
 
     @Nested
+    inner class Skills {
+        @Test
+        fun `skill catalog is included when non-blank`() {
+            val catalog = "<available_skills>\n  <skill><name>test</name></skill>\n</available_skills>"
+            val result = SystemPromptBuilder.build(
+                basePrompt = "base",
+                skillCatalog = catalog,
+            )
+            assertTrue(result.contains("## Skills"))
+            assertTrue(result.contains("<available_skills>"))
+        }
+
+        @Test
+        fun `skill section is omitted when catalog is null`() {
+            val result = SystemPromptBuilder.build(basePrompt = "base", skillCatalog = null)
+            assertFalse(result.contains("## Skills"))
+        }
+
+        @Test
+        fun `skill section is omitted when catalog is blank`() {
+            val result = SystemPromptBuilder.build(basePrompt = "base", skillCatalog = "  ")
+            assertFalse(result.contains("## Skills"))
+        }
+    }
+
+    @Nested
     inner class Templates {
         @Test
         fun `available templates show as a bullet list`() {
@@ -164,6 +190,7 @@ class SystemPromptBuilderTest {
                 basePrompt = "You are a coder.",
                 workspace = WorkspaceSnapshot(cwd = Paths.get("/tmp/proj"), gitBranch = "main"),
                 contextFiles = listOf(ctx("/proj/AGENTS.md", "rules", LoadedContextFile.Source.PROJECT)),
+                skillCatalog = "<available_skills></available_skills>",
                 availableTemplates = listOf(TemplateDescriptor("review")),
                 appendText = "EXTRA",
             )
@@ -171,12 +198,14 @@ class SystemPromptBuilderTest {
             val baseIdx = result.indexOf("You are a coder.")
             val workspaceIdx = result.indexOf("## Workspace")
             val contextIdx = result.indexOf("## Context")
+            val skillsIdx = result.indexOf("## Skills")
             val templatesIdx = result.indexOf("## Available prompt templates")
             val extraIdx = result.indexOf("EXTRA")
 
             assertTrue(baseIdx < workspaceIdx)
             assertTrue(workspaceIdx < contextIdx)
-            assertTrue(contextIdx < templatesIdx)
+            assertTrue(contextIdx < skillsIdx)
+            assertTrue(skillsIdx < templatesIdx)
             assertTrue(templatesIdx < extraIdx)
         }
     }

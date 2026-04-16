@@ -9,6 +9,12 @@ import com.github.ajalt.clikt.parameters.options.split
 import fraggle.agent.loop.ProviderLlmBridge
 import fraggle.agent.loop.ToolCallExecutor
 import fraggle.agent.message.AgentMessage
+import fraggle.agent.skill.DefaultSkillExecutionContext
+import fraggle.agent.skill.SkillCommandExpander
+import fraggle.agent.skill.SkillPromptFormatter
+import fraggle.agent.skill.SkillRegistryLoader
+import fraggle.agent.skill.SkillSecretsStore
+import fraggle.agent.skill.SkillVenvManager
 import fraggle.agent.tool.SupervisedToolCallExecutor
 import fraggle.coding.CodingAgent
 import fraggle.coding.CodingAgentOptions
@@ -205,7 +211,24 @@ class CodeCommand : CliktCommand(name = "code") {
             addAll(templateLoader.loadFromDirectory(cwd.resolve(".fraggle").resolve("coding").resolve("prompts")))
         }
 
-        // 8. Compose the system prompt
+        // 8. Skills — load registry, build execution context, render catalog
+        val skillsConfig = fraggleConfig.fraggle.skills
+        val skillRegistryLoader = SkillRegistryLoader()
+        val skillRegistry = skillRegistryLoader.load(skillsConfig)
+        val skillSecretsStore = SkillSecretsStore(FraggleEnvironment.secretsDir)
+        val skillVenvManager = SkillVenvManager(FraggleEnvironment.venvsDir)
+        val skillExecutionContext = DefaultSkillExecutionContext(
+            registry = skillRegistry,
+            secretsStore = skillSecretsStore,
+            venvManager = skillVenvManager,
+        )
+        val skillCatalog = SkillPromptFormatter.format(
+            skills = skillRegistry.skills,
+            envChecker = { skillName, varName -> skillSecretsStore.isConfigured(skillName, varName) },
+        ).ifBlank { null }
+        val skillExpander = SkillCommandExpander { skillRegistryLoader.load(skillsConfig) }
+
+        // 9. Compose the system prompt
         val basePrompt = systemPromptOverride
             ?: readFileOrNull(projectFile = cwd.resolve(".fraggle").resolve("coding").resolve("SYSTEM.md"))
             ?: readFileOrNull(projectFile = FraggleEnvironment.codingDir.resolve("SYSTEM.md"))
@@ -220,6 +243,7 @@ class CodeCommand : CliktCommand(name = "code") {
             basePrompt = basePrompt,
             workspace = workspace,
             contextFiles = contextFiles,
+            skillCatalog = skillCatalog,
             availableTemplates = templates.map { t ->
                 fraggle.coding.context.TemplateDescriptor(
                     name = t.name,
@@ -229,7 +253,7 @@ class CodeCommand : CliktCommand(name = "code") {
             appendText = finalAppend,
         )
 
-        // 9. HTTP client, provider, bridge
+        // 10. HTTP client, provider, bridge
         val httpClient = buildLlmHttpClient()
         val provider = LMStudioProvider(
             baseUrl = providerConfig.url,
@@ -241,7 +265,7 @@ class CodeCommand : CliktCommand(name = "code") {
             model = effectiveModel,
         )
 
-        // 10. Tool executor + registry + supervisor + permission handler
+        // 11. Tool executor + registry + supervisor + permission handler
         val toolExecutor = LocalToolExecutor(cwd)
         val toolEnabled: Set<String>? = when {
             noTools -> emptySet()
@@ -252,6 +276,7 @@ class CodeCommand : CliktCommand(name = "code") {
             toolExecutor = toolExecutor,
             httpClient = httpClient,
             playwrightFetcher = null,
+            skillExecutionContext = skillExecutionContext,
             enabledTools = toolEnabled,
         )
 
@@ -272,7 +297,7 @@ class CodeCommand : CliktCommand(name = "code") {
             supervisor = supervisor,
         )
 
-        // 11. Initial-message seed from @file positionals or raw text
+        // 12. Initial-message seed from @file positionals or raw text
         val seedFromArgs = buildInitialUserMessage(messageArgs, cwd)
         val seededInitialMessages: List<AgentMessage> = if (seedFromArgs != null) {
             initialMessages + AgentMessage.User(seedFromArgs)
@@ -280,7 +305,7 @@ class CodeCommand : CliktCommand(name = "code") {
             initialMessages
         }
 
-        // 12. Orchestrator
+        // 13. Orchestrator
         val options = CodingAgentOptions(
             model = effectiveModel,
             workDir = cwd,
@@ -300,7 +325,7 @@ class CodeCommand : CliktCommand(name = "code") {
         )
         val supervisionLabel = effectiveSupervision.name.lowercase()
 
-        // 13. Run the TUI. runCodingApp blocks until the composition exits.
+        // 14. Run the TUI. runCodingApp blocks until the composition exits.
         Runtime.getRuntime().addShutdownHook(
             Thread {
                 runCatching { httpClient.close() }
@@ -312,6 +337,7 @@ class CodeCommand : CliktCommand(name = "code") {
                 options = options,
                 header = header,
                 supervisionLabel = supervisionLabel,
+                skillExpander = skillExpander,
                 onExitRequest = {
                     // Mosaic has no composition-level exit; shutdown hook above handles cleanup.
                     exitProcess(0)

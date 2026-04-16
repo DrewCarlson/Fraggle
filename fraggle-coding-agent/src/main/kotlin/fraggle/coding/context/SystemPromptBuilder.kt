@@ -15,9 +15,11 @@ package fraggle.coding.context
  * 3. Context files (AGENTS.md, CLAUDE.md), in [contextFiles] order. The caller
  *    is responsible for ordering — [AgentsFileLoader.load] produces the
  *    expected order (global → outer → inner).
- * 4. Available prompt templates (a flat list of `/name` entries with one-line
+ * 4. Skill catalog (pre-rendered XML block from [SkillPromptFormatter]), if
+ *    any skills are loaded.
+ * 5. Available prompt templates (a flat list of `/name` entries with one-line
  *    descriptions so the model knows they exist).
- * 5. [appendText] — the user's optional `APPEND_SYSTEM.md`.
+ * 6. [appendText] — the user's optional `APPEND_SYSTEM.md`.
  *
  * Sections are separated by a single blank line. Empty sections are skipped
  * entirely so the prompt doesn't have stray headings for things that aren't there.
@@ -27,6 +29,7 @@ object SystemPromptBuilder {
         basePrompt: String,
         workspace: WorkspaceSnapshot? = null,
         contextFiles: List<LoadedContextFile> = emptyList(),
+        skillCatalog: String? = null,
         availableTemplates: List<TemplateDescriptor> = emptyList(),
         appendText: String? = null,
     ): String = buildString {
@@ -40,6 +43,12 @@ object SystemPromptBuilder {
         if (contextFiles.isNotEmpty()) {
             append("\n\n")
             append(renderContextFiles(contextFiles))
+        }
+
+        if (!skillCatalog.isNullOrBlank()) {
+            append("\n\n")
+            append("## Skills\n\n")
+            append(skillCatalog.trimEnd())
         }
 
         if (availableTemplates.isNotEmpty()) {

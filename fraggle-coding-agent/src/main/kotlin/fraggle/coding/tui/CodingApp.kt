@@ -17,6 +17,7 @@ import com.jakewharton.mosaic.ui.Text
 import fraggle.agent.compaction.ContextUsage
 import fraggle.agent.event.AgentEvent
 import fraggle.agent.message.AgentMessage
+import fraggle.agent.skill.SkillCommandExpander
 import fraggle.coding.CodingAgent
 import fraggle.coding.CodingAgentOptions
 import kotlinx.coroutines.flow.collectLatest
@@ -48,6 +49,7 @@ fun CodingApp(
     options: CodingAgentOptions,
     header: HeaderInfo,
     supervisionLabel: String,
+    skillExpander: SkillCommandExpander? = null,
     onExitRequest: () -> Unit,
     permissionHandler: TuiToolPermissionHandler? = null,
 ) {
@@ -169,6 +171,49 @@ fun CodingApp(
                 onSubmit = submit@{
                     val text = editor.text
                     if (text.isBlank()) return@submit
+
+                    // Try skill expansion before slash commands — /skill:name
+                    // is not a slash command, it's a skill invocation that
+                    // expands into a prompt sent to the agent.
+                    if (skillExpander != null) {
+                        when (val r = skillExpander.tryExpand(text)) {
+                            is SkillCommandExpander.Result.Expanded -> {
+                                editor = EditorState()
+                                errorMessage = null
+                                notice = null
+                                confirmExit = false
+                                scope.launch {
+                                    busy = true
+                                    try {
+                                        agent.prompt(r.text)
+                                    } catch (_: kotlinx.coroutines.CancellationException) {
+                                    } catch (e: Exception) {
+                                        errorMessage = e.message ?: e::class.simpleName ?: "error"
+                                    } finally {
+                                        busy = false
+                                    }
+                                }
+                                return@submit
+                            }
+                            is SkillCommandExpander.Result.UnknownSkill -> {
+                                editor = EditorState()
+                                errorMessage = "unknown skill: ${r.name}"
+                                return@submit
+                            }
+                            is SkillCommandExpander.Result.MalformedCommand -> {
+                                editor = EditorState()
+                                errorMessage = r.reason
+                                return@submit
+                            }
+                            is SkillCommandExpander.Result.ReadError -> {
+                                editor = EditorState()
+                                errorMessage = "failed to read skill ${r.name}: ${r.reason}"
+                                return@submit
+                            }
+                            SkillCommandExpander.Result.NotASkillCommand -> Unit
+                        }
+                    }
+
                     when (val parsed = slashCommands.parse(text)) {
                         is SlashCommandParse.Matched -> {
                             editor = EditorState()
@@ -371,5 +416,5 @@ private val HotkeysHelp: List<String> = listOf(
     "  Backspace/Delete  edit buffer",
     "  Y / N         approve / deny pending tool call",
     "",
-    "slash commands:  /hotkeys  /session  /new  /quit",
+    "slash commands:  /hotkeys  /session  /new  /quit  /skill:<name>",
 )
