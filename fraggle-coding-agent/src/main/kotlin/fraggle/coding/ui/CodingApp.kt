@@ -294,6 +294,7 @@ class CodingApp(
             when (val r = expander.tryExpand(trimmed)) {
                 is SkillCommandExpander.Result.Expanded -> {
                     clearEphemeral()
+                    setNotice(listOf("activated skill: ${r.skill.name}"))
                     sendToAgent(r.text)
                     return
                 }
@@ -407,6 +408,10 @@ class CodingApp(
         val component = when (msg) {
             is AgentMessage.User -> {
                 val text = msg.content.filterIsInstance<ContentPart.Text>().joinToString("") { it.text }
+                // Skill invocations are inlined as <skill name="..."> blocks so the LLM
+                // sees the full SKILL.md body. Hide that wall of text from the TUI — the
+                // notice row ("activated skill: <name>") already tells the user it fired.
+                if (text.trimStart().startsWith("<skill name=\"")) return
                 UserMessage(text)
             }
             is AgentMessage.Assistant -> AssistantMessage(
