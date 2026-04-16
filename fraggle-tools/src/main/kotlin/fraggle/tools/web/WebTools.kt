@@ -107,17 +107,8 @@ class FetchApiTool(
     name = "fetch_api",
     description = """Fetch data from an API endpoint. Uses simple HTTP without browser rendering.
 
-USE THIS TOOL FOR:
-- JSON REST APIs
-- XML/RSS feeds
-- GraphQL endpoints
-- Any structured data API
-- Downloading raw text/data files
-
-DO NOT USE FOR:
-- HTML webpages (use fetch_webpage instead)
-- Websites with JavaScript rendering
-- Downloading images""",
+USE FOR: JSON REST APIs, XML/RSS feeds, Any structured data API, raw text/data files, simple HTML pages.
+DO NOT USE FOR: Complex HTML/JavaSscript webpages (use fetch_webpage instead), Downloading images""",
     argsSerializer = Args.serializer(),
 ) {
     @Serializable
@@ -162,11 +153,9 @@ class ScreenshotPageTool(
     private val playwrightFetcher: PlaywrightFetcher,
 ) : AgentToolDef<ScreenshotPageTool.Args>(
     name = "screenshot_page",
-    description = """Take a screenshot of a web page and send it WITH your response.
-The page will be fully rendered with JavaScript before the screenshot is taken.
+    description = """Take a screenshot of a web page.
 
-The screenshot will be automatically combined with your text response into one cohesive message.
-Simply describe or explain the screenshot in your response text - the image will be attached automatically.""",
+Describe or explain the screenshot in your response text - the image will be attached automatically.""",
     argsSerializer = Args.serializer(),
 ) {
     private val logger = LoggerFactory.getLogger(ScreenshotPageTool::class.java)
