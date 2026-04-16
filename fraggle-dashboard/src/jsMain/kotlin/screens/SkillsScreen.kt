@@ -118,6 +118,7 @@ private fun SkillCard(
                 justifyContent(JustifyContent.SpaceBetween)
                 padding(20.px, 24.px)
                 cursor("pointer")
+                gap(12.px)
             }
             onClick { onToggle() }
         }) {
@@ -126,6 +127,8 @@ private fun SkillCard(
                     display(DisplayStyle.Flex)
                     alignItems(AlignItems.Center)
                     gap(16.px)
+                    flex(1)
+                    minWidth(0.px)
                 }
             }) {
                 Div({

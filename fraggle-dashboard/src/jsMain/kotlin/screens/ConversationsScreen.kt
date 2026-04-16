@@ -95,6 +95,9 @@ private fun ChatListView(
                     Div({
                         classes(DashboardStyles.card)
                     }) {
+                      Div({
+                        classes(DashboardStyles.tableWrapper)
+                      }) {
                         Table({
                             classes(DashboardStyles.table)
                         }) {
@@ -169,6 +172,7 @@ private fun ChatListView(
                                 }
                             }
                         }
+                      }
                     }
                 }
             }
@@ -269,6 +273,9 @@ private fun ChatDetailView(
                         Div({
                             classes(DashboardStyles.card)
                         }) {
+                          Div({
+                            classes(DashboardStyles.tableWrapper)
+                          }) {
                             Table({
                                 classes(DashboardStyles.table)
                             }) {
@@ -334,6 +341,7 @@ private fun ChatDetailView(
                                     }
                                 }
                             }
+                          }
                         }
                     }
                 }

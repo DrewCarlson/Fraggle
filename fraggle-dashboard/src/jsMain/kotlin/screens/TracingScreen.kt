@@ -107,6 +107,9 @@ private fun SessionListView(
                     Div({
                         classes(DashboardStyles.card)
                     }) {
+                      Div({
+                        classes(DashboardStyles.tableWrapper)
+                      }) {
                         Table({
                             classes(DashboardStyles.table)
                         }) {
@@ -191,6 +194,7 @@ private fun SessionListView(
                                 }
                             }
                         }
+                      }
                     }
                 }
             }
@@ -229,6 +233,7 @@ private fun SessionDetailView(
                 alignItems(AlignItems.Center)
                 gap(12.px)
                 marginBottom(16.px)
+                property("flex-wrap", "wrap")
             }
         }) {
             Button({
@@ -253,7 +258,7 @@ private fun SessionDetailView(
             if (state is DataState.Success) {
                 Button({
                     classes(DashboardStyles.button, DashboardStyles.buttonSmall, DashboardStyles.buttonOutline)
-                    onClick { exportTraceJson((state as DataState.Success<TraceSessionDetail>).data) }
+                    onClick { exportTraceJson(state.data) }
                 }) {
                     I({ classes("bi", "bi-download") })
                     Text("Export")
@@ -313,6 +318,9 @@ private fun SessionDetailView(
                         Div({
                             classes(DashboardStyles.card)
                         }) {
+                          Div({
+                            classes(DashboardStyles.tableWrapper)
+                          }) {
                             Table({
                                 classes(DashboardStyles.table)
                             }) {
@@ -357,6 +365,7 @@ private fun SessionDetailView(
                                     }
                                 }
                             }
+                          }
                         }
                     }
                 }
@@ -510,7 +519,7 @@ private fun DataField(key: String, value: String) {
             style {
                 color(Color("#e4e4e7"))
                 property("word-break", "break-all")
-                property("max-width", "400px")
+                property("max-width", "min(400px, 50vw)")
                 property("overflow", "hidden")
                 property("text-overflow", "ellipsis")
                 property("display", "-webkit-box")
@@ -600,7 +609,6 @@ private fun EventDetailDialog(event: TraceEventRecord, onClose: () -> Unit) {
             style {
                 property("max-width", "800px")
                 property("max-height", "85vh")
-                property("min-width", "600px")
                 property("overflow", "hidden")
                 display(DisplayStyle.Flex)
                 flexDirection(FlexDirection.Column)

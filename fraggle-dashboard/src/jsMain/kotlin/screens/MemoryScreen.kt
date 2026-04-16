@@ -14,12 +14,11 @@ import fraggle.models.MemoryResponse
 import fraggle.models.MemoryScopeInfo
 import fraggle.models.MemoryScopesResponse
 import fraggle.models.UpdateFactRequest
-import kotlinx.browser.window
 import org.jetbrains.compose.web.attributes.InputType
 import org.jetbrains.compose.web.attributes.placeholder
 import org.jetbrains.compose.web.css.*
 import org.jetbrains.compose.web.dom.*
-import org.w3c.dom.events.Event
+import rememberIsMobile
 import rememberRefreshableDataLoader
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -38,26 +37,9 @@ private const val COLOR_TEXT_MUTED = "#71717a"
 private const val COLOR_TEXT_DIM = "#52525b"
 private const val COLOR_ERROR = "#ef4444"
 
-private const val COMPACT_BREAKPOINT = 768
-
-@Composable
-private fun rememberIsCompact(): Boolean {
-    var isCompact by remember {
-        mutableStateOf(window.innerWidth < COMPACT_BREAKPOINT)
-    }
-    DisposableEffect(Unit) {
-        val listener: (Event) -> Unit = {
-            isCompact = window.innerWidth < COMPACT_BREAKPOINT
-        }
-        window.addEventListener("resize", listener)
-        onDispose { window.removeEventListener("resize", listener) }
-    }
-    return isCompact
-}
-
 @Composable
 fun MemoryScreen(wsService: WebSocketService) {
-    val isCompact = rememberIsCompact()
+    val isCompact = rememberIsMobile()
     var selectedScope by remember { mutableStateOf<MemoryScopeInfo?>(null) }
     var searchQuery by remember { mutableStateOf("") }
     var showClearConfirm by remember { mutableStateOf(false) }

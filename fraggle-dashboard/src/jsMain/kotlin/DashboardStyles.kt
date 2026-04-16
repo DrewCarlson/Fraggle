@@ -51,12 +51,62 @@ object DashboardStyles : StyleSheet() {
         flexShrink(0)
         backgroundColor(colorSurface)
         property("border-right", "1px solid $colorBorder")
-        property("transition", "width 0.2s ease")
+        property("transition", "width 0.2s ease, transform 0.25s ease")
         overflow("hidden")
+        property("z-index", "200")
     }
 
     val sidebarCollapsed by style {
         width(72.px)
+    }
+
+    // Mobile: sidebar slides off-screen as an overlay
+    val sidebarMobile by style {
+        position(Position.Fixed)
+        top(0.px)
+        left(0.px)
+        bottom(0.px)
+        width(280.px)
+        property("transform", "translateX(-100%)")
+        property("z-index", "1000")
+        property("box-shadow", "none")
+    }
+
+    val sidebarMobileOpen by style {
+        property("transform", "translateX(0)")
+        property("box-shadow", "4px 0 24px rgba(0, 0, 0, 0.5)")
+    }
+
+    val sidebarBackdrop by style {
+        position(Position.Fixed)
+        top(0.px)
+        left(0.px)
+        right(0.px)
+        bottom(0.px)
+        backgroundColor(Color("rgba(0, 0, 0, 0.5)"))
+        property("z-index", "999")
+        property("backdrop-filter", "blur(2px)")
+    }
+
+    val hamburgerButton by style {
+        display(DisplayStyle.Flex)
+        alignItems(AlignItems.Center)
+        justifyContent(JustifyContent.Center)
+        width(40.px)
+        height(40.px)
+        backgroundColor(Color.transparent)
+        border(1.px, LineStyle.Solid, colorBorder)
+        borderRadius(8.px)
+        color(colorTextMuted)
+        cursor("pointer")
+        fontSize(18.px)
+        property("transition", "all 0.15s ease")
+        marginRight(12.px)
+
+        self + hover style {
+            backgroundColor(colorSurfaceHover)
+            color(colorText)
+        }
     }
 
     val sidebarHeader by style {
@@ -220,6 +270,10 @@ object DashboardStyles : StyleSheet() {
         flex(1)
         padding(32.px)
         overflow("auto")
+    }
+
+    val pageContentMobile by style {
+        padding(16.px)
     }
 
     // ========================================================================
@@ -446,9 +500,15 @@ object DashboardStyles : StyleSheet() {
     // Tables
     // ========================================================================
 
+    val tableWrapper by style {
+        overflow("auto")
+        property("-webkit-overflow-scrolling", "touch")
+    }
+
     val table by style {
         width(100.percent)
         property("border-collapse", "collapse")
+        property("min-width", "600px")
     }
 
     val tableHeader by style {
@@ -543,7 +603,7 @@ object DashboardStyles : StyleSheet() {
         border(1.px, LineStyle.Solid, colorBorder)
         borderRadius(16.px)
         padding(24.px)
-        minWidth(400.px)
+        width(90.vw)
         maxWidth(500.px)
         maxHeight(80.vh)
         overflow("auto")
@@ -650,11 +710,13 @@ object DashboardStyles : StyleSheet() {
         position(Position.Fixed)
         bottom(24.px)
         right(24.px)
+        left(24.px)
         display(DisplayStyle.Flex)
         flexDirection(FlexDirection.Column)
         gap(12.px)
         property("z-index", "1100")
         maxWidth(400.px)
+        property("margin-left", "auto")
         property("pointer-events", "none")
     }
 

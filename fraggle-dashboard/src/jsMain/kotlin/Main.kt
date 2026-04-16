@@ -21,6 +21,7 @@ import org.jetbrains.compose.web.dom.*
 import org.jetbrains.compose.web.renderComposableInBody
 import components.ToolPermissionToasts
 import screens.*
+import org.jetbrains.compose.web.css.*
 
 /**
  * Shared HTTP client for API calls to the backend.
@@ -63,7 +64,9 @@ fun main() {
 
 @Composable
 fun App() {
+    val isMobile = rememberIsMobile()
     var sidebarCollapsed by remember { mutableStateOf(false) }
+    var sidebarOpen by remember { mutableStateOf(false) }
 
     // Initialize WebSocket service
     val wsService = LocalWebSocketService.current
@@ -83,11 +86,30 @@ fun App() {
         BrowserRouter("/") {
             val router = Router.current
 
+            // Mobile backdrop
+            if (isMobile && sidebarOpen) {
+                Div({
+                    classes(DashboardStyles.sidebarBackdrop)
+                    onClick { sidebarOpen = false }
+                })
+            }
+
             // Sidebar
             Sidebar(
-                collapsed = sidebarCollapsed,
+                collapsed = if (isMobile) false else sidebarCollapsed,
+                isMobile = isMobile,
+                isMobileOpen = sidebarOpen,
                 router = router,
-                onCollapseToggle = { sidebarCollapsed = !sidebarCollapsed },
+                onCollapseToggle = {
+                    if (isMobile) {
+                        sidebarOpen = !sidebarOpen
+                    } else {
+                        sidebarCollapsed = !sidebarCollapsed
+                    }
+                },
+                onNavigate = {
+                    if (isMobile) sidebarOpen = false
+                },
             )
 
             // Main content
@@ -97,11 +119,34 @@ fun App() {
                 // Header
                 Header({
                     classes(DashboardStyles.header)
+                    if (isMobile) {
+                        style {
+                            padding(16.px)
+                        }
+                    }
                 }) {
-                    H1({
-                        classes(DashboardStyles.pageTitle)
+                    Div({
+                        style {
+                            display(DisplayStyle.Flex)
+                            alignItems(AlignItems.Center)
+                        }
                     }) {
-                        Text(getPageTitle(router.currentPath.path))
+                        if (isMobile) {
+                            Button({
+                                classes(DashboardStyles.hamburgerButton)
+                                onClick { sidebarOpen = true }
+                            }) {
+                                I({ classes("bi", "bi-list") })
+                            }
+                        }
+                        H1({
+                            classes(DashboardStyles.pageTitle)
+                            if (isMobile) {
+                                style { fontSize(18.px) }
+                            }
+                        }) {
+                            Text(getPageTitle(router.currentPath.path))
+                        }
                     }
 
                     Div({
@@ -115,6 +160,9 @@ fun App() {
                 // Page content
                 Div({
                     classes(DashboardStyles.pageContent)
+                    if (isMobile) {
+                        classes(DashboardStyles.pageContentMobile)
+                    }
                 }) {
                     route("/") {
                         OverviewScreen(statusState, wsService)
@@ -163,12 +211,20 @@ fun App() {
 @Composable
 private fun Sidebar(
     collapsed: Boolean,
+    isMobile: Boolean,
+    isMobileOpen: Boolean,
     router: Router,
     onCollapseToggle: () -> Unit,
+    onNavigate: () -> Unit,
 ) {
     Aside({
         classes(DashboardStyles.sidebar)
-        if (collapsed) {
+        if (isMobile) {
+            classes(DashboardStyles.sidebarMobile)
+            if (isMobileOpen) {
+                classes(DashboardStyles.sidebarMobileOpen)
+            }
+        } else if (collapsed) {
             classes(DashboardStyles.sidebarCollapsed)
         }
     }) {
@@ -200,6 +256,7 @@ private fun Sidebar(
                 route = "/",
                 router = router,
                 collapsed = collapsed,
+                onNavigate = onNavigate,
             )
             NavItem(
                 icon = "bi-chat-dots",
@@ -207,6 +264,7 @@ private fun Sidebar(
                 route = "/chats",
                 router = router,
                 collapsed = collapsed,
+                onNavigate = onNavigate,
             )
             NavItem(
                 icon = "bi-plug",
@@ -214,6 +272,7 @@ private fun Sidebar(
                 route = "/bridges",
                 router = router,
                 collapsed = collapsed,
+                onNavigate = onNavigate,
             )
             NavItem(
                 icon = "bi-tools",
@@ -221,6 +280,7 @@ private fun Sidebar(
                 route = "/tools",
                 router = router,
                 collapsed = collapsed,
+                onNavigate = onNavigate,
             )
             NavItem(
                 icon = "bi-lightbulb",
@@ -228,6 +288,7 @@ private fun Sidebar(
                 route = "/skills",
                 router = router,
                 collapsed = collapsed,
+                onNavigate = onNavigate,
             )
             NavItem(
                 icon = "bi-journal-bookmark",
@@ -235,6 +296,7 @@ private fun Sidebar(
                 route = "/memory",
                 router = router,
                 collapsed = collapsed,
+                onNavigate = onNavigate,
             )
             NavItem(
                 icon = "bi-calendar-event",
@@ -242,6 +304,7 @@ private fun Sidebar(
                 route = "/scheduler",
                 router = router,
                 collapsed = collapsed,
+                onNavigate = onNavigate,
             )
             NavItem(
                 icon = "bi-activity",
@@ -249,6 +312,7 @@ private fun Sidebar(
                 route = "/tracing",
                 router = router,
                 collapsed = collapsed,
+                onNavigate = onNavigate,
             )
             NavItem(
                 icon = "bi-gear",
@@ -256,20 +320,23 @@ private fun Sidebar(
                 route = "/settings",
                 router = router,
                 collapsed = collapsed,
+                onNavigate = onNavigate,
             )
         }
 
-        // Collapse toggle
-        Div({
-            classes(DashboardStyles.sidebarFooter)
-        }) {
-            Button({
-                classes(DashboardStyles.collapseButton)
-                onClick { onCollapseToggle() }
+        // Collapse toggle (desktop only)
+        if (!isMobile) {
+            Div({
+                classes(DashboardStyles.sidebarFooter)
             }) {
-                I({
-                    classes("bi", if (collapsed) "bi-chevron-right" else "bi-chevron-left")
-                })
+                Button({
+                    classes(DashboardStyles.collapseButton)
+                    onClick { onCollapseToggle() }
+                }) {
+                    I({
+                        classes("bi", if (collapsed) "bi-chevron-right" else "bi-chevron-left")
+                    })
+                }
             }
         }
     }
@@ -282,6 +349,7 @@ private fun NavItem(
     route: String,
     router: Router,
     collapsed: Boolean,
+    onNavigate: () -> Unit,
 ) {
     val isActive = router.currentPath.path == route ||
             (route != "/" && router.currentPath.path.startsWith(route))
@@ -296,6 +364,7 @@ private fun NavItem(
             onClick {
                 it.preventDefault()
                 router.navigate(route)
+                onNavigate()
             }
             if (collapsed) {
                 title(label)

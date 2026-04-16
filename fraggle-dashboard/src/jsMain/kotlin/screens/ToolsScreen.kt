@@ -110,6 +110,7 @@ private fun ToolCard(
                 justifyContent(JustifyContent.SpaceBetween)
                 padding(20.px, 24.px)
                 cursor("pointer")
+                gap(12.px)
             }
             onClick { onToggle() }
         }) {
@@ -118,6 +119,8 @@ private fun ToolCard(
                     display(DisplayStyle.Flex)
                     alignItems(AlignItems.Center)
                     gap(16.px)
+                    flex(1)
+                    minWidth(0.px)
                 }
             }) {
                 Div({
@@ -228,10 +231,11 @@ private fun ToolCard(
                             style {
                                 display(DisplayStyle.Flex)
                                 alignItems(AlignItems.FlexStart)
-                                gap(12.px)
+                                gap(8.px)
                                 padding(12.px)
                                 backgroundColor(Color("#0f0f1a"))
                                 borderRadius(8.px)
+                                property("flex-wrap", "wrap")
                             }
                         }) {
                             Code({

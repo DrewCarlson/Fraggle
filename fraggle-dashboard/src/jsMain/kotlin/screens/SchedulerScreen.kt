@@ -108,6 +108,8 @@ private fun TaskCard(
                 alignItems(AlignItems.Center)
                 justifyContent(JustifyContent.SpaceBetween)
                 padding(20.px, 24.px)
+                property("flex-wrap", "wrap")
+                gap(12.px)
             }
         }) {
             Div({
@@ -115,6 +117,8 @@ private fun TaskCard(
                     display(DisplayStyle.Flex)
                     alignItems(AlignItems.Center)
                     gap(16.px)
+                    flex(1)
+                    property("min-width", "200px")
                 }
             }) {
                 // Status indicator
@@ -166,7 +170,8 @@ private fun TaskCard(
                 style {
                     display(DisplayStyle.Flex)
                     alignItems(AlignItems.Center)
-                    gap(16.px)
+                    gap(12.px)
+                    property("flex-wrap", "wrap")
                 }
             }) {
                 // Schedule badge
