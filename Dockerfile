@@ -24,7 +24,8 @@ RUN apt-get update \
 
 RUN addgroup --gid "$PGID" "$USER" \
     && adduser --gecos '' --uid "$PUID" --gid "$PGID" --disabled-password --shell /bin/bash "$USER" \
-    && mkdir -p /app/data \
+    && mkdir -p /app/data /app/data/secrets /app/data/venvs \
+    && chmod 700 /app/data/secrets \
     && chown -R "$USER:$USER" /app
 
 COPY --chown=$USER:$USER fraggle-cli/build/install/fraggle/ ./
