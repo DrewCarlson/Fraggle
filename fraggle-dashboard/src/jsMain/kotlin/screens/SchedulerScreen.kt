@@ -5,9 +5,11 @@ import DataState
 import RefreshTrigger
 import WebSocketService
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import apiClient
 import io.ktor.client.call.*
 import io.ktor.client.request.*
+import kotlinx.coroutines.launch
 import fraggle.models.ScheduledTaskInfo
 import org.jetbrains.compose.web.css.*
 import org.jetbrains.compose.web.dom.*
@@ -74,9 +76,15 @@ fun SchedulerScreen(wsService: WebSocketService) {
                         classes(DashboardStyles.cardList)
                     }) {
                         tasks.forEach { task ->
+                            val scope = rememberCoroutineScope()
                             TaskCard(
                                 task = task,
-                                onCancel = { refresh() }
+                                onCancel = {
+                                    scope.launch {
+                                        apiClient.delete("scheduler/tasks/${task.id}")
+                                        refresh()
+                                    }
+                                }
                             )
                         }
                     }
