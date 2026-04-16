@@ -894,17 +894,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#differences-from-pi-coding-agent" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Differences from pi-coding-agent
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#troubleshooting" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1734,17 +1723,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#differences-from-pi-coding-agent" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Differences from pi-coding-agent
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#troubleshooting" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1890,7 +1868,7 @@
 </tr>
 <tr>
 <td><code>-r</code>, <code>--resume</code></td>
-<td>Resume the most recent session (alias of <code>--continue</code> in MVP; a selectable picker is future work).</td>
+<td>Resume the most recent session (alias of <code>--continue</code>).</td>
 </tr>
 <tr>
 <td><code>--session &lt;path&gt;</code></td>
@@ -1987,14 +1965,14 @@
 <p>Once <code>fraggle code</code> launches the TUI, you get a live message list, a multi-line editor, and a status footer.</p>
 <h3 id="layout">Layout<a class="headerlink" href="#layout" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>┌─────────────────────────────────────────────────────────────┐
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>│  fraggle code  │  ?: /hotkeys  │  3 context files  │  ...  │  ← Header
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>│  fraggle code  │  ?: /hotkeys  │  3 context files  │  ...   │  ← Header
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>├─────────────────────────────────────────────────────────────┤
 <a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>│  » what&#39;s in foo.kt?                                        │
 <a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>│                                                             │
 <a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>│  ◆ I&#39;ll read the file                                       │
 <a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>│    └─ read_file {&quot;path&quot;:&quot;foo.kt&quot;}                           │
 <a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>│         ← read_file: fun main() { println(&quot;hi&quot;) }           │
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>│  ◆ The file defines a main function that prints hello.     │
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>│  ◆ The file defines a main function that prints hello.      │
 <a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>│                                                             │  ← MessageList
 <a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>├─────────────────────────────────────────────────────────────┤
 <a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>│  &gt; your next message here_                                  │
@@ -2066,7 +2044,7 @@
 <p>Press <code>y</code> to let the tool call run or <code>n</code> (or <code>Escape</code>) to deny. The agent receives the denial as a tool error and usually asks you what to do instead.</p>
 <p>To run without prompts, start with <code>--supervision none</code> or set <code>"supervision": "none"</code> in <code>settings.json</code>.</p>
 <h2 id="sessions">Sessions<a class="headerlink" href="#sessions" title="Permanent link">&para;</a></h2>
-<p>Sessions are JSONL files with a tree structure. Every entry has an <code>id</code> and an optional <code>parentId</code>, so multiple branches can share a prefix. This is how <code>/tree</code> navigation and forking work without creating new files for every branch point.</p>
+<p>Sessions are JSONL files with a tree structure. Every entry has an <code>id</code> and an optional <code>parentId</code>, so multiple branches can share a prefix. This is how forking works without creating new files for every branch point.</p>
 <h3 id="where-sessions-live">Where sessions live<a class="headerlink" href="#where-sessions-live" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>$FRAGGLE_ROOT/coding/sessions/
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>  &lt;project-hash&gt;/               # 12-char sha1 of the absolute project path
@@ -2100,7 +2078,7 @@
 <li>Replaces the in-memory history with <code>[synthetic summary message] + recent turns verbatim</code>.</li>
 <li>Writes a <code>Meta(label="compaction")</code> entry to the session file with the full summary text.</li>
 </ol>
-<p><strong>Compaction is lossy for the working conversation but the session file keeps the full original history.</strong> Future work (<code>/tree</code>) will let you browse back to any point before compaction.</p>
+<p><strong>Compaction is lossy for the working conversation but the session file keeps the full original history.</strong></p>
 <p>Tune via <code>settings.json</code>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="p">{</span>
 <a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">&quot;contextWindowTokens&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">32000</span><span class="p">,</span>
@@ -2291,35 +2269,6 @@
 <a id="__codelineno-15-23" name="__codelineno-15-23" href="#__codelineno-15-23"></a>        ├── APPEND_SYSTEM.md       # project append
 <a id="__codelineno-15-24" name="__codelineno-15-24" href="#__codelineno-15-24"></a>        └── prompts/               # project-specific templates
 </code></pre></div>
-<h2 id="differences-from-pi-coding-agent">Differences from pi-coding-agent<a class="headerlink" href="#differences-from-pi-coding-agent" title="Permanent link">&para;</a></h2>
-<p>Fraggle's coding agent is modeled on <a href="https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent">pi</a> but intentionally smaller in scope for MVP.</p>
-<p><strong>Present in Fraggle:</strong></p>
-<ul>
-<li>JSONL session files with tree structure (identical format concept)</li>
-<li><code>AGENTS.md</code> context files walked cwd → git root</li>
-<li>Compaction with cumulative summaries</li>
-<li>Exact-string <code>edit_file</code> modeled on Claude Code's Edit tool</li>
-<li>Supervision modes (<code>ask</code> / <code>none</code>)</li>
-<li>Prompt templates with variable substitution</li>
-<li>Slash commands (<code>/new</code>, <code>/quit</code>, <code>/hotkeys</code>, <code>/session</code>)</li>
-<li><code>@file</code> positional arguments</li>
-<li>Steering and follow-up message queues (inherited from the core agent loop)</li>
-</ul>
-<p><strong>Deferred to later phases:</strong></p>
-<ul>
-<li><code>/tree</code> interactive branch navigator</li>
-<li>Multi-provider support (Fraggle only speaks LM Studio today)</li>
-<li>Subscription OAuth (Anthropic Pro, GitHub Copilot, etc.)</li>
-<li>Agent skills (under construction in parallel — will land for both the messenger assistant and the coding agent together)</li>
-<li>Extensions / Kotlin Scripting modules</li>
-<li>Pi-package-style installation via git/npm</li>
-<li><code>/share</code> gist upload and HTML export</li>
-<li>Thinking-level shorthand</li>
-<li>RPC and JSON output modes</li>
-<li>Image paste / drag-drop attachments</li>
-<li>Git checkpointing and auto-commit</li>
-<li><code>--print</code> / <code>-p</code> non-interactive mode</li>
-</ul>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <h3 id="no-model-configured">"No model configured"<a class="headerlink" href="#no-model-configured" title="Permanent link">&para;</a></h3>
 <p>Set <code>provider.model</code> in <code>fraggle.yaml</code>, or pass <code>--model &lt;id&gt;</code> on the command line, or set <code>"model": "..."</code> in your coding-agent <code>settings.json</code>.</p>
@@ -2327,7 +2276,7 @@
 <p>The TUI locks out typing while the agent is processing a turn. Watch the footer status — <code>thinking...</code> means the agent is running; <code>idle</code> means the editor will accept input. If the agent is stuck, press <code>Escape</code> to abort the current turn.</p>
 <h3 id="compaction-fires-too-often-not-often-enough">Compaction fires too often / not often enough<a class="headerlink" href="#compaction-fires-too-often-not-often-enough" title="Permanent link">&para;</a></h3>
 <p>Compaction is gated on both the policy AND the context-usage ratio. If you haven't set <code>contextWindowTokens</code> in <code>settings.json</code>, the ratio is always 0.0 and compaction never fires proactively. Set it to your model's actual context window size (e.g., <code>32000</code> for a 32K-context model) to enable ratio-based compaction.</p>
-<p>To disable compaction entirely, set <code>compactionKeepRecentMessages</code> larger than any session you expect, or (future work) add a <code>never</code> compaction policy.</p>
+<p>To disable compaction entirely, set <code>compactionKeepRecentMessages</code> larger than any session you expect.</p>
 <h3 id="i-edited-an-agentsmd-and-the-agent-doesnt-see-the-change">I edited an <code>AGENTS.md</code> and the agent doesn't see the change<a class="headerlink" href="#i-edited-an-agentsmd-and-the-agent-doesnt-see-the-change" title="Permanent link">&para;</a></h3>
 <p><code>AGENTS.md</code> files are loaded at startup. Exit with <code>Escape</code> and run <code>fraggle code -c</code> to pick up the change.</p>
 <h3 id="session-file-is-corrupt">Session file is corrupt<a class="headerlink" href="#session-file-is-corrupt" title="Permanent link">&para;</a></h3>
