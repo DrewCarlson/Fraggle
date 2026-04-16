@@ -804,6 +804,106 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#python-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python support
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Python support">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#skill-layout-with-python" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Skill layout with Python
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How it works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#writing-python-skill-scripts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Writing Python skill scripts
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#secrets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Secrets
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Secrets">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Storage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#managing-secrets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Managing secrets
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security model
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#configuration" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1235,6 +1335,106 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#python-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python support
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Python support">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#skill-layout-with-python" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Skill layout with Python
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How it works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#writing-python-skill-scripts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Writing Python skill scripts
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#secrets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Secrets
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Secrets">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Storage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#managing-secrets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Managing secrets
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security model
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#configuration" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1451,6 +1651,11 @@
 <td>Declared tool allowlist (parsed but not enforced in the current release).</td>
 </tr>
 <tr>
+<td><code>env</code></td>
+<td>string list</td>
+<td>Environment variable names the skill requires (API keys, credentials). See <a href="#secrets">Secrets</a>.</td>
+</tr>
+<tr>
 <td><code>disable-model-invocation</code></td>
 <td>boolean</td>
 <td>If <code>true</code>, hide the skill from the auto-catalog. Still reachable via <code>/skill:name</code> explicitly.</td>
@@ -1531,15 +1736,85 @@
 </code></pre></div>
 <p>That rewritten message then flows through the normal agent loop.</p>
 <p><strong>Hidden skills</strong> (those with <code>disable-model-invocation: true</code>) are <em>not</em> in the catalog, so the model won't pick them up automatically — but they remain reachable via explicit <code>/skill:name</code>. Use this for skills you want to keep off the default surface (e.g. destructive operations) while still having them available on request.</p>
+<h2 id="python-support">Python support<a class="headerlink" href="#python-support" title="Permanent link">&para;</a></h2>
+<p>Skills can include Python scripts with dependency management. When a skill directory contains a <code>requirements.txt</code>, Fraggle manages a per-skill Python virtual environment automatically.</p>
+<h3 id="skill-layout-with-python">Skill layout with Python<a class="headerlink" href="#skill-layout-with-python" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>my-api-skill/
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>├── SKILL.md
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>├── requirements.txt       # Python dependencies
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>└── scripts/
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>    ├── config.py           # Shared credential/config helpers
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>    ├── get_data.py         # Individual script per action
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>    └── submit_order.py
+</code></pre></div>
+<h3 id="how-it-works">How it works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>On <code>fraggle skills add</code></strong>: if <code>requirements.txt</code> is present, Fraggle automatically creates a venv at <code>~/.fraggle/venvs/&lt;skill-name&gt;/</code> and runs <code>pip install -r requirements.txt</code>.</li>
+<li><strong>When the agent runs a skill script</strong>: it passes <code>skill="&lt;name&gt;"</code> to the <code>execute_command</code> tool. This activates the venv (prepends its <code>bin/</code> to <code>PATH</code>) and injects configured secrets as environment variables — all at the process level, never visible to the LLM.</li>
+<li><strong>Manual setup</strong>: run <code>fraggle skills setup [name]</code> to create or <code>fraggle skills setup --rebuild [name]</code> to recreate venvs.</li>
+</ol>
+<h3 id="writing-python-skill-scripts">Writing Python skill scripts<a class="headerlink" href="#writing-python-skill-scripts" title="Permanent link">&para;</a></h3>
+<p>Scripts should use <code>argparse</code> for CLI arguments and read credentials from environment variables (injected automatically by Fraggle):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="n">symbol</span><span class="p">):</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>    <span class="n">api_key</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;MY_API_KEY&quot;</span><span class="p">)</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">api_key</span><span class="p">:</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Error: MY_API_KEY not configured&quot;</span><span class="p">)</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>        <span class="k">return</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>    <span class="c1"># ... use the API ...</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Result for </span><span class="si">{</span><span class="n">symbol</span><span class="si">}</span><span class="s2">: ...&quot;</span><span class="p">)</span>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">()</span>
+<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--symbol&quot;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>    <span class="n">main</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">symbol</span><span class="p">)</span>
+</code></pre></div>
+<p>The SKILL.md body should describe which scripts are available and what arguments they accept, so the agent knows how to invoke them.</p>
+<h2 id="secrets">Secrets<a class="headerlink" href="#secrets" title="Permanent link">&para;</a></h2>
+<p>Skills declare required environment variables in the <code>env</code> frontmatter field:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nn">---</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-api-skill</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Interact with the My API service.</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="nt">env</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&#39;MY_API_KEY&#39;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&#39;MY_ACCOUNT_ID&#39;</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="nn">---</span>
+</code></pre></div>
+<h3 id="storage">Storage<a class="headerlink" href="#storage" title="Permanent link">&para;</a></h3>
+<p>Secrets are stored as individual files at <code>~/.fraggle/secrets/&lt;skill-name&gt;/&lt;VAR_NAME&gt;</code>. Directory permissions are <code>rwx------</code> (700) and file permissions are <code>rw-------</code> (600).</p>
+<h3 id="managing-secrets">Managing secrets<a class="headerlink" href="#managing-secrets" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Set a secret (prompts for value on stdin to avoid shell history)</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>secrets<span class="w"> </span><span class="nb">set</span><span class="w"> </span>my-api-skill<span class="w"> </span>MY_API_KEY
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># Set with value directly (less secure — visible in shell history)</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>secrets<span class="w"> </span><span class="nb">set</span><span class="w"> </span>my-api-skill<span class="w"> </span>MY_API_KEY<span class="w"> </span>--value<span class="w"> </span><span class="s2">&quot;sk-...&quot;</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="c1"># List configured secret names (values are never shown)</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>secrets<span class="w"> </span>list<span class="w"> </span>my-api-skill
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>
+<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="c1"># Check which required env vars are configured vs missing</span>
+<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>secrets<span class="w"> </span>check<span class="w"> </span>my-api-skill
+<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a>
+<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="c1"># Remove a secret</span>
+<a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>secrets<span class="w"> </span>remove<span class="w"> </span>my-api-skill<span class="w"> </span>MY_API_KEY
+</code></pre></div>
+<h3 id="security-model">Security model<a class="headerlink" href="#security-model" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Secrets never pass through the LLM.</strong> The agent only knows the skill name; secret values are injected into the process environment at the tool execution layer.</li>
+<li><strong>Secrets are not included in prompts.</strong> The system prompt shows which env vars are configured (<code>configured="true"</code>) but never their values.</li>
+<li><strong>Script output is visible to the LLM.</strong> Skill authors should avoid printing secret values in their scripts' stdout/stderr.</li>
+<li><strong>Secrets survive skill removal</strong> unless <code>--purge</code> is passed to <code>fraggle skills remove</code>.</li>
+</ul>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <p>All skill behaviour is controlled from <code>config/fraggle.yaml</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">fraggle</span><span class="p">:</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">skills</span><span class="p">:</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">                        </span><span class="c1"># Load and advertise skills</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="nt">skills_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./config/skills</span><span class="w">          </span><span class="c1"># Project-scoped directory (PROJECT precedence)</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="nt">global_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~/.fraggle/skills</span><span class="w">        </span><span class="c1"># Cross-project directory (null to disable)</span>
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="nt">extra_paths</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span><span class="w">                      </span><span class="c1"># Additional files or directories (EXPLICIT precedence)</span>
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">    </span><span class="nt">enable_slash_commands</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">          </span><span class="c1"># Enable /skill:name in chat bridges</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nt">fraggle</span><span class="p">:</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span><span class="nt">skills</span><span class="p">:</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">                        </span><span class="c1"># Load and advertise skills</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">    </span><span class="nt">skills_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./config/skills</span><span class="w">          </span><span class="c1"># Project-scoped directory (PROJECT precedence)</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">    </span><span class="nt">global_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~/.fraggle/skills</span><span class="w">        </span><span class="c1"># Cross-project directory (null to disable)</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">    </span><span class="nt">extra_paths</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span><span class="w">                      </span><span class="c1"># Additional files or directories (EXPLICIT precedence)</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">    </span><span class="nt">enable_slash_commands</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">          </span><span class="c1"># Enable /skill:name in chat bridges</span>
 </code></pre></div>
 <p>Setting <code>enabled: false</code> wires an empty registry — no catalog block is injected into the system prompt and <code>/skill:name</code> commands fall through as unknown. Setting <code>enable_slash_commands: false</code> keeps auto-invocation working but disables the explicit <code>/skill:name</code> path.</p>
 <h2 id="authoring-tips">Authoring tips<a class="headerlink" href="#authoring-tips" title="Permanent link">&para;</a></h2>
@@ -1561,7 +1836,7 @@
 <tbody>
 <tr>
 <td><code>fraggle skills list</code></td>
-<td>List installed skills from the configured sources, with source, description, and on-disk location. Flags: <code>-g</code>/<code>-p</code> to filter, <code>--all</code> to include hidden skills.</td>
+<td>List installed skills from the configured sources, with source, description, and on-disk location. Shows <code>[python]</code> and <code>[env:N/M]</code> markers. Flags: <code>-g</code>/<code>-p</code> to filter, <code>--all</code> to include hidden skills.</td>
 </tr>
 <tr>
 <td><code>fraggle skills find &lt;terms…&gt;</code></td>
@@ -1577,7 +1852,7 @@
 </tr>
 <tr>
 <td><code>fraggle skills add &lt;source&gt;</code></td>
-<td>Install skills from a local path, a GitHub repo, or a git URL.</td>
+<td>Install skills from a local path, a GitHub repo, or a git URL. Auto-creates Python venvs and warns about missing secrets.</td>
 </tr>
 <tr>
 <td><code>fraggle skills update [&lt;names…&gt;]</code></td>
@@ -1585,7 +1860,27 @@
 </tr>
 <tr>
 <td><code>fraggle skills remove &lt;name…&gt;</code></td>
-<td>Uninstall skills previously installed via <code>add</code>. Only touches entries tracked in the target's manifest.</td>
+<td>Uninstall skills previously installed via <code>add</code>. Cleans up venvs. Pass <code>--purge</code> to also remove secrets.</td>
+</tr>
+<tr>
+<td><code>fraggle skills setup [name]</code></td>
+<td>Set up Python venvs for skills with <code>requirements.txt</code>. Use <code>--rebuild</code> to recreate from scratch. Omit name to set up all.</td>
+</tr>
+<tr>
+<td><code>fraggle skills secrets set &lt;skill&gt; &lt;var&gt;</code></td>
+<td>Set a secret value for a skill (prompts stdin; use <code>--value</code> for non-interactive).</td>
+</tr>
+<tr>
+<td><code>fraggle skills secrets list &lt;skill&gt;</code></td>
+<td>List configured secret names (values not shown).</td>
+</tr>
+<tr>
+<td><code>fraggle skills secrets check &lt;skill&gt;</code></td>
+<td>Show required vs configured env vars for a skill.</td>
+</tr>
+<tr>
+<td><code>fraggle skills secrets remove &lt;skill&gt; &lt;var&gt;</code></td>
+<td>Remove a secret.</td>
 </tr>
 </tbody>
 </table>
@@ -1638,38 +1933,38 @@
 <li>Records each installation in <code>&lt;target&gt;/.fraggle-skills.json</code>. The manifest is what <code>remove</code> consults, so skills you drop into the target manually are <strong>not</strong> <code>remove</code>-able via the CLI and will be left alone.</li>
 </ul>
 <h3 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Scaffold a new skill locally</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>init<span class="w"> </span>pr-review<span class="w"> </span>-d<span class="w"> </span><span class="s2">&quot;Review a pull request for correctness, style, and tests.&quot;</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1"># Install from GitHub shorthand</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>add<span class="w"> </span>vercel-labs/skills
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="c1"># Install one skill from a subdirectory on a branch</span>
-<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>add<span class="w"> </span>acme/tools/skills/code-review@dev
-<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>
-<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="c1"># Install from a local directory you&#39;re authoring, as a symlink</span>
-<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>add<span class="w"> </span>--symlink<span class="w"> </span>~/code/my-skill
-<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>
-<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="c1"># Install from a GitLab repo</span>
-<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>add<span class="w"> </span>https://gitlab.com/foo/bar.git
-<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>
-<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a><span class="c1"># List everything loaded (including installed + manually-dropped)</span>
-<a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>list
-<a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a>
-<a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a><span class="c1"># Search across loaded skills</span>
-<a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>find<span class="w"> </span>commit<span class="w"> </span>message
-<a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a>
-<a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a><span class="c1"># Refresh every tracked skill from its original source</span>
-<a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>update
-<a id="__codelineno-7-24" name="__codelineno-7-24" href="#__codelineno-7-24"></a>
-<a id="__codelineno-7-25" name="__codelineno-7-25" href="#__codelineno-7-25"></a><span class="c1"># Refresh specific skills, showing what would change without touching disk</span>
-<a id="__codelineno-7-26" name="__codelineno-7-26" href="#__codelineno-7-26"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>update<span class="w"> </span>commit-message<span class="w"> </span>--dry-run
-<a id="__codelineno-7-27" name="__codelineno-7-27" href="#__codelineno-7-27"></a>
-<a id="__codelineno-7-28" name="__codelineno-7-28" href="#__codelineno-7-28"></a><span class="c1"># Uninstall one or more skills</span>
-<a id="__codelineno-7-29" name="__codelineno-7-29" href="#__codelineno-7-29"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>remove<span class="w"> </span>pr-review<span class="w"> </span>code-review
-<a id="__codelineno-7-30" name="__codelineno-7-30" href="#__codelineno-7-30"></a>
-<a id="__codelineno-7-31" name="__codelineno-7-31" href="#__codelineno-7-31"></a><span class="c1"># Validate a directory before shipping (CI-friendly)</span>
-<a id="__codelineno-7-32" name="__codelineno-7-32" href="#__codelineno-7-32"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>validate<span class="w"> </span>./skills
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Scaffold a new skill locally</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>init<span class="w"> </span>pr-review<span class="w"> </span>-d<span class="w"> </span><span class="s2">&quot;Review a pull request for correctness, style, and tests.&quot;</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="c1"># Install from GitHub shorthand</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>add<span class="w"> </span>vercel-labs/skills
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="c1"># Install one skill from a subdirectory on a branch</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>add<span class="w"> </span>acme/tools/skills/code-review@dev
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="c1"># Install from a local directory you&#39;re authoring, as a symlink</span>
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>add<span class="w"> </span>--symlink<span class="w"> </span>~/code/my-skill
+<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a>
+<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="c1"># Install from a GitLab repo</span>
+<a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>add<span class="w"> </span>https://gitlab.com/foo/bar.git
+<a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a>
+<a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a><span class="c1"># List everything loaded (including installed + manually-dropped)</span>
+<a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>list
+<a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a>
+<a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a><span class="c1"># Search across loaded skills</span>
+<a id="__codelineno-11-20" name="__codelineno-11-20" href="#__codelineno-11-20"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>find<span class="w"> </span>commit<span class="w"> </span>message
+<a id="__codelineno-11-21" name="__codelineno-11-21" href="#__codelineno-11-21"></a>
+<a id="__codelineno-11-22" name="__codelineno-11-22" href="#__codelineno-11-22"></a><span class="c1"># Refresh every tracked skill from its original source</span>
+<a id="__codelineno-11-23" name="__codelineno-11-23" href="#__codelineno-11-23"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>update
+<a id="__codelineno-11-24" name="__codelineno-11-24" href="#__codelineno-11-24"></a>
+<a id="__codelineno-11-25" name="__codelineno-11-25" href="#__codelineno-11-25"></a><span class="c1"># Refresh specific skills, showing what would change without touching disk</span>
+<a id="__codelineno-11-26" name="__codelineno-11-26" href="#__codelineno-11-26"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>update<span class="w"> </span>commit-message<span class="w"> </span>--dry-run
+<a id="__codelineno-11-27" name="__codelineno-11-27" href="#__codelineno-11-27"></a>
+<a id="__codelineno-11-28" name="__codelineno-11-28" href="#__codelineno-11-28"></a><span class="c1"># Uninstall one or more skills</span>
+<a id="__codelineno-11-29" name="__codelineno-11-29" href="#__codelineno-11-29"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>remove<span class="w"> </span>pr-review<span class="w"> </span>code-review
+<a id="__codelineno-11-30" name="__codelineno-11-30" href="#__codelineno-11-30"></a>
+<a id="__codelineno-11-31" name="__codelineno-11-31" href="#__codelineno-11-31"></a><span class="c1"># Validate a directory before shipping (CI-friendly)</span>
+<a id="__codelineno-11-32" name="__codelineno-11-32" href="#__codelineno-11-32"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>validate<span class="w"> </span>./skills
 </code></pre></div>
 <h3 id="notes-on-update">Notes on <code>update</code><a class="headerlink" href="#notes-on-update" title="Permanent link">&para;</a></h3>
 <p><code>update</code> re-resolves each tracked skill by parsing its manifest <code>source</code> label back into the original spec, fetches a fresh copy, and reinstalls over the existing directory with <code>force=true</code>. Per-entry rules:</p>
@@ -1705,7 +2000,7 @@
 </table>
 <h2 id="example">Example<a class="headerlink" href="#example" title="Permanent link">&para;</a></h2>
 <p>A copyable reference skill lives at <a href="https://github.com/drewcarlson/Fraggle/tree/main/docs/examples/skills/commit-message"><code>docs/examples/skills/commit-message/</code></a>. Copy the directory into <code>~/.fraggle/skills/</code> to install it globally, or into <code>./config/skills/</code> for a single project — or just run:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>add<span class="w"> </span>docs/examples/skills/commit-message
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>add<span class="w"> </span>docs/examples/skills/commit-message
 </code></pre></div>
 
 
