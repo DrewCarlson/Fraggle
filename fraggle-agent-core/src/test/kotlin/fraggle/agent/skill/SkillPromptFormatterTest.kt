@@ -13,6 +13,7 @@ class SkillPromptFormatterTest {
         description: String = "Desc for $name",
         path: String = "/skills/$name/SKILL.md",
         hidden: Boolean = false,
+        env: List<String> = emptyList(),
     ) = Skill(
         name = name,
         description = description,
@@ -20,7 +21,7 @@ class SkillPromptFormatterTest {
         baseDir = Path.of(path).parent,
         source = SkillSource.PROJECT,
         disableModelInvocation = hidden,
-        frontmatter = SkillFrontmatter(name = name, description = description),
+        frontmatter = SkillFrontmatter(name = name, description = description, env = env),
     )
 
     @Test
@@ -75,5 +76,42 @@ class SkillPromptFormatterTest {
         assertTrue("&lt;tag&gt;" in output)
         assertTrue("&amp;" in output)
         assertFalse("<tag>" in output)
+    }
+
+    @Test
+    fun `includes env var status when skill declares env`() {
+        val output = SkillPromptFormatter.format(
+            listOf(skill("api-skill", env = listOf("API_KEY", "SECRET"))),
+            envChecker = { _, varName -> varName == "API_KEY" },
+        )
+        assertTrue("<env>" in output)
+        assertTrue("""<var name="API_KEY" configured="true"/>""" in output)
+        assertTrue("""<var name="SECRET" configured="false"/>""" in output)
+        assertTrue("</env>" in output)
+    }
+
+    @Test
+    fun `omits env block when skill has no env vars`() {
+        val output = SkillPromptFormatter.format(
+            listOf(skill("simple")),
+        )
+        assertFalse("<env>" in output)
+    }
+
+    @Test
+    fun `includes skill parameter instruction when env vars present`() {
+        val output = SkillPromptFormatter.format(
+            listOf(skill("api-skill", env = listOf("KEY"))),
+        )
+        assertTrue("execute_command with skill=" in output)
+        assertTrue("Never ask the user for secret values" in output)
+    }
+
+    @Test
+    fun `does not include skill parameter instruction for plain skills`() {
+        val output = SkillPromptFormatter.format(
+            listOf(skill("plain")),
+        )
+        assertFalse("execute_command with skill=" in output)
     }
 }

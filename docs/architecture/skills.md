@@ -64,6 +64,7 @@ Style rules for this repo are in `references/style-guide.md` (relative to this s
 | `license`                   | string      | SPDX identifier. Metadata only.                                                                   |
 | `compatibility`             | string      | Agent platform compatibility hint. Metadata only.                                                 |
 | `allowed-tools`             | string list | Declared tool allowlist (parsed but not enforced in the current release).                         |
+| `env`                       | string list | Environment variable names the skill requires (API keys, credentials). See [Secrets](#secrets).  |
 | `disable-model-invocation`  | boolean     | If `true`, hide the skill from the auto-catalog. Still reachable via `/skill:name` explicitly.    |
 
 Validation is lenient: bad names or over-long descriptions produce a warning in the logs but the skill still loads. Missing `description` is the only hard failure — the skill is skipped.
@@ -138,6 +139,95 @@ That rewritten message then flows through the normal agent loop.
 
 **Hidden skills** (those with `disable-model-invocation: true`) are *not* in the catalog, so the model won't pick them up automatically — but they remain reachable via explicit `/skill:name`. Use this for skills you want to keep off the default surface (e.g. destructive operations) while still having them available on request.
 
+## Python support
+
+Skills can include Python scripts with dependency management. When a skill directory contains a `requirements.txt`, Fraggle manages a per-skill Python virtual environment automatically.
+
+### Skill layout with Python
+
+```
+my-api-skill/
+├── SKILL.md
+├── requirements.txt       # Python dependencies
+└── scripts/
+    ├── config.py           # Shared credential/config helpers
+    ├── get_data.py         # Individual script per action
+    └── submit_order.py
+```
+
+### How it works
+
+1. **On `fraggle skills add`**: if `requirements.txt` is present, Fraggle automatically creates a venv at `~/.fraggle/venvs/<skill-name>/` and runs `pip install -r requirements.txt`.
+2. **When the agent runs a skill script**: it passes `skill="<name>"` to the `execute_command` tool. This activates the venv (prepends its `bin/` to `PATH`) and injects configured secrets as environment variables — all at the process level, never visible to the LLM.
+3. **Manual setup**: run `fraggle skills setup [name]` to create or `fraggle skills setup --rebuild [name]` to recreate venvs.
+
+### Writing Python skill scripts
+
+Scripts should use `argparse` for CLI arguments and read credentials from environment variables (injected automatically by Fraggle):
+
+```python
+import argparse
+import os
+
+def main(symbol):
+    api_key = os.environ.get("MY_API_KEY")
+    if not api_key:
+        print("Error: MY_API_KEY not configured")
+        return
+    # ... use the API ...
+    print(f"Result for {symbol}: ...")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--symbol", required=True)
+    args = parser.parse_args()
+    main(args.symbol)
+```
+
+The SKILL.md body should describe which scripts are available and what arguments they accept, so the agent knows how to invoke them.
+
+## Secrets
+
+Skills declare required environment variables in the `env` frontmatter field:
+
+```yaml
+---
+name: my-api-skill
+description: Interact with the My API service.
+env: ['MY_API_KEY', 'MY_ACCOUNT_ID']
+---
+```
+
+### Storage
+
+Secrets are stored as individual files at `~/.fraggle/secrets/<skill-name>/<VAR_NAME>`. Directory permissions are `rwx------` (700) and file permissions are `rw-------` (600).
+
+### Managing secrets
+
+```bash
+# Set a secret (prompts for value on stdin to avoid shell history)
+fraggle skills secrets set my-api-skill MY_API_KEY
+
+# Set with value directly (less secure — visible in shell history)
+fraggle skills secrets set my-api-skill MY_API_KEY --value "sk-..."
+
+# List configured secret names (values are never shown)
+fraggle skills secrets list my-api-skill
+
+# Check which required env vars are configured vs missing
+fraggle skills secrets check my-api-skill
+
+# Remove a secret
+fraggle skills secrets remove my-api-skill MY_API_KEY
+```
+
+### Security model
+
+- **Secrets never pass through the LLM.** The agent only knows the skill name; secret values are injected into the process environment at the tool execution layer.
+- **Secrets are not included in prompts.** The system prompt shows which env vars are configured (`configured="true"`) but never their values.
+- **Script output is visible to the LLM.** Skill authors should avoid printing secret values in their scripts' stdout/stderr.
+- **Secrets survive skill removal** unless `--purge` is passed to `fraggle skills remove`.
+
 ## Configuration
 
 All skill behaviour is controlled from `config/fraggle.yaml`:
@@ -167,13 +257,18 @@ The `fraggle skills` subcommand family is a lightweight skill package manager mo
 
 | Command | What it does |
 |---|---|
-| `fraggle skills list` | List installed skills from the configured sources, with source, description, and on-disk location. Flags: `-g`/`-p` to filter, `--all` to include hidden skills. |
+| `fraggle skills list` | List installed skills from the configured sources, with source, description, and on-disk location. Shows `[python]` and `[env:N/M]` markers. Flags: `-g`/`-p` to filter, `--all` to include hidden skills. |
 | `fraggle skills find <terms…>` | Substring-match skills by name and description. Multiple terms are AND-matched, case-insensitive. |
 | `fraggle skills validate [path]` | Validate SKILL.md files at a path (or the configured sources if omitted). Exits non-zero on any error; warnings don't fail. CI-friendly. |
 | `fraggle skills init <name> [-d "…"]` | Scaffold a new `SKILL.md` under the target directory with a templated body. |
-| `fraggle skills add <source>` | Install skills from a local path, a GitHub repo, or a git URL. |
+| `fraggle skills add <source>` | Install skills from a local path, a GitHub repo, or a git URL. Auto-creates Python venvs and warns about missing secrets. |
 | `fraggle skills update [<names…>]` | Re-fetch and reinstall tracked skills. Omit `<names>` to update everything tracked in the target's manifest. Supports `--dry-run`. |
-| `fraggle skills remove <name…>` | Uninstall skills previously installed via `add`. Only touches entries tracked in the target's manifest. |
+| `fraggle skills remove <name…>` | Uninstall skills previously installed via `add`. Cleans up venvs. Pass `--purge` to also remove secrets. |
+| `fraggle skills setup [name]` | Set up Python venvs for skills with `requirements.txt`. Use `--rebuild` to recreate from scratch. Omit name to set up all. |
+| `fraggle skills secrets set <skill> <var>` | Set a secret value for a skill (prompts stdin; use `--value` for non-interactive). |
+| `fraggle skills secrets list <skill>` | List configured secret names (values not shown). |
+| `fraggle skills secrets check <skill>` | Show required vs configured env vars for a skill. |
+| `fraggle skills secrets remove <skill> <var>` | Remove a secret. |
 
 ### Target resolution
 

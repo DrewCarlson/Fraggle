@@ -16,6 +16,10 @@ RUN apt-get update \
     # Common
     wget \
     bash \
+    # Python 3 for skill venvs and script execution
+    python3 \
+    python3-venv \
+    python3-pip \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 RUN addgroup --gid "$PGID" "$USER" \
@@ -30,7 +34,9 @@ USER $USER
 VOLUME [ \
   "/app/data/config", \
   "/app/data/data", \
-  "/app/data/logs" \
+  "/app/data/logs", \
+  "/app/data/secrets", \
+  "/app/data/venvs" \
 ]
 
 ENTRYPOINT ["./bin/fraggle"]

@@ -11,7 +11,7 @@ An AI-powered assistant framework that connects LLMs to messaging platforms with
 - **Local LLM Support** - Works with LM Studio for fully local, private AI
 - **Cloud Providers** - Also supports OpenAI and Anthropic APIs
 - **Built-in Tools** - File operations, web fetching, shell execution, task scheduling, time/timezone
-- **Agent Skills** - Portable [agentskills.io](https://agentskills.io) bundles loaded on demand (`/skill:name` or automatic)
+- **Agent Skills** - Portable [agentskills.io](https://agentskills.io) bundles with Python venv support, dependency management, and secrets injection
 - **Persistent Memory** - Remembers context across conversations
 - **Tool Supervision** - Approve or deny tool calls interactively via CLI or dashboard
 - **Remote Execution** - Offload tool execution to a lightweight worker process
@@ -46,6 +46,11 @@ cd fraggle
 ./bin/fraggle skills init my-skill -d "What the skill does and when to use it."
 ./bin/fraggle skills find commit
 ./bin/fraggle skills remove my-skill
+
+# Python skill management
+./bin/fraggle skills setup my-skill          # Create Python venv + install deps
+./bin/fraggle skills secrets set my-skill API_KEY   # Configure secrets
+./bin/fraggle skills secrets check my-skill  # Verify env var status
 ```
 
 ## Requirements

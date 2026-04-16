@@ -11,7 +11,9 @@ import fraggle.agent.skill.InMemorySkillRegistry
 import fraggle.agent.skill.Skill
 import fraggle.agent.skill.SkillDiagnostic
 import fraggle.agent.skill.SkillLoader
+import fraggle.agent.skill.SkillSecretsStore
 import fraggle.agent.skill.SkillSource
+import fraggle.agent.skill.SkillVenvManager
 import fraggle.models.SkillsConfig
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
@@ -58,6 +60,8 @@ class SkillsCommand : CliktCommand(name = "skills") {
             SkillsUpdateCommand(),
             SkillsRemoveCommand(),
             SkillsFindCommand(),
+            SkillsSetupCommand(),
+            SkillsSecretsCommand(),
         )
     }
 }
@@ -214,17 +218,31 @@ class SkillsListCommand : CliktCommand(name = "list") {
 
         val maxName = skills.maxOf { it.name.length }
         val maxSource = skills.maxOf { it.source.name.length }
+        val secretsStore = SkillSecretsStore(FraggleEnvironment.secretsDir)
+        val venvManager = SkillVenvManager(FraggleEnvironment.venvsDir)
 
         println("Loaded ${skills.size} skill(s):")
         println()
         for (skill in skills) {
-            val hiddenMarker = if (skill.disableModelInvocation) " [hidden]" else ""
+            val markers = buildList {
+                if (skill.disableModelInvocation) add("hidden")
+                if (skill.hasPythonDeps) {
+                    val venvStatus = if (venvManager.isSetUp(skill.name)) "ready" else "no venv"
+                    add("python:$venvStatus")
+                }
+                if (skill.requiredEnv.isNotEmpty()) {
+                    val configured = secretsStore.listConfigured(skill.name)
+                    val count = skill.requiredEnv.count { it in configured }
+                    add("env:$count/${skill.requiredEnv.size}")
+                }
+            }
+            val markerStr = if (markers.isEmpty()) "" else " [${markers.joinToString(", ")}]"
             println(
                 "  %-${maxName}s  %-${maxSource}s  %s%s".format(
                     skill.name,
                     skill.source.name.lowercase(),
                     skill.description,
-                    hiddenMarker,
+                    markerStr,
                 ),
             )
             println("    " + skill.filePath)
@@ -438,10 +456,54 @@ class SkillsAddCommand : CliktCommand(name = "add") {
                             result.skipped.all { "already exists" in it.reason }
                         if (!onlyCollisions) exitProcess(1)
                     }
+
+                    // Auto-setup Python venvs and warn about missing secrets.
+                    if (result.installed.isNotEmpty()) {
+                        postInstallSetup(result.installed)
+                    }
                 }
             }
         } finally {
             client.close()
+        }
+    }
+
+    /**
+     * After installing skills, set up Python venvs for any that have
+     * `requirements.txt` and warn about unconfigured required env vars.
+     */
+    private suspend fun postInstallSetup(installed: List<SkillInstaller.Installed>) {
+        val loader = SkillLoader()
+        val venvManager = SkillVenvManager(FraggleEnvironment.venvsDir)
+        val secretsStore = SkillSecretsStore(FraggleEnvironment.secretsDir)
+
+        for (entry in installed) {
+            val skillFile = entry.destination.resolve(SkillLoader.SKILL_FILE_NAME)
+            if (!skillFile.isRegularFile()) continue
+            val loadResult = loader.loadFromFile(skillFile, SkillSource.EXPLICIT)
+            val skill = loadResult.skills.firstOrNull() ?: continue
+
+            // Set up Python venv if requirements.txt exists.
+            if (skill.hasPythonDeps) {
+                print("  Setting up Python venv for ${skill.name}... ")
+                System.out.flush()
+                val result = venvManager.setup(skill)
+                if (result.success) {
+                    println("done.")
+                } else {
+                    println("FAILED")
+                    println(result.output.prependIndent("    "))
+                }
+            }
+
+            // Warn about missing required env vars.
+            if (skill.requiredEnv.isNotEmpty()) {
+                val missing = skill.requiredEnv.filter { !secretsStore.isConfigured(skill.name, it) }
+                if (missing.isNotEmpty()) {
+                    println("  Required env vars not yet configured: ${missing.joinToString(", ")}")
+                    println("  Run: fraggle skills secrets set ${skill.name} <VAR>")
+                }
+            }
         }
     }
 }
@@ -666,17 +728,34 @@ class SkillsRemoveCommand : CliktCommand(name = "remove") {
     private val global by option("-g", "--global", help = "Remove from the global skills directory.").flag()
     private val project by option("-p", "--project", help = "Remove from the project skills directory.").flag()
     private val pathOpt by option("--path", help = "Override the target directory.")
+    private val purge by option(
+        "--purge",
+        help = "Also remove configured secrets for the skill.",
+    ).flag()
 
     override fun run() {
         val config = loadSkillsConfig(configPath)
         val target = resolveInstallTarget(config, global, project, pathOpt)
         val installer = SkillInstaller(target)
+        val venvManager = SkillVenvManager(FraggleEnvironment.venvsDir)
 
         var hadFailure = false
         for (name in nameArgs) {
             when (val result = installer.uninstall(name)) {
-                is SkillInstaller.UninstallResult.Removed ->
+                is SkillInstaller.UninstallResult.Removed -> {
                     println("- $name  →  removed (${result.mode}) from ${result.path}")
+                    // Clean up venv.
+                    if (venvManager.isSetUp(name)) {
+                        venvManager.remove(name)
+                        println("  venv cleaned up")
+                    }
+                    // Clean up secrets if --purge.
+                    if (purge) {
+                        val secretsStore = SkillSecretsStore(FraggleEnvironment.secretsDir)
+                        secretsStore.removeAll(name)
+                        println("  secrets purged")
+                    }
+                }
                 is SkillInstaller.UninstallResult.NotInManifest -> {
                     println("? $name  →  not tracked in manifest (skipping — delete manually if needed)")
                     hadFailure = true
@@ -750,6 +829,71 @@ class SkillsFindCommand : CliktCommand(name = "find") {
             )
             println("    " + skill.filePath)
         }
+    }
+}
+
+// ---------- skills setup ----------
+
+class SkillsSetupCommand : CliktCommand(name = "setup") {
+    override fun help(context: com.github.ajalt.clikt.core.Context) =
+        "Set up Python venvs for skills with requirements.txt"
+
+    private val nameArg by argument(
+        name = "name",
+        help = "Skill name to set up. Omit to set up all skills with Python deps.",
+    ).optional()
+
+    private val configPath by option(
+        "-c", "--config",
+        help = $$"Path to configuration file (default: $FRAGGLE_ROOT/config/fraggle.yaml)",
+    )
+
+    private val rebuild by option(
+        "--rebuild",
+        help = "Delete and recreate the venv from scratch.",
+    ).flag()
+
+    override fun run() {
+        val config = loadSkillsConfig(configPath)
+        val (skills, _) = loadConfiguredSkills(config, SkillTarget.BOTH)
+        val venvManager = SkillVenvManager(FraggleEnvironment.venvsDir)
+
+        val targets = if (nameArg != null) {
+            val skill = skills.firstOrNull { it.name == nameArg }
+            if (skill == null) {
+                println("Skill '$nameArg' not found.")
+                exitProcess(1)
+            }
+            if (!skill.hasPythonDeps) {
+                println("Skill '$nameArg' has no requirements.txt — nothing to set up.")
+                return
+            }
+            listOf(skill)
+        } else {
+            skills.filter { it.hasPythonDeps }
+        }
+
+        if (targets.isEmpty()) {
+            println("No skills with Python dependencies found.")
+            return
+        }
+
+        var hadFailure = false
+        runBlocking {
+            for (skill in targets) {
+                print("Setting up ${skill.name}... ")
+                System.out.flush()
+                val result = if (rebuild) venvManager.rebuild(skill) else venvManager.setup(skill)
+                if (result.success) {
+                    println("done.")
+                } else {
+                    println("FAILED")
+                    println(result.output.prependIndent("  "))
+                    hadFailure = true
+                }
+            }
+        }
+        if (hadFailure) exitProcess(1)
     }
 }
 

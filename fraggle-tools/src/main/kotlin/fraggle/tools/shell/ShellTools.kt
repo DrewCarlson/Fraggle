@@ -5,6 +5,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.Serializable
+import fraggle.agent.skill.SkillExecutionContext
 import fraggle.agent.tool.AgentToolDef
 import fraggle.agent.tool.LLMDescription
 import fraggle.executor.ToolExecutor
@@ -12,7 +13,10 @@ import fraggle.executor.supervision.ToolArg
 import fraggle.executor.supervision.ToolArgKind
 import kotlin.time.Duration.Companion.seconds
 
-class ExecuteCommandTool(private val toolExecutor: ToolExecutor) : AgentToolDef<ExecuteCommandTool.Args>(
+class ExecuteCommandTool(
+    private val toolExecutor: ToolExecutor,
+    private val skillContext: SkillExecutionContext? = null,
+) : AgentToolDef<ExecuteCommandTool.Args>(
     name = "execute_command",
     description = """Execute a shell command and return the output.
 The command runs in the workspace directory.
@@ -26,6 +30,8 @@ Use this for running scripts, system commands, or other shell operations.""",
         val command: String,
         @param:LLMDescription("Maximum time to wait for the command to complete. Defaults to 30 seconds.")
         val timeout_seconds: Int = 30,
+        @param:LLMDescription("Optional skill name. When provided, the skill's Python venv is activated and its configured environment variables are injected automatically.")
+        val skill: String? = null,
     )
 
     private val dangerousPatterns = listOf(
@@ -47,9 +53,19 @@ Use this for running scripts, system commands, or other shell operations.""",
         return withContext(Dispatchers.IO) {
             try {
                 val maxOutputSize = 100_000
+                val skillEnv = args.skill?.let { skillContext?.resolveEnvironment(it) }
+                val workDir = skillEnv?.workDir?.toFile() ?: toolExecutor.workDir().toFile()
                 val processBuilder = ProcessBuilder("sh", "-c", args.command)
-                    .directory(toolExecutor.workDir().toFile())
+                    .directory(workDir)
                     .redirectErrorStream(false)
+
+                if (skillEnv != null) {
+                    val env = processBuilder.environment()
+                    env.putAll(skillEnv.envVars)
+                    if (skillEnv.venvBinDir != null) {
+                        env["PATH"] = "${skillEnv.venvBinDir}:${env["PATH"] ?: ""}"
+                    }
+                }
 
                 val process = processBuilder.start()
 

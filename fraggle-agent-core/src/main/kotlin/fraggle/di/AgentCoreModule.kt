@@ -5,9 +5,13 @@ import dev.zacsweers.metro.Provides
 import dev.zacsweers.metro.SingleIn
 import io.ktor.client.*
 import fraggle.FraggleEnvironment
+import fraggle.agent.skill.DefaultSkillExecutionContext
 import fraggle.agent.skill.SkillDiagnostic
+import fraggle.agent.skill.SkillExecutionContext
 import fraggle.agent.skill.SkillRegistry
 import fraggle.agent.skill.SkillRegistryLoader
+import fraggle.agent.skill.SkillSecretsStore
+import fraggle.agent.skill.SkillVenvManager
 import fraggle.executor.LocalToolExecutor
 import fraggle.executor.RemoteToolClient
 import fraggle.executor.ToolExecutor
@@ -89,6 +93,25 @@ interface AgentCoreModule {
         if (config.level == TracingLevel.OFF) return null
         return TraceStore()
     }
+
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideSkillSecretsStore(): SkillSecretsStore =
+        SkillSecretsStore(FraggleEnvironment.secretsDir)
+
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideSkillVenvManager(): SkillVenvManager =
+        SkillVenvManager(FraggleEnvironment.venvsDir)
+
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideSkillExecutionContext(
+        registry: SkillRegistry,
+        secretsStore: SkillSecretsStore,
+        venvManager: SkillVenvManager,
+    ): SkillExecutionContext =
+        DefaultSkillExecutionContext(registry, secretsStore, venvManager)
 
     @Provides
     @SingleIn(AppScope::class)

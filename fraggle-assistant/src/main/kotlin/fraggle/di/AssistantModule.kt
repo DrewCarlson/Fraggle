@@ -8,6 +8,7 @@ import fraggle.FraggleEnvironment
 import fraggle.agent.FraggleAgent
 import fraggle.agent.skill.SkillCommandExpander
 import fraggle.agent.skill.SkillRegistryLoader
+import fraggle.agent.skill.SkillSecretsStore
 import fraggle.agent.loop.LlmBridge
 import fraggle.agent.loop.ProviderLlmBridge
 import fraggle.agent.loop.ToolCallExecutor
@@ -234,6 +235,7 @@ interface AssistantModule {
         promptManager: PromptManager,
         skillRegistryLoader: SkillRegistryLoader,
         skillsConfig: SkillsConfig,
+        skillSecretsStore: SkillSecretsStore,
         traceStore: TraceStore?,
         eventBus: EventBus,
     ): FraggleAgent = FraggleAgent(
@@ -245,6 +247,7 @@ interface AssistantModule {
         promptManager = promptManager,
         skillRegistryLoader = skillRegistryLoader,
         skillsConfig = skillsConfig,
+        skillSecretsStore = skillSecretsStore,
         traceStore = traceStore,
         eventBus = eventBus,
     )

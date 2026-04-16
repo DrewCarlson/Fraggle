@@ -4,6 +4,7 @@ import dev.zacsweers.metro.ContributesTo
 import dev.zacsweers.metro.Provides
 import dev.zacsweers.metro.SingleIn
 import io.ktor.client.*
+import fraggle.agent.skill.SkillExecutionContext
 import fraggle.agent.tool.FraggleToolRegistry
 import fraggle.executor.ToolExecutor
 import fraggle.executor.supervision.ToolArgTypes
@@ -57,9 +58,11 @@ interface ToolsModule {
         toolExecutor: ToolExecutor,
         @DefaultHttpClient httpClient: HttpClient,
         playwrightFetcher: PlaywrightFetcher?,
+        skillExecutionContext: SkillExecutionContext,
     ): FraggleToolRegistry = DefaultTools.createToolRegistry(
         toolExecutor = toolExecutor,
         httpClient = httpClient,
         playwrightFetcher = playwrightFetcher,
+        skillExecutionContext = skillExecutionContext,
     )
 }

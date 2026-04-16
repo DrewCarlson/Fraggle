@@ -3,6 +3,7 @@ package fraggle.tools
 import io.ktor.client.*
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.SerialDescriptor
+import fraggle.agent.skill.SkillExecutionContext
 import fraggle.agent.tool.AgentToolDef
 import fraggle.agent.tool.FraggleToolRegistry
 import fraggle.executor.ToolExecutor
@@ -77,6 +78,7 @@ object DefaultTools {
         toolExecutor: ToolExecutor,
         httpClient: HttpClient,
         playwrightFetcher: PlaywrightFetcher? = null,
+        skillExecutionContext: SkillExecutionContext? = null,
     ): FraggleToolRegistry {
         val tools = buildList<AgentToolDef<*>> {
             // File tools
@@ -96,7 +98,7 @@ object DefaultTools {
             }
 
             // Shell
-            add(ExecuteCommandTool(toolExecutor))
+            add(ExecuteCommandTool(toolExecutor, skillExecutionContext))
 
             // Time
             add(GetCurrentTimeTool())

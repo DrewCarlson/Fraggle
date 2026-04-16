@@ -1,6 +1,7 @@
 package fraggle.agent.skill
 
 import java.nio.file.Path
+import kotlin.io.path.isRegularFile
 
 /**
  * A loaded agent skill — metadata + a pointer to the SKILL.md file on disk.
@@ -18,7 +19,13 @@ data class Skill(
     val source: SkillSource,
     val disableModelInvocation: Boolean,
     val frontmatter: SkillFrontmatter,
-)
+) {
+    /** Whether this skill has a `requirements.txt` declaring Python dependencies. */
+    val hasPythonDeps: Boolean get() = baseDir.resolve("requirements.txt").isRegularFile()
+
+    /** Environment variable names this skill declares as required. */
+    val requiredEnv: List<String> get() = frontmatter.env
+}
 
 /**
  * Origin of a skill. Used for collision precedence when the same name appears in

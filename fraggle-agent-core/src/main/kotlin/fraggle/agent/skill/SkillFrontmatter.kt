@@ -20,6 +20,7 @@ data class SkillFrontmatter(
     val compatibility: String? = null,
     @SerialName("allowed-tools")
     val allowedTools: List<String> = emptyList(),
+    val env: List<String> = emptyList(),
     @SerialName("disable-model-invocation")
     val disableModelInvocation: Boolean = false,
 )

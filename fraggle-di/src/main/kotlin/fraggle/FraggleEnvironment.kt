@@ -36,6 +36,24 @@ object FraggleEnvironment {
     val logsDir: Path get() = root.resolve("logs")
 
     /**
+     * Python venvs for skills: {FRAGGLE_ROOT}/venvs
+     *
+     * Each skill with Python dependencies gets its own venv at
+     * `{venvsDir}/{skillName}/`. Created on demand by `fraggle skills add`
+     * or `fraggle skills setup`.
+     */
+    val venvsDir: Path get() = root.resolve("venvs")
+
+    /**
+     * Secrets storage for skills: {FRAGGLE_ROOT}/secrets
+     *
+     * Each skill's secrets are stored as individual files at
+     * `{secretsDir}/{skillName}/{VAR_NAME}`. Permissions are restricted
+     * to owner-only access.
+     */
+    val secretsDir: Path get() = root.resolve("secrets")
+
+    /**
      * Global skills directory: {FRAGGLE_ROOT}/skills
      *
      * Holds SKILL.md bundles that are shared across every Fraggle session.
