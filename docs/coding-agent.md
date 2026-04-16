@@ -33,41 +33,41 @@ fraggle code [<options>] [<message>]...
 
 ### Session options
 
-| Flag | Description |
-|---|---|
-| `-c`, `--continue` | Resume the most recent session for the current project. |
-| `-r`, `--resume` | Resume the most recent session (alias of `--continue` in MVP; a selectable picker is future work). |
-| `--session <path>` | Open a specific session file by path. |
-| `--fork <path>` | Fork a specific session file into a new session in the same project. |
-| `--no-session` | Ephemeral mode — start fresh, don't chain off any existing session. |
+| Flag               | Description                                                          |
+|--------------------|----------------------------------------------------------------------|
+| `-c`, `--continue` | Resume the most recent session for the current project.              |
+| `-r`, `--resume`   | Resume the most recent session (alias of `--continue`).              |
+| `--session <path>` | Open a specific session file by path.                                |
+| `--fork <path>`    | Fork a specific session file into a new session in the same project. |
+| `--no-session`     | Ephemeral mode — start fresh, don't chain off any existing session.  |
 
 The session flags are mutually exclusive; passing more than one is an error.
 
 ### Model and workspace
 
-| Flag | Description |
-|---|---|
-| `--model <id>` | Override the model id from `fraggle.yaml` and `settings.json`. |
+| Flag               | Description                                                                       |
+|--------------------|-----------------------------------------------------------------------------------|
+| `--model <id>`     | Override the model id from `fraggle.yaml` and `settings.json`.                    |
 | `--workdir <path>` | Override the working directory. All tool calls and context-file walks start here. |
 
 ### Tool selection
 
-| Flag | Description |
-|---|---|
+| Flag             | Description                                                                           |
+|------------------|---------------------------------------------------------------------------------------|
 | `--tools <list>` | Comma-separated list of tools to enable. Example: `--tools read_file,grep,edit_file`. |
-| `--no-tools` | Disable all built-in tools. The agent becomes pure conversation. |
+| `--no-tools`     | Disable all built-in tools. The agent becomes pure conversation.                      |
 
 ### System prompt
 
-| Flag | Description |
-|---|---|
-| `--system-prompt <text>` | Replace the default system prompt entirely with the given text. |
-| `--append-system-prompt <text>` | Append text to whichever system prompt is active. |
+| Flag                            | Description                                                     |
+|---------------------------------|-----------------------------------------------------------------|
+| `--system-prompt <text>`        | Replace the default system prompt entirely with the given text. |
+| `--append-system-prompt <text>` | Append text to whichever system prompt is active.               |
 
 ### Supervision
 
-| Flag | Description |
-|---|---|
+| Flag                        | Description                                                                                                                                            |
+|-----------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `--supervision <ask\|none>` | `ask` prompts for approval on every tool call (default). `none` auto-approves all tool calls — use this in containers or other sandboxed environments. |
 
 ### Positional arguments
@@ -86,14 +86,14 @@ Once `fraggle code` launches the TUI, you get a live message list, a multi-line 
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  fraggle code  │  ?: /hotkeys  │  3 context files  │  ...  │  ← Header
+│  fraggle code  │  ?: /hotkeys  │  3 context files  │  ...   │  ← Header
 ├─────────────────────────────────────────────────────────────┤
 │  » what's in foo.kt?                                        │
 │                                                             │
 │  ◆ I'll read the file                                       │
 │    └─ read_file {"path":"foo.kt"}                           │
 │         ← read_file: fun main() { println("hi") }           │
-│  ◆ The file defines a main function that prints hello.     │
+│  ◆ The file defines a main function that prints hello.      │
 │                                                             │  ← MessageList
 ├─────────────────────────────────────────────────────────────┤
 │  > your next message here_                                  │
@@ -109,17 +109,17 @@ Once `fraggle code` launches the TUI, you get a live message list, a multi-line 
 
 ### Keyboard shortcuts
 
-| Key | Action |
-|---|---|
-| `Enter` | Submit the current message. |
-| `Shift+Enter` | Insert a newline without submitting. |
-| `Backspace` / `Delete` | Delete character behind / at cursor. |
-| `←` / `→` | Cursor left / right. |
-| `↑` / `↓` | Move cursor up / down between lines (column preserved when possible). |
-| `Home` / `End` | Start / end of the current line. |
-| `Escape` | If the agent is running: abort the current turn. If the editor has text: clear it. Otherwise: exit (pressing twice confirms). |
-| `Ctrl+C` | Clear the editor if it has text, otherwise exit. |
-| `y` / `n` | Approve / deny a pending tool call (only when the approval overlay is visible). |
+| Key                    | Action                                                                                                                        |
+|------------------------|-------------------------------------------------------------------------------------------------------------------------------|
+| `Enter`                | Submit the current message.                                                                                                   |
+| `Shift+Enter`          | Insert a newline without submitting.                                                                                          |
+| `Backspace` / `Delete` | Delete character behind / at cursor.                                                                                          |
+| `←` / `→`              | Cursor left / right.                                                                                                          |
+| `↑` / `↓`              | Move cursor up / down between lines (column preserved when possible).                                                         |
+| `Home` / `End`         | Start / end of the current line.                                                                                              |
+| `Escape`               | If the agent is running: abort the current turn. If the editor has text: clear it. Otherwise: exit (pressing twice confirms). |
+| `Ctrl+C`               | Clear the editor if it has text, otherwise exit.                                                                              |
+| `y` / `n`              | Approve / deny a pending tool call (only when the approval overlay is visible).                                               |
 
 ### Tool approval (ask mode)
 
@@ -139,7 +139,7 @@ To run without prompts, start with `--supervision none` or set `"supervision": "
 
 ## Sessions
 
-Sessions are JSONL files with a tree structure. Every entry has an `id` and an optional `parentId`, so multiple branches can share a prefix. This is how `/tree` navigation and forking work without creating new files for every branch point.
+Sessions are JSONL files with a tree structure. Every entry has an `id` and an optional `parentId`, so multiple branches can share a prefix. This is how forking works without creating new files for every branch point.
 
 ### Where sessions live
 
@@ -189,7 +189,7 @@ Long sessions can exhaust the LLM's context window. When context usage crosses t
 2. Replaces the in-memory history with `[synthetic summary message] + recent turns verbatim`.
 3. Writes a `Meta(label="compaction")` entry to the session file with the full summary text.
 
-**Compaction is lossy for the working conversation but the session file keeps the full original history.** Future work (`/tree`) will let you browse back to any point before compaction.
+**Compaction is lossy for the working conversation but the session file keeps the full original history.**
 
 Tune via `settings.json`:
 
@@ -271,20 +271,20 @@ The template is advertised to the model in the system prompt (so it knows `/revi
 
 The coding agent ships with these tools by default:
 
-| Tool | Description |
-|---|---|
-| `read_file` | Read a file with optional line range. |
-| `write_file` | Overwrite a file. Supervised by default. |
-| `append_file` | Append to a file. Supervised by default. |
-| `edit_file` | Exact-string replacement (Claude Code style). Requires `old_string` to match exactly once in the file unless `replace_all = true`. |
-| `list_files` | `ls`-equivalent directory listing. |
-| `search_files` | Glob-based file search. |
-| `file_exists` | Check if a path exists. |
-| `delete_file` | Delete a file. Supervised by default. |
-| `execute_command` | Run a shell command in the project directory. Supervised by default. |
-| `fetch_webpage` | HTTP GET with optional Playwright rendering. |
-| `fetch_api` | HTTP request returning raw response. |
-| `get_current_time` | Current time in any timezone. |
+| Tool               | Description                                                                                                                        |
+|--------------------|------------------------------------------------------------------------------------------------------------------------------------|
+| `read_file`        | Read a file with optional line range.                                                                                              |
+| `write_file`       | Overwrite a file. Supervised by default.                                                                                           |
+| `append_file`      | Append to a file. Supervised by default.                                                                                           |
+| `edit_file`        | Exact-string replacement (Claude Code style). Requires `old_string` to match exactly once in the file unless `replace_all = true`. |
+| `list_files`       | `ls`-equivalent directory listing.                                                                                                 |
+| `search_files`     | Glob-based file search.                                                                                                            |
+| `file_exists`      | Check if a path exists.                                                                                                            |
+| `delete_file`      | Delete a file. Supervised by default.                                                                                              |
+| `execute_command`  | Run a shell command in the project directory. Supervised by default.                                                               |
+| `fetch_webpage`    | HTTP GET with optional Playwright rendering.                                                                                       |
+| `fetch_api`        | HTTP request returning raw response.                                                                                               |
+| `get_current_time` | Current time in any timezone.                                                                                                      |
 
 ### `edit_file` semantics
 
@@ -383,37 +383,6 @@ $FRAGGLE_ROOT/
         └── prompts/               # project-specific templates
 ```
 
-## Differences from pi-coding-agent
-
-Fraggle's coding agent is modeled on [pi](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent) but intentionally smaller in scope for MVP.
-
-**Present in Fraggle:**
-
-- JSONL session files with tree structure (identical format concept)
-- `AGENTS.md` context files walked cwd → git root
-- Compaction with cumulative summaries
-- Exact-string `edit_file` modeled on Claude Code's Edit tool
-- Supervision modes (`ask` / `none`)
-- Prompt templates with variable substitution
-- Slash commands (`/new`, `/quit`, `/hotkeys`, `/session`)
-- `@file` positional arguments
-- Steering and follow-up message queues (inherited from the core agent loop)
-
-**Deferred to later phases:**
-
-- `/tree` interactive branch navigator
-- Multi-provider support (Fraggle only speaks LM Studio today)
-- Subscription OAuth (Anthropic Pro, GitHub Copilot, etc.)
-- Agent skills (under construction in parallel — will land for both the messenger assistant and the coding agent together)
-- Extensions / Kotlin Scripting modules
-- Pi-package-style installation via git/npm
-- `/share` gist upload and HTML export
-- Thinking-level shorthand
-- RPC and JSON output modes
-- Image paste / drag-drop attachments
-- Git checkpointing and auto-commit
-- `--print` / `-p` non-interactive mode
-
 ## Troubleshooting
 
 ### "No model configured"
@@ -428,7 +397,7 @@ The TUI locks out typing while the agent is processing a turn. Watch the footer 
 
 Compaction is gated on both the policy AND the context-usage ratio. If you haven't set `contextWindowTokens` in `settings.json`, the ratio is always 0.0 and compaction never fires proactively. Set it to your model's actual context window size (e.g., `32000` for a 32K-context model) to enable ratio-based compaction.
 
-To disable compaction entirely, set `compactionKeepRecentMessages` larger than any session you expect, or (future work) add a `never` compaction policy.
+To disable compaction entirely, set `compactionKeepRecentMessages` larger than any session you expect.
 
 ### I edited an `AGENTS.md` and the agent doesn't see the change
 
