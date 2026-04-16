@@ -4,36 +4,45 @@ import DashboardStyles
 import DataState
 import RefreshTrigger
 import WebSocketService
+import app.softwork.routingcompose.Router
 import androidx.compose.runtime.*
 import apiClient
+import kotlinx.coroutines.launch
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import kotlinx.serialization.json.*
 import fraggle.models.TraceEventRecord
 import fraggle.models.TraceSession
 import fraggle.models.TraceSessionDetail
+import kotlinx.browser.document
+import kotlinx.browser.window
 import org.jetbrains.compose.web.css.*
 import org.jetbrains.compose.web.dom.*
+import org.w3c.dom.HTMLAnchorElement
+import org.w3c.dom.url.URL
+import org.w3c.files.Blob
+import org.w3c.files.BlobPropertyBag
 import rememberRefreshableDataLoader
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 @Composable
 fun TracingScreen(wsService: WebSocketService) {
-    var selectedSessionId by remember { mutableStateOf<String?>(null) }
+    val router = Router.current
+    SessionListView(
+        wsService = wsService,
+        onSelectSession = { router.navigate("/tracing/$it") },
+    )
+}
 
-    if (selectedSessionId != null) {
-        SessionDetailView(
-            sessionId = selectedSessionId!!,
-            wsService = wsService,
-            onBack = { selectedSessionId = null },
-        )
-    } else {
-        SessionListView(
-            wsService = wsService,
-            onSelectSession = { selectedSessionId = it },
-        )
-    }
+@Composable
+fun TracingDetailScreen(sessionId: String, wsService: WebSocketService) {
+    val router = Router.current
+    SessionDetailView(
+        sessionId = sessionId,
+        wsService = wsService,
+        onBack = { router.navigate("/tracing") },
+    )
 }
 
 @Composable
@@ -146,15 +155,36 @@ private fun SessionListView(
                                             Text(formatDuration(session.startTime, session.endTime))
                                         }
                                         Td({ classes(DashboardStyles.tableCell) }) {
-                                            Button({
-                                                classes(DashboardStyles.button, DashboardStyles.buttonSmall, DashboardStyles.buttonOutline)
-                                                onClick {
-                                                    it.stopPropagation()
-                                                    onSelectSession(session.id)
+                                            val scope = rememberCoroutineScope()
+                                            Div({
+                                                style {
+                                                    display(DisplayStyle.Flex)
+                                                    gap(4.px)
                                                 }
                                             }) {
-                                                I({ classes("bi", "bi-eye") })
-                                                Text("View")
+                                                Button({
+                                                    classes(DashboardStyles.button, DashboardStyles.buttonSmall, DashboardStyles.buttonOutline)
+                                                    onClick {
+                                                        it.stopPropagation()
+                                                        onSelectSession(session.id)
+                                                    }
+                                                }) {
+                                                    I({ classes("bi", "bi-eye") })
+                                                    Text("View")
+                                                }
+                                                Button({
+                                                    classes(DashboardStyles.button, DashboardStyles.buttonSmall, DashboardStyles.buttonOutline)
+                                                    onClick {
+                                                        it.stopPropagation()
+                                                        scope.launch {
+                                                            val detail = apiClient.get("tracing/sessions/${session.id}")
+                                                                .body<TraceSessionDetail>()
+                                                            exportTraceJson(detail)
+                                                        }
+                                                    }
+                                                }) {
+                                                    I({ classes("bi", "bi-download") })
+                                                }
                                             }
                                         }
                                     }
@@ -219,6 +249,16 @@ private fun SessionDetailView(
             DataStateLoadingSpinner(state)
 
             Div({ style { flex(1) } })
+
+            if (state is DataState.Success) {
+                Button({
+                    classes(DashboardStyles.button, DashboardStyles.buttonSmall, DashboardStyles.buttonOutline)
+                    onClick { exportTraceJson((state as DataState.Success<TraceSessionDetail>).data) }
+                }) {
+                    I({ classes("bi", "bi-download") })
+                    Text("Export")
+                }
+            }
 
             Button({
                 classes(DashboardStyles.button, DashboardStyles.buttonSmall, DashboardStyles.buttonOutline)
@@ -1268,6 +1308,19 @@ private fun RoleBadge(role: String) {
     }) {
         Text(role)
     }
+}
+
+private val exportJson = Json { prettyPrint = true }
+
+private fun exportTraceJson(detail: TraceSessionDetail) {
+    val json = exportJson.encodeToString(TraceSessionDetail.serializer(), detail)
+    val blob = Blob(arrayOf(json), BlobPropertyBag(type = "application/json"))
+    val url = URL.createObjectURL(blob)
+    val anchor = document.createElement("a") as HTMLAnchorElement
+    anchor.href = url
+    anchor.download = "trace-${detail.session.id.take(8)}.json"
+    anchor.click()
+    URL.revokeObjectURL(url)
 }
 
 private val prettyJson = Json { prettyPrint = true }
