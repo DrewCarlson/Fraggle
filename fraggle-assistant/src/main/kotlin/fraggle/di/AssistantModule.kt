@@ -215,13 +215,13 @@ interface AssistantModule {
     @Provides
     @SingleIn(AppScope::class)
     fun provideChatHistoryStore(database: FraggleDatabase): ChatHistoryStore {
-        return ExposedChatHistoryStore(database.database)
+        return ExposedChatHistoryStore(database)
     }
 
     @Provides
     @SingleIn(AppScope::class)
     fun provideScheduledTaskStore(database: FraggleDatabase): ScheduledTaskStore {
-        return ExposedScheduledTaskStore(database.database)
+        return ExposedScheduledTaskStore(database)
     }
 
     @Provides

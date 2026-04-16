@@ -2,8 +2,6 @@ package fraggle.db
 
 import fraggle.scheduling.ScheduledTask
 import fraggle.scheduling.TaskStatus
-import org.jetbrains.exposed.v1.jdbc.Database
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -22,19 +20,15 @@ class ExposedScheduledTaskStoreTest {
     @TempDir
     lateinit var tempDir: Path
 
-    private lateinit var database: Database
+    private lateinit var fraggleDb: FraggleDatabase
     private lateinit var store: ExposedScheduledTaskStore
 
     @BeforeEach
     fun setup() {
         val dbPath = tempDir.resolve("test.db")
-        database = Database.connect("jdbc:sqlite:$dbPath", driver = "org.sqlite.JDBC")
-        transaction(database) {
-            val conn = this.connection.connection as java.sql.Connection
-            conn.createStatement().use { it.execute("PRAGMA foreign_keys=ON;") }
-        }
-        MigrationRunner(database).run()
-        store = ExposedScheduledTaskStore(database)
+        fraggleDb = FraggleDatabase(dbPath)
+        fraggleDb.connect()
+        store = ExposedScheduledTaskStore(fraggleDb)
     }
 
     private fun createTask(

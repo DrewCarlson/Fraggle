@@ -1,7 +1,5 @@
 package fraggle.db
 
-import org.jetbrains.exposed.v1.jdbc.Database
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -20,19 +18,15 @@ class ExposedChatHistoryStoreTest {
     @TempDir
     lateinit var tempDir: Path
 
-    private lateinit var database: Database
+    private lateinit var fraggleDb: FraggleDatabase
     private lateinit var store: ExposedChatHistoryStore
 
     @BeforeEach
     fun setup() {
         val dbPath = tempDir.resolve("test.db")
-        database = Database.connect("jdbc:sqlite:$dbPath", driver = "org.sqlite.JDBC")
-        transaction(database) {
-            val conn = this.connection.connection as java.sql.Connection
-            conn.createStatement().use { it.execute("PRAGMA foreign_keys=ON;") }
-        }
-        MigrationRunner(database).run()
-        store = ExposedChatHistoryStore(database)
+        fraggleDb = FraggleDatabase(dbPath)
+        fraggleDb.connect()
+        store = ExposedChatHistoryStore(fraggleDb)
     }
 
     @Nested
@@ -542,25 +536,25 @@ class ExposedChatHistoryStoreTest {
         @Test
         fun `FraggleDatabase creates schema on connect`() {
             val dbPath = tempDir.resolve("fresh.db")
-            val fraggleDb = FraggleDatabase(dbPath)
-            fraggleDb.connect()
+            val db = FraggleDatabase(dbPath)
+            db.connect()
 
             // Should be able to use the store immediately
-            val freshStore = ExposedChatHistoryStore(fraggleDb.database)
+            val freshStore = ExposedChatHistoryStore(db)
             val chat = freshStore.getOrCreateChat("test:chat", "test")
             assertTrue(chat.id > 0)
 
-            fraggleDb.close()
+            db.close()
         }
 
         @Test
         fun `FraggleDatabase creates parent directories`() {
             val dbPath = tempDir.resolve("nested/dir/test.db")
-            val fraggleDb = FraggleDatabase(dbPath)
-            fraggleDb.connect()
+            val db = FraggleDatabase(dbPath)
+            db.connect()
 
             assertTrue(dbPath.parent.toFile().exists())
-            fraggleDb.close()
+            db.close()
         }
     }
 }

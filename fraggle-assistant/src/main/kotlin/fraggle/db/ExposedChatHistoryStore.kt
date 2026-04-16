@@ -2,7 +2,6 @@ package fraggle.db
 
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.*
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -10,7 +9,7 @@ import kotlin.time.Duration.Companion.milliseconds
  * Exposed-backed implementation of [ChatHistoryStore] using SQLite.
  */
 class ExposedChatHistoryStore(
-    private val database: Database,
+    private val db: FraggleDatabase,
 ) : ChatHistoryStore {
 
     override fun getOrCreateChat(
@@ -18,7 +17,7 @@ class ExposedChatHistoryStore(
         platform: String,
         name: String?,
         isGroup: Boolean,
-    ): ChatRecord = transaction(database) {
+    ): ChatRecord = db.transact {
         val existing = ChatTable.selectAll()
             .where { ChatTable.externalId eq externalId }
             .singleOrNull()
@@ -55,21 +54,21 @@ class ExposedChatHistoryStore(
         }
     }
 
-    override fun getChat(externalId: String): ChatRecord? = transaction(database) {
+    override fun getChat(externalId: String): ChatRecord? = db.query {
         ChatTable.selectAll()
             .where { ChatTable.externalId eq externalId }
             .singleOrNull()
             ?.toChatRecord()
     }
 
-    override fun getChatById(id: Long): ChatRecord? = transaction(database) {
+    override fun getChatById(id: Long): ChatRecord? = db.query {
         ChatTable.selectAll()
             .where { ChatTable.id eq id }
             .singleOrNull()
             ?.toChatRecord()
     }
 
-    override fun listChats(limit: Int, offset: Long): List<ChatRecord> = transaction(database) {
+    override fun listChats(limit: Int, offset: Long): List<ChatRecord> = db.query {
         ChatTable.selectAll()
             .orderBy(ChatTable.lastActiveAt, SortOrder.DESC)
             .limit(limit)
@@ -77,13 +76,13 @@ class ExposedChatHistoryStore(
             .map { it.toChatRecord() }
     }
 
-    override fun updateChatName(externalId: String, name: String): Unit = transaction(database) {
+    override fun updateChatName(externalId: String, name: String): Unit = db.transact {
         ChatTable.update({ ChatTable.externalId eq externalId }) {
             it[ChatTable.name] = name
         }
     }
 
-    override fun recordMessage(message: MessageRecord): MessageRecord = transaction(database) {
+    override fun recordMessage(message: MessageRecord): MessageRecord = db.transact {
         val insertedId = MessageTable.insert {
             it[chatId] = message.chatId
             it[externalId] = message.externalId
@@ -105,7 +104,7 @@ class ExposedChatHistoryStore(
     }
 
     override fun getMessages(chatId: Long, limit: Int, offset: Long): List<MessageRecord> =
-        transaction(database) {
+        db.query {
             MessageTable.selectAll()
                 .where { MessageTable.chatId eq chatId }
                 .orderBy(MessageTable.timestamp, SortOrder.DESC)
@@ -114,13 +113,13 @@ class ExposedChatHistoryStore(
                 .map { it.toMessageRecord() }
         }
 
-    override fun countMessages(chatId: Long): Long = transaction(database) {
+    override fun countMessages(chatId: Long): Long = db.query {
         MessageTable.selectAll()
             .where { MessageTable.chatId eq chatId }
             .count()
     }
 
-    override fun getChatStats(chatId: Long): ChatStats = transaction(database) {
+    override fun getChatStats(chatId: Long): ChatStats = db.query {
         val total = MessageTable.selectAll()
             .where { MessageTable.chatId eq chatId }
             .count()
@@ -164,7 +163,7 @@ class ExposedChatHistoryStore(
         )
     }
 
-    override fun countChats(): Long = transaction(database) {
+    override fun countChats(): Long = db.query {
         ChatTable.selectAll().count()
     }
 

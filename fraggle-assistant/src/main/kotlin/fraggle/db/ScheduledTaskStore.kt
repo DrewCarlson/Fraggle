@@ -4,7 +4,6 @@ import fraggle.scheduling.ScheduledTask
 import fraggle.scheduling.TaskStatus
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.*
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 /**
  * Persistence layer for scheduled tasks.
@@ -22,10 +21,10 @@ interface ScheduledTaskStore {
  * SQLite-backed implementation using Exposed.
  */
 class ExposedScheduledTaskStore(
-    private val database: Database,
+    private val db: FraggleDatabase,
 ) : ScheduledTaskStore {
 
-    override fun save(task: ScheduledTask): Unit = transaction(database) {
+    override fun save(task: ScheduledTask): Unit = db.transact {
         ScheduledTaskTable.insert {
             it[id] = task.id
             it[name] = task.name
@@ -39,7 +38,7 @@ class ExposedScheduledTaskStore(
         }
     }
 
-    override fun update(task: ScheduledTask): Unit = transaction(database) {
+    override fun update(task: ScheduledTask): Unit = db.transact {
         ScheduledTaskTable.update({ ScheduledTaskTable.id eq task.id }) {
             it[nextRunTime] = task.nextRunTime
             it[repeatInterval] = task.repeatInterval
@@ -48,19 +47,19 @@ class ExposedScheduledTaskStore(
         }
     }
 
-    override fun getById(id: String): ScheduledTask? = transaction(database) {
+    override fun getById(id: String): ScheduledTask? = db.query {
         ScheduledTaskTable.selectAll()
             .where { ScheduledTaskTable.id eq id }
             .singleOrNull()
             ?.toScheduledTask()
     }
 
-    override fun listAll(): List<ScheduledTask> = transaction(database) {
+    override fun listAll(): List<ScheduledTask> = db.query {
         ScheduledTaskTable.selectAll()
             .map { it.toScheduledTask() }
     }
 
-    override fun listActive(): List<ScheduledTask> = transaction(database) {
+    override fun listActive(): List<ScheduledTask> = db.query {
         ScheduledTaskTable.selectAll()
             .where {
                 (ScheduledTaskTable.status eq TaskStatus.PENDING) or
@@ -69,7 +68,7 @@ class ExposedScheduledTaskStore(
             .map { it.toScheduledTask() }
     }
 
-    override fun delete(id: String) = transaction(database) {
+    override fun delete(id: String) = db.transact {
         ScheduledTaskTable.deleteWhere { ScheduledTaskTable.id eq id }
         Unit
     }

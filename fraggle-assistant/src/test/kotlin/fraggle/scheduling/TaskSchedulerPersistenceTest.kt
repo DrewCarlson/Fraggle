@@ -1,12 +1,9 @@
 package fraggle.scheduling
 
 import fraggle.db.ExposedScheduledTaskStore
-import fraggle.db.MigrationRunner
-import fraggle.db.ScheduledTaskStore
+import fraggle.db.FraggleDatabase
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import org.jetbrains.exposed.v1.jdbc.Database
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
@@ -23,7 +20,7 @@ class TaskSchedulerPersistenceTest {
     @TempDir
     lateinit var tempDir: Path
 
-    private lateinit var database: Database
+    private lateinit var fraggleDb: FraggleDatabase
     private lateinit var store: ExposedScheduledTaskStore
     private lateinit var scheduler: TaskScheduler
     private val triggeredTasks = mutableListOf<ScheduledTask>()
@@ -31,13 +28,9 @@ class TaskSchedulerPersistenceTest {
     @BeforeEach
     fun setup() {
         val dbPath = tempDir.resolve("test.db")
-        database = Database.connect("jdbc:sqlite:$dbPath", driver = "org.sqlite.JDBC")
-        transaction(database) {
-            val conn = this.connection.connection as java.sql.Connection
-            conn.createStatement().use { it.execute("PRAGMA foreign_keys=ON;") }
-        }
-        MigrationRunner(database).run()
-        store = ExposedScheduledTaskStore(database)
+        fraggleDb = FraggleDatabase(dbPath)
+        fraggleDb.connect()
+        store = ExposedScheduledTaskStore(fraggleDb)
         triggeredTasks.clear()
         scheduler = TaskScheduler(store = store) { task -> triggeredTasks.add(task) }
     }
