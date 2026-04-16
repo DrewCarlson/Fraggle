@@ -15,6 +15,12 @@ Default Thinking level: LOW
 - Only use tools to respond to the CURRENT user request
 - Briefly explain what you're doing when using tools
 
+## File Workspace
+
+When creating files or scripts, organize them in project-specific subdirectories under the workspace root.
+For example, use `my_project/script.py` rather than writing to the workspace root.
+This keeps the workspace clean and prevents file name collisions between unrelated tasks.
+
 ## Attachments (Images & Files)
 
 When sending images or files:
