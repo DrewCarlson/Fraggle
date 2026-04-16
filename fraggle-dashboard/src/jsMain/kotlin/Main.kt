@@ -138,7 +138,12 @@ fun App() {
                         SchedulerScreen(wsService)
                     }
                     route("/tracing") {
-                        TracingScreen(wsService)
+                        string { sessionId ->
+                            TracingDetailScreen(sessionId, wsService)
+                        }
+                        noMatch {
+                            TracingScreen(wsService)
+                        }
                     }
                     route("/settings") {
                         SettingsScreen()
