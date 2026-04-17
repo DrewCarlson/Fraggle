@@ -18,8 +18,12 @@ class ExecuteCommandTool(
     private val skillContext: SkillExecutionContext? = null,
 ) : AgentToolDef<ExecuteCommandTool.Args>(
     name = "execute_command",
-    description = """Execute a shell command and return the output.
-The command runs in the workspace directory.
+    description = $$"""Execute a shell command and return the output.
+By default the command runs in the workspace directory.
+When `skill` is provided, the command runs in that skill's directory instead; the
+workspace path is available to the command as the `WORKSPACE_DIR` env var and the
+skill's own directory as `SKILL_DIR`. Reference user-supplied files via
+`$WORKSPACE_DIR/<path>` so they resolve regardless of CWD.
 Use this for running scripts, system commands, or other shell operations.""",
     argsSerializer = Args.serializer(),
 ) {
@@ -54,7 +58,8 @@ Use this for running scripts, system commands, or other shell operations.""",
             try {
                 val maxOutputSize = 100_000
                 val skillEnv = args.skill?.let { skillContext?.resolveEnvironment(it) }
-                val workDir = skillEnv?.workDir?.toFile() ?: toolExecutor.workDir().toFile()
+                val workspaceDir = toolExecutor.workDir()
+                val workDir = skillEnv?.workDir?.toFile() ?: workspaceDir.toFile()
                 val processBuilder = ProcessBuilder("sh", "-c", args.command)
                     .directory(workDir)
                     .redirectErrorStream(false)
@@ -62,6 +67,8 @@ Use this for running scripts, system commands, or other shell operations.""",
                 if (skillEnv != null) {
                     val env = processBuilder.environment()
                     env.putAll(skillEnv.envVars)
+                    env["WORKSPACE_DIR"] = workspaceDir.toString()
+                    env["SKILL_DIR"] = skillEnv.workDir.toString()
                     if (skillEnv.venvBinDir != null) {
                         env["PATH"] = "${skillEnv.venvBinDir}:${env["PATH"] ?: ""}"
                     }

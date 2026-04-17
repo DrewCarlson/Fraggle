@@ -158,7 +158,7 @@ my-api-skill/
 ### How it works
 
 1. **On `fraggle skills add`**: if `requirements.txt` is present, Fraggle automatically creates a venv at `~/.fraggle/venvs/<skill-name>/` and runs `pip install -r requirements.txt`.
-2. **When the agent runs a skill script**: it passes `skill="<name>"` to the `execute_command` tool. This activates the venv (prepends its `bin/` to `PATH`) and injects configured secrets as environment variables — all at the process level, never visible to the LLM.
+2. **When the agent runs a skill script**: it passes `skill="<name>"` to the `execute_command` tool. This activates the venv (prepends its `bin/` to `PATH`), injects configured secrets as environment variables, sets `WORKSPACE_DIR` (the user's workspace root) and `SKILL_DIR` (the skill's own directory), and runs the command with CWD set to the skill directory — all at the process level, never visible to the LLM. Reference user-supplied files via `$WORKSPACE_DIR/<path>` so they resolve regardless of which skill is active.
 3. **Manual setup**: run `fraggle skills setup [name]` to create or `fraggle skills setup --rebuild [name]` to recreate venvs.
 
 ### Writing Python skill scripts

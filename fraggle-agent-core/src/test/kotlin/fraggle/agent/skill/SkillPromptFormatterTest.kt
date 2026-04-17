@@ -105,6 +105,8 @@ class SkillPromptFormatterTest {
         )
         assertTrue("execute_command with skill=" in output)
         assertTrue("Never ask the user for secret values" in output)
+        assertTrue($$"$WORKSPACE_DIR" in output)
+        assertTrue($$"$SKILL_DIR" in output)
     }
 
     @Test

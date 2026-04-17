@@ -64,6 +64,11 @@ object SkillPromptFormatter {
                 append("When a skill has Python support, use execute_command with skill=\"<name>\" to run its scripts. ")
                 append("This activates the skill's Python virtual environment and injects configured secrets automatically. ")
                 append("Never ask the user for secret values — they are injected by the system.")
+                appendLine()
+                appendLine()
+                append("CWD note: with skill=\"<name>\" the command runs in the skill's directory, not the workspace. ")
+                append($$"The workspace path is exposed as $WORKSPACE_DIR and the skill's directory as $SKILL_DIR. ")
+                append($$"To run a user-provided script, prefix it: `python3 $WORKSPACE_DIR/<relative/path>`.")
             }
         }
     }
