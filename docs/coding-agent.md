@@ -116,10 +116,51 @@ Once `fraggle code` launches the TUI, you get a live message list, a multi-line 
 | `Backspace` / `Delete` | Delete character behind / at cursor.                                                                                          |
 | `←` / `→`              | Cursor left / right.                                                                                                          |
 | `↑` / `↓`              | Move cursor up / down between lines (column preserved when possible).                                                         |
-| `Home` / `End`         | Start / end of the current line.                                                                                              |
+| `Home` / `Ctrl+A`      | Jump to the start of the current logical line.                                                                                |
+| `End` / `Ctrl+E`       | Jump to the end of the current logical line.                                                                                  |
+| `Ctrl+K`               | Delete from the cursor to the end of the current line.                                                                        |
+| `Ctrl+U`               | Delete from the cursor to the start of the current line.                                                                      |
+| `Ctrl+W`               | Delete the word immediately before the cursor.                                                                                |
+| `Ctrl+H`               | Alias for `Backspace`.                                                                                                        |
 | `Escape`               | If the agent is running: abort the current turn. If the editor has text: clear it. Otherwise: exit (pressing twice confirms). |
 | `Ctrl+C`               | Clear the editor if it has text, otherwise exit.                                                                              |
 | `y` / `n`              | Approve / deny a pending tool call (only when the approval overlay is visible).                                               |
+
+Slash commands and skill invocations are submitted via the editor. Typing
+`/hotkeys` shows this table in-session; `/session` prints the active session
+id and file path; `/skill:<name>` expands into the body of an installed skill
+(see [Skills](#skills) below); and `/quit` exits.
+
+### Terminal runtime
+
+The TUI is built on `fraggle-tui`, a bespoke terminal runtime in this repo.
+It uses a differential renderer on top of
+[Mosaic](https://github.com/JakeWharton/mosaic)'s lower-level TTY and event
+layers (raw-mode handling, ANSI/Kitty protocol parsing, in-band resize
+detection), but owns its own rendering pipeline:
+
+- **Full-tree diff + line-level rewrite.** Every frame, the whole component
+  tree renders to a flat line list. Only lines that changed between the
+  previous and new frame are written to the terminal. Appended rows flow
+  through `\r\n` so they scroll naturally into the terminal's native
+  scrollback.
+- **Synchronized output mode (DEC 2026)** wraps every write when supported,
+  so partial frames never appear.
+- **Strict width contract.** Any rendered line whose visible width exceeds
+  the current terminal width aborts the render with a diagnostic error —
+  wrap mismatch is the single largest source of ghost/trail bugs in TUIs,
+  so it's caught at the source.
+- **Resize handling.** On a resize event the runtime clears the viewport,
+  clears the scrollback, invalidates every component's width-dependent
+  caches, and redraws the full tree at the new width. This keeps scrollback
+  storage in lockstep with the on-screen frame instead of accumulating
+  duplicate copies of older wrap states.
+
+Tradeoff of the scrollback clear: any shell output that was in scrollback
+*before* you ran `fraggle code` (the prompt that launched the TUI, earlier
+commands) is wiped the first time you resize. Within-session history
+scrolls naturally back into scrollback as it overflows the viewport, so
+you can scroll up to see earlier messages without issue.
 
 ### Tool approval (ask mode)
 
@@ -307,6 +348,94 @@ fraggle code --tools read_file,search_files,list_files,grep
 # No tools at all
 fraggle code --no-tools
 ```
+
+## Skills
+
+Skills are reusable prompt-plus-code bundles that ship their own instructions
+and, optionally, Python scripts and encrypted environment variables. A skill
+lives as a directory containing a `SKILL.md` file with YAML frontmatter and a
+markdown body.
+
+```
+~/.fraggle/skills/code-review/
+├── SKILL.md
+├── requirements.txt      # optional Python deps; auto-installed into a venv
+└── scripts/
+    └── review.py
+```
+
+Skills are discovered from three locations, highest precedence first:
+
+1. `--skill <path>` CLI flag or `skills.extra_paths` in `fraggle.yaml`
+   (explicit).
+2. `<cwd>/.fraggle/skills/` (project).
+3. `$FRAGGLE_ROOT/skills/` (global).
+
+When skills are enabled (the default), the coding agent injects a skill
+catalog into the system prompt so the model knows which skills are available
+by name + description. The full body of a skill is only read on demand —
+the model can request it with `read_file`, or the user can invoke it
+directly via `/skill:<name>`. Typing `/skill:code-review src/Foo.kt` expands
+to the SKILL.md body followed by the extra argument text and submits that as
+a single message.
+
+Skills that declare Python dependencies get their own virtual environment
+at `$FRAGGLE_ROOT/venvs/<skill>/`. When the agent runs `execute_command`
+with `skill = "<name>"`, the runtime activates that venv and injects any
+configured secrets as environment variables before execution. Secrets are
+stored at `$FRAGGLE_ROOT/secrets/<skill>/<VAR>` with restrictive POSIX
+permissions (700/600) and never pass through the model.
+
+Manage skills from the CLI:
+
+```bash
+fraggle skills list                         # show installed skills + source
+fraggle skills add <path-or-url>            # install a skill from disk or git
+fraggle skills remove <name>                # delete a skill
+fraggle skills validate                     # lint every SKILL.md
+fraggle skills setup <name>                 # (re)build the Python venv
+fraggle skills secrets set <name> <VAR>     # store a secret
+fraggle skills secrets list <name>          # list configured secret names
+```
+
+To disable skills entirely, set `skills.enabled: false` in `fraggle.yaml`.
+
+## Markdown rendering
+
+LLM output rendered in the TUI is parsed by the JetBrains CommonMark parser
+(GFM flavour) and emitted as ANSI-styled lines. Block handling:
+
+- **Headings** render as bold text with the accent color. Level 1 adds
+  reverse-video; level 2 adds underline. The leading `#` characters are
+  *not* rendered — terminals don't need the syntax markers to communicate
+  hierarchy.
+- **Code blocks** are drawn with a `┌─ lang ──┐ / │ … / └─` border in the
+  dim theme color. Content is hard-wrapped to fit inside the gutter.
+- **Lists** (unordered + ordered) wrap body text under the bullet with a
+  matching continuation indent.
+- **Blockquotes** use a `│ ` gutter in quote-accent color with italic body
+  text.
+- **Horizontal rules** render as `──────`.
+- Inline **bold / italic / strikethrough / inline-code / links** are
+  preserved via ANSI styling.
+
+### LaTeX math
+
+LLMs routinely emit math fragments like `$\approx 70\%$` or
+`$\sum_{i=1}^{n} x_i$`. These are pre-processed before markdown parsing:
+
+- `$…$` and `$$…$$` pairs are unwrapped when the inner content contains
+  LaTeX markers (a `\command`, `^`, or `_`). Bare currency mentions like
+  `$5 to $10` are left alone.
+- Common commands are substituted with Unicode equivalents: `\approx` → ≈,
+  `\leq` → ≤, `\pm` → ±, `\infty` → ∞, all Greek letters (`\alpha` → α,
+  `\Pi` → Π, etc.), arrows, set/logic operators. Escaped punctuation
+  (`\%` → %, `\$` → $, `\{` → {) is unescaped.
+- Unknown commands pass through as literal text — the user at least sees a
+  readable approximation instead of garbled TeX.
+
+The substitution is not a full LaTeX renderer; complex expressions (nested
+fractions, matrices, integrals with bounds) survive as their command form.
 
 ## Configuration
 

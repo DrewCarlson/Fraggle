@@ -124,18 +124,17 @@ class TtyOutput(private val tty: Tty) : TerminalOutput {
  * visible viewport + clear scrollback), invalidates width-dependent caches
  * on every child, and performs a full redraw at the new width.
  *
- * The scrollback clear is load-bearing for pi-style rendering: because each
- * full redraw re-emits the entire component tree with `\r\n` separators,
- * content scrolls into scrollback storage whenever the frame exceeds the
- * viewport. Without the scrollback clear, every resize would pile up another
- * copy of the session history in scrollback storage (same content, different
- * wrap). The clear keeps scrollback storage in lockstep with the just-emitted
- * frame.
+ * The scrollback clear is load-bearing: because each full redraw re-emits
+ * the entire component tree with `\r\n` separators, content scrolls into
+ * scrollback storage whenever the frame exceeds the viewport. Without the
+ * scrollback clear, every resize would pile up another copy of the session
+ * history in scrollback storage (same content, different wrap). The clear
+ * keeps scrollback storage in lockstep with the just-emitted frame.
  *
- * Tradeoff: content that was in scrollback before the TUI started (the user's
- * earlier shell prompts + output) is wiped on resize. Matches pi's behavior.
- * Session history remains visible by scrolling up — what scrolled off the
- * re-emitted frame naturally repopulates scrollback storage.
+ * Tradeoff: content that was in scrollback before the TUI started (the
+ * user's earlier shell prompts + output) is wiped on resize. Session history
+ * remains visible by scrolling up — what scrolled off the re-emitted frame
+ * naturally repopulates scrollback storage.
  *
  * ## Overflow safety
  *
@@ -430,11 +429,11 @@ class TUI(
         val sync = terminal.capabilities.synchronizedOutput
         if (sync) sb.append(Ansi.SYNC_BEGIN)
         if (clear) {
-            // Home + clear viewport + clear scrollback. This is pi's
-            // aggressive clear on resize. Without the scrollback clear, the
-            // full tree re-emission (via `\r\n` separators) scrolls content
-            // into scrollback storage, producing a new copy on every resize
-            // — multiple resizes pile up duplicate history.
+            // Home + clear viewport + clear scrollback. Without the
+            // scrollback clear, the full tree re-emission (via `\r\n`
+            // separators) scrolls content into scrollback storage, producing
+            // a new copy on every resize — multiple resizes pile up
+            // duplicate history.
             sb.append(Ansi.CURSOR_HOME)
             sb.append(Ansi.CLEAR_DISPLAY)
             sb.append(Ansi.CLEAR_SCROLLBACK)
