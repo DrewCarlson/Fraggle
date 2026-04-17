@@ -1750,7 +1750,7 @@
 <h3 id="how-it-works">How it works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h3>
 <ol>
 <li><strong>On <code>fraggle skills add</code></strong>: if <code>requirements.txt</code> is present, Fraggle automatically creates a venv at <code>~/.fraggle/venvs/&lt;skill-name&gt;/</code> and runs <code>pip install -r requirements.txt</code>.</li>
-<li><strong>When the agent runs a skill script</strong>: it passes <code>skill="&lt;name&gt;"</code> to the <code>execute_command</code> tool. This activates the venv (prepends its <code>bin/</code> to <code>PATH</code>) and injects configured secrets as environment variables — all at the process level, never visible to the LLM.</li>
+<li><strong>When the agent runs a skill script</strong>: it passes <code>skill="&lt;name&gt;"</code> to the <code>execute_command</code> tool. This activates the venv (prepends its <code>bin/</code> to <code>PATH</code>), injects configured secrets as environment variables, sets <code>WORKSPACE_DIR</code> (the user's workspace root) and <code>SKILL_DIR</code> (the skill's own directory), and runs the command with CWD set to the skill directory — all at the process level, never visible to the LLM. Reference user-supplied files via <code>$WORKSPACE_DIR/&lt;path&gt;</code> so they resolve regardless of which skill is active.</li>
 <li><strong>Manual setup</strong>: run <code>fraggle skills setup [name]</code> to create or <code>fraggle skills setup --rebuild [name]</code> to recreate venvs.</li>
 </ol>
 <h3 id="writing-python-skill-scripts">Writing Python skill scripts<a class="headerlink" href="#writing-python-skill-scripts" title="Permanent link">&para;</a></h3>
