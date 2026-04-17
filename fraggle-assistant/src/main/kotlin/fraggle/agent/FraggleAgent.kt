@@ -176,7 +176,7 @@ class FraggleAgent(
                 logger.info("Scheduled turn suppressed by skip_reply for chat ${message.chatId}")
                 AgentResponse.Silent
             } else {
-                if (config.autoMemory && content.isNotBlank()) {
+                if (config.autoMemory && content.isNotBlank() && !message.isScheduled) {
                     scope.launch { extractMemoryViaLLM(message, content) }
                 }
 
