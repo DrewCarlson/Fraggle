@@ -40,7 +40,6 @@ class AtFileExpanderTest {
             val result = AtFileExpander.expand(text, tmp)
             assertEquals(text, result.expandedText)
             assertTrue(result.resolved.isEmpty())
-            // Not even recorded as unresolved — mid-word @ shouldn't fire at all.
             assertTrue(result.unresolved.isEmpty())
         }
 
@@ -55,7 +54,6 @@ class AtFileExpanderTest {
 
         @Test
         fun `at followed by whitespace is not a reference`(@TempDir tmp: Path) {
-            // "@" then space → zero-length token; kept literal, not recorded.
             val text = "hey @ then stuff"
             val result = AtFileExpander.expand(text, tmp)
             assertEquals(text, result.expandedText)
@@ -76,31 +74,33 @@ class AtFileExpanderTest {
     @Nested
     inner class Resolves {
         @Test
-        fun `single relative file expands into a code fence with path header`(@TempDir tmp: Path) {
+        fun `single relative file prepends a context block and preserves user text`(@TempDir tmp: Path) {
             val file = tmp.resolve("hello.txt")
             file.writeText("greetings\n")
 
-            val result = AtFileExpander.expand("look at @hello.txt now", tmp)
+            val userText = "look at @hello.txt now"
+            val result = AtFileExpander.expand(userText, tmp)
 
             assertTrue(result.isChanged)
             assertEquals(listOf("hello.txt"), result.resolved)
             assertTrue(result.unresolved.isEmpty())
-            // Preamble / postamble preserved.
+
+            // Must start with the context wrapper and end with the user's
+            // literal text (@token preserved).
+            assertTrue(result.expandedText.startsWith("<context>\n"))
             assertTrue(
-                result.expandedText.startsWith("look at "),
-                "preamble must be preserved, got: ${result.expandedText}",
+                result.expandedText.endsWith("\n\n$userText"),
+                "user text must appear verbatim after the context block",
             )
-            assertTrue(
-                result.expandedText.endsWith(" now"),
-                "postamble must be preserved, got: ${result.expandedText}",
-            )
-            // Contains the header + code fence.
+            // Context block contents.
             assertContains(result.expandedText, "`hello.txt`:")
             assertContains(result.expandedText, "```\ngreetings\n```")
+            // Closing tag present exactly once.
+            assertEquals(1, result.expandedText.split("</context>").size - 1)
         }
 
         @Test
-        fun `absolute path also resolves and is used verbatim in header`(@TempDir tmp: Path) {
+        fun `absolute path also resolves and is used verbatim in context header`(@TempDir tmp: Path) {
             val file = tmp.resolve("abs.txt")
             file.writeText("abs content")
             val abs = file.toAbsolutePath().toString()
@@ -111,30 +111,33 @@ class AtFileExpanderTest {
             assertTrue(result.unresolved.isEmpty())
             assertContains(result.expandedText, "`$abs`:")
             assertContains(result.expandedText, "abs content")
+            // User text with @token preserved.
+            assertTrue(result.expandedText.endsWith("here: @$abs end"))
         }
 
         @Test
-        fun `multiple references expand independently in order`(@TempDir tmp: Path) {
-            val a = tmp.resolve("a.txt").apply { writeText("AAA\n") }
-            val b = tmp.resolve("b.txt").apply { writeText("BBB\n") }
+        fun `multiple references all appear in one context block, user tokens preserved`(@TempDir tmp: Path) {
+            tmp.resolve("a.txt").writeText("AAA\n")
+            tmp.resolve("b.txt").writeText("BBB\n")
 
-            val result = AtFileExpander.expand("compare @a.txt with @b.txt ok", tmp)
+            val userText = "compare @a.txt with @b.txt ok"
+            val result = AtFileExpander.expand(userText, tmp)
 
             assertEquals(listOf("a.txt", "b.txt"), result.resolved)
             assertTrue(result.unresolved.isEmpty())
+            // User text preserved verbatim at the tail.
+            assertTrue(result.expandedText.endsWith("\n\n$userText"))
+            // Both headers present inside the wrapper.
             val aHeader = result.expandedText.indexOf("`a.txt`:")
             val bHeader = result.expandedText.indexOf("`b.txt`:")
-            assertTrue(aHeader >= 0, "missing a header")
-            assertTrue(bHeader > aHeader, "b header must come after a header")
+            assertTrue(aHeader in 0 until result.expandedText.indexOf("</context>"))
+            assertTrue(bHeader in aHeader..result.expandedText.indexOf("</context>"))
             assertContains(result.expandedText, "AAA")
             assertContains(result.expandedText, "BBB")
-            // Unused paths intentionally referenced so IntelliJ keeps imports happy.
-            assertTrue(a.toFile().exists())
-            assertTrue(b.toFile().exists())
         }
 
         @Test
-        fun `reference at start of text works (no preceding whitespace)`(@TempDir tmp: Path) {
+        fun `reference at start of text works and preserves the literal @token`(@TempDir tmp: Path) {
             val file = tmp.resolve("start.md")
             file.writeText("hi")
 
@@ -143,40 +146,57 @@ class AtFileExpanderTest {
             assertEquals(listOf("start.md"), result.resolved)
             assertContains(result.expandedText, "`start.md`:")
             assertContains(result.expandedText, "```\nhi\n```")
+            // Original token preserved at the end.
+            assertTrue(result.expandedText.endsWith("\n\n@start.md"))
         }
 
         @Test
         fun `file not ending in newline gets trailing newline in fence`(@TempDir tmp: Path) {
             val file = tmp.resolve("no-nl.txt")
-            file.writeText("abc") // no trailing \n
+            file.writeText("abc")
 
             val result = AtFileExpander.expand("@no-nl.txt", tmp)
 
-            // Output must include "abc\n```" so the closing fence is on its own line.
             assertContains(result.expandedText, "abc\n```")
+        }
+
+        @Test
+        fun `duplicate references contribute only one entry to the context block`(@TempDir tmp: Path) {
+            tmp.resolve("dup.txt").writeText("once\n")
+
+            val userText = "compare @dup.txt with @dup.txt please"
+            val result = AtFileExpander.expand(userText, tmp)
+
+            assertEquals(listOf("dup.txt"), result.resolved)
+            // Exactly one header in the context block.
+            assertEquals(1, result.expandedText.split("`dup.txt`:").size - 1)
+            // User text — including BOTH literal @dup.txt tokens — is preserved.
+            assertTrue(result.expandedText.endsWith("\n\n$userText"))
         }
     }
 
     @Nested
     inner class Unresolves {
         @Test
-        fun `missing file kept literal and recorded`(@TempDir tmp: Path) {
+        fun `missing file keeps user text verbatim and records as unresolved`(@TempDir tmp: Path) {
             val text = "@does-not-exist.md here"
             val result = AtFileExpander.expand(text, tmp)
 
-            assertEquals("@does-not-exist.md here", result.expandedText)
+            // No context block was built, so the text comes out unchanged.
+            assertEquals(text, result.expandedText)
             assertTrue(result.resolved.isEmpty())
             assertEquals(listOf("does-not-exist.md"), result.unresolved)
         }
 
         @Test
-        fun `directory is treated as unresolved`(@TempDir tmp: Path) {
+        fun `directory is treated as unresolved and user text stays unchanged`(@TempDir tmp: Path) {
             val dir = tmp.resolve("somedir")
             dir.createDirectory()
 
-            val result = AtFileExpander.expand("look at @somedir here", tmp)
+            val userText = "look at @somedir here"
+            val result = AtFileExpander.expand(userText, tmp)
 
-            assertEquals("look at @somedir here", result.expandedText)
+            assertEquals(userText, result.expandedText)
             assertTrue(result.resolved.isEmpty())
             assertEquals(listOf("somedir"), result.unresolved)
         }
@@ -186,9 +206,10 @@ class AtFileExpanderTest {
             val big = tmp.resolve("big.txt")
             big.writeText("x".repeat(1024))
 
-            val result = AtFileExpander.expand("see @big.txt", tmp, maxFileBytes = 512)
+            val userText = "see @big.txt"
+            val result = AtFileExpander.expand(userText, tmp, maxFileBytes = 512)
 
-            assertEquals("see @big.txt", result.expandedText)
+            assertEquals(userText, result.expandedText)
             assertTrue(result.resolved.isEmpty())
             assertEquals(listOf("big.txt"), result.unresolved)
         }
@@ -204,17 +225,19 @@ class AtFileExpanderTest {
         }
 
         @Test
-        fun `mix of resolved and unresolved records each separately`(@TempDir tmp: Path) {
+        fun `mix of resolved and unresolved puts good file in context, bad stays in user text`(@TempDir tmp: Path) {
             tmp.resolve("good.txt").writeText("good")
 
-            val result = AtFileExpander.expand("@good.txt and @bad.txt done", tmp)
+            val userText = "@good.txt and @bad.txt done"
+            val result = AtFileExpander.expand(userText, tmp)
 
             assertEquals(listOf("good.txt"), result.resolved)
             assertEquals(listOf("bad.txt"), result.unresolved)
-            // Bad path kept literally.
-            assertContains(result.expandedText, "@bad.txt")
-            // Good path replaced.
+            // Context block contains only the resolved file.
             assertContains(result.expandedText, "`good.txt`:")
+            assertFalse(result.expandedText.contains("`bad.txt`:"))
+            // User text preserved verbatim — both @tokens included.
+            assertTrue(result.expandedText.endsWith("\n\n$userText"))
         }
     }
 
@@ -227,11 +250,52 @@ class AtFileExpanderTest {
             val file = sub.resolve("x.txt")
             file.writeText("hidden-content")
 
-            val result = AtFileExpander.expand("@sub/dir/x.txt", tmp)
+            val userText = "@sub/dir/x.txt"
+            val result = AtFileExpander.expand(userText, tmp)
 
             assertEquals(listOf("sub/dir/x.txt"), result.resolved)
             assertContains(result.expandedText, "`sub/dir/x.txt`:")
             assertContains(result.expandedText, "hidden-content")
+            assertTrue(result.expandedText.endsWith("\n\n$userText"))
+        }
+    }
+
+    @Nested
+    inner class StripContextBlock {
+        @Test
+        fun `strips a well-formed wrapper and surrounding blank lines`() {
+            val wrapped = "<context>\n`foo`:\n```\ncontents\n```\n</context>\n\nwhat do you think?"
+            assertEquals("what do you think?", AtFileExpander.stripContextBlock(wrapped))
+        }
+
+        @Test
+        fun `no context block returns text unchanged`() {
+            val plain = "no wrapper here"
+            assertEquals(plain, AtFileExpander.stripContextBlock(plain))
+        }
+
+        @Test
+        fun `partial open tag without close is left alone`() {
+            val weird = "<context>\noh no did not finish"
+            assertEquals(weird, AtFileExpander.stripContextBlock(weird))
+        }
+
+        @Test
+        fun `idempotent on already-stripped text`() {
+            val stripped = "what do you think?"
+            assertEquals(stripped, AtFileExpander.stripContextBlock(AtFileExpander.stripContextBlock(stripped)))
+        }
+
+        @Test
+        fun `round-trip with expand yields the original user text`(@TempDir tmp: Path) {
+            tmp.resolve("a.txt").writeText("aaa")
+            tmp.resolve("b.txt").writeText("bbb")
+            val userText = "review @a.txt and @b.txt carefully"
+
+            val expanded = AtFileExpander.expand(userText, tmp).expandedText
+            val stripped = AtFileExpander.stripContextBlock(expanded)
+
+            assertEquals(userText, stripped)
         }
     }
 }

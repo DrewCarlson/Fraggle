@@ -6,44 +6,78 @@ import kotlin.io.path.isRegularFile
 import kotlin.io.path.readText
 
 /**
- * Expands `@path` file references in a user message into inlined file
- * content, matching the behavior of `fraggle code`'s CLI positional `@file`
- * arguments.
+ * Expands `@path` file references in a user message by prepending a
+ * `<context>…</context>` block with the referenced file contents, while
+ * leaving the user's original text (including the `@path` tokens
+ * themselves) untouched.
  *
- * A valid `@path` reference is `@` followed by a path token, where `@` is
- * either at the start of the input or immediately preceded by whitespace.
- * The path token runs up to the next whitespace character. Non-file `@`
- * uses (email addresses, `@mentions` with no following path, etc.) are
- * detected heuristically and left untouched — the expander only fires when
- * the token actually resolves to an existing regular file.
+ * This matches how pi and Claude-Code present file references in the UI:
+ * the chat history shows what the user actually typed, and the LLM receives
+ * the full file contents as surrounding context. Fraggle talks to a local
+ * LLM so we can't rely on the provider to expand references server-side;
+ * instead we inline the content ourselves but keep the display clean via a
+ * known wrapper that the TUI renderer strips before rendering.
  *
- * Expansion format matches the CLI:
+ * ### Expansion format
  *
  * ```
- * `<relative path>`:
+ * <context>
+ * `src/Foo.kt`:
  * ```
  * <file contents>
  * ```
+ *
+ * `src/Bar.kt`:
+ * ```
+ * <file contents>
+ * ```
+ * </context>
+ *
+ * <user's original text, including the @path tokens>
  * ```
  *
- * Multiple references in one message expand in order. Missing / unreadable
- * references are left as plain text in the output and recorded in
- * [ExpansionResult.unresolved] so the caller can surface a warning.
+ * The wrapper uses the same XML-tag convention as the skill inclusion
+ * (`<skill …>…</skill>`) so both features compose the same way. [stripContextBlock]
+ * is the inverse operation used at display time.
  *
- * Local LLM providers don't natively understand `@path` syntax the way
- * cloud assistants do, so we inline content client-side before sending.
+ * ### Trigger rules
+ *
+ * A `@path` is treated as a file reference only when `@` is at the start of
+ * the input or immediately preceded by whitespace. This excludes email
+ * addresses (`user@example.com`) and `@mentions` in prose.
+ *
+ * ### Deduplication
+ *
+ * Duplicate `@path` references in one message (e.g. `compare @foo to @foo`)
+ * contribute a single context block entry. The user's literal text still
+ * contains both occurrences.
+ *
+ * ### Limits
+ *
+ * Files larger than [DEFAULT_MAX_FILE_BYTES] are treated as unresolved —
+ * local LLMs have hard context limits and a stray `@big.log` reference
+ * should not blow the whole window. Unresolved references are recorded
+ * separately so callers can surface a warning.
  */
 object AtFileExpander {
 
-    /** Result of an expansion pass. */
+    /** Default file-size cap for a single reference, in bytes. 256 KiB. */
+    const val DEFAULT_MAX_FILE_BYTES: Long = 256 * 1024
+
+    /** XML-tag marker that wraps the context block. */
+    private const val CONTEXT_OPEN = "<context>"
+    private const val CONTEXT_CLOSE = "</context>"
+
+    /** Result of a single expansion pass. */
     data class ExpansionResult(
-        /** Input text with every resolved `@path` token replaced by an inlined code block. */
+        /** Text to send to the LLM: `<context>…</context>\n\n<original>` when any ref resolved, or the original verbatim when nothing resolved. */
         val expandedText: String,
-        /** Relative paths (as the user wrote them) that resolved to a readable file. */
+        /** Relative paths (as the user wrote them) that resolved to a readable file. Deduplicated, in first-seen order. */
         val resolved: List<String>,
-        /** Path references that couldn't be resolved (missing file, directory, read error). */
+        /** Path references that couldn't be resolved (missing, directory, oversize, read error). Deduplicated, in first-seen order. */
         val unresolved: List<String>,
     ) {
+        /** True when at least one reference resolved and the expansion text differs from the input. */
         val isChanged: Boolean get() = resolved.isNotEmpty()
     }
 
@@ -51,77 +85,93 @@ object AtFileExpander {
      * Expand `@path` references in [text]. Paths are resolved against [cwd]
      * for relative references; absolute paths are used verbatim.
      *
-     * Size cap: files larger than [maxFileBytes] are treated as unresolved
-     * to avoid blowing out the LLM context. Defaults to 256 KiB — generous
-     * for source files, strict enough to catch stray log-file references.
+     * The user's literal text is preserved verbatim in the result — only
+     * the prepended `<context>` block adds content. See [stripContextBlock]
+     * for the inverse.
      */
     fun expand(
         text: String,
         cwd: Path,
-        maxFileBytes: Long = 256 * 1024,
+        maxFileBytes: Long = DEFAULT_MAX_FILE_BYTES,
     ): ExpansionResult {
         if (text.isEmpty() || '@' !in text) {
             return ExpansionResult(text, emptyList(), emptyList())
         }
 
-        val out = StringBuilder(text.length)
-        val resolved = mutableListOf<String>()
-        val unresolved = mutableListOf<String>()
-
-        var i = 0
-        while (i < text.length) {
-            val c = text[i]
-
-            // Only consider `@` as a trigger when at the start of input or
-            // after whitespace. That excludes email addresses and most
-            // `@mentions` in prose.
-            val triggerValid = c == '@' && (i == 0 || text[i - 1].isWhitespace())
-            if (!triggerValid) {
-                out.append(c)
-                i++
-                continue
-            }
-
-            // Collect the path token: everything up to the next whitespace.
-            // Zero-length tokens ("@ " or "@" at EOF) aren't references.
-            val pathStart = i + 1
-            var pathEnd = pathStart
-            while (pathEnd < text.length && !text[pathEnd].isWhitespace()) {
-                pathEnd++
-            }
-            val rawPath = text.substring(pathStart, pathEnd)
-            if (rawPath.isEmpty()) {
-                out.append(c)
-                i++
-                continue
-            }
-
-            val expanded = tryInline(rawPath, cwd, maxFileBytes)
-            if (expanded != null) {
-                out.append(expanded)
-                resolved += rawPath
-            } else {
-                // Leave the original `@path` text in place so the user can
-                // see what didn't resolve. Record it so the caller can
-                // surface a warning.
-                out.append('@').append(rawPath)
-                unresolved += rawPath
-            }
-            i = pathEnd
+        val references = findReferences(text)
+        if (references.isEmpty()) {
+            return ExpansionResult(text, emptyList(), emptyList())
         }
 
+        val resolved = LinkedHashMap<String, String>() // rawPath → file contents
+        val unresolved = LinkedHashSet<String>()
+        for (rawPath in references) {
+            if (resolved.containsKey(rawPath) || rawPath in unresolved) continue
+            val contents = tryReadFile(rawPath, cwd, maxFileBytes)
+            if (contents != null) resolved[rawPath] = contents else unresolved += rawPath
+        }
+
+        if (resolved.isEmpty()) {
+            return ExpansionResult(text, emptyList(), unresolved.toList())
+        }
+
+        val contextBlock = buildContextBlock(resolved)
+        val expandedText = "$contextBlock\n\n$text"
+
         return ExpansionResult(
-            expandedText = out.toString(),
-            resolved = resolved,
-            unresolved = unresolved,
+            expandedText = expandedText,
+            resolved = resolved.keys.toList(),
+            unresolved = unresolved.toList(),
         )
     }
 
     /**
-     * Read the file and format it as an inlined code block. Returns null if
-     * the path doesn't resolve to a readable file under [maxFileBytes].
+     * Remove a leading `<context>…</context>\n\n` block from [text], if one is
+     * present. Idempotent: messages with no wrapper pass through unchanged,
+     * and repeated calls don't eat extra leading whitespace.
+     *
+     * Used by the TUI display path to hide the expansion from the rendered
+     * user message. The wrapper exists only for the LLM's benefit.
      */
-    private fun tryInline(rawPath: String, cwd: Path, maxFileBytes: Long): String? {
+    fun stripContextBlock(text: String): String {
+        if (!text.startsWith(CONTEXT_OPEN)) return text
+        val close = text.indexOf(CONTEXT_CLOSE, CONTEXT_OPEN.length)
+        if (close < 0) return text
+        var tail = close + CONTEXT_CLOSE.length
+        // Strip one or more newlines between the closing tag and the user text.
+        while (tail < text.length && text[tail] == '\n') tail++
+        return text.substring(tail)
+    }
+
+    // ── Internals ──────────────────────────────────────────────────────────
+
+    /**
+     * Collect every `@path` token from [text] in source order, with duplicates.
+     * A token is `@` (at start of input or after whitespace) followed by a
+     * non-whitespace path segment.
+     */
+    private fun findReferences(text: String): List<String> {
+        val out = ArrayList<String>()
+        var i = 0
+        while (i < text.length) {
+            val c = text[i]
+            val triggerValid = c == '@' && (i == 0 || text[i - 1].isWhitespace())
+            if (!triggerValid) {
+                i++
+                continue
+            }
+            val pathStart = i + 1
+            var pathEnd = pathStart
+            while (pathEnd < text.length && !text[pathEnd].isWhitespace()) pathEnd++
+            if (pathEnd > pathStart) {
+                out += text.substring(pathStart, pathEnd)
+            }
+            i = pathEnd
+        }
+        return out
+    }
+
+    private fun tryReadFile(rawPath: String, cwd: Path, maxFileBytes: Long): String? {
         val path = try {
             val p = Path.of(rawPath)
             if (p.isAbsolute) p else cwd.resolve(rawPath)
@@ -129,29 +179,33 @@ object AtFileExpander {
             return null
         }
         if (!path.exists() || !path.isRegularFile()) return null
-
         val size = try {
             path.toFile().length()
         } catch (_: Throwable) {
             return null
         }
         if (size > maxFileBytes) return null
-
-        val contents = try {
+        return try {
             path.readText()
         } catch (_: Throwable) {
-            return null
+            null
         }
+    }
 
-        // Mirror the CLI positional-arg format verbatim so behavior is
-        // identical whether the user typed `@file` in the editor or passed
-        // it on the command line.
-        return buildString {
-            append('`').append(rawPath).append("`:\n")
-            append("```\n")
-            append(contents)
-            if (!contents.endsWith("\n")) append('\n')
-            append("```")
+    private fun buildContextBlock(resolved: Map<String, String>): String {
+        val sb = StringBuilder()
+        sb.append(CONTEXT_OPEN).append('\n')
+        var first = true
+        for ((path, contents) in resolved) {
+            if (!first) sb.append('\n')
+            first = false
+            sb.append('`').append(path).append("`:\n")
+            sb.append("```\n")
+            sb.append(contents)
+            if (!contents.endsWith("\n")) sb.append('\n')
+            sb.append("```\n")
         }
+        sb.append(CONTEXT_CLOSE)
+        return sb.toString()
     }
 }

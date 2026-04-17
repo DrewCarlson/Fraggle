@@ -31,6 +31,7 @@ import fraggle.coding.session.replayCurrentBranch
 import fraggle.coding.settings.CodingSettingsDefaults
 import fraggle.coding.settings.SettingsStore
 import fraggle.coding.tools.CodingToolRegistry
+import fraggle.coding.ui.AtFileExpander
 import fraggle.coding.ui.HeaderInfo
 import fraggle.coding.ui.SessionPickerResult
 import fraggle.coding.ui.TuiToolPermissionHandler
@@ -449,25 +450,17 @@ class CodeCommand : CliktCommand(name = "code") {
      */
     private fun buildInitialUserMessage(args: List<String>, cwd: Path): String? {
         if (args.isEmpty()) return null
-        val sb = StringBuilder()
-        for (arg in args) {
-            if (arg.startsWith("@")) {
-                val rel = arg.substring(1)
-                val path = Path(rel).let { if (it.isAbsolute) it else cwd.resolve(it) }
-                if (path.exists() && path.isRegularFile()) {
-                    sb.appendLine("`$rel`:")
-                    sb.appendLine("```")
-                    sb.appendLine(path.readText())
-                    sb.appendLine("```")
-                } else {
-                    System.err.println("warning: @file not found or not a regular file: $path")
-                    sb.append(arg).append(' ')
-                }
-            } else {
-                sb.append(arg).append(' ')
-            }
+        // Join positional args with a single space and run the resulting
+        // string through the same expander the in-editor submit path uses.
+        // Produces a `<context>…</context>\n\n<user text>` wrapper when any
+        // @path resolves, matching the display/expansion contract the TUI
+        // renderer expects.
+        val joined = args.joinToString(" ").trim().ifEmpty { return null }
+        val expansion = AtFileExpander.expand(joined, cwd)
+        for (missing in expansion.unresolved) {
+            System.err.println("warning: @file not found or not a regular file: $missing")
         }
-        return sb.toString().trim().ifEmpty { null }
+        return expansion.expandedText.ifEmpty { null }
     }
 
     private fun readFileOrNull(projectFile: Path): String? =

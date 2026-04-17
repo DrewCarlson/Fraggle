@@ -472,7 +472,12 @@ class CodingApp(
                 // sees the full SKILL.md body. Hide that wall of text from the TUI — the
                 // notice row ("activated skill: <name>") already tells the user it fired.
                 if (text.trimStart().startsWith("<skill name=\"")) return
-                UserMessage(text)
+                // @file expansions prepend a <context>…</context> block holding the
+                // inlined file contents. The LLM needs to see it; the user doesn't —
+                // their chat history should show the message they typed, with the
+                // @path tokens intact.
+                val displayText = AtFileExpander.stripContextBlock(text)
+                UserMessage(displayText)
             }
             is AgentMessage.Assistant -> AssistantMessage(
                 text = msg.textContent,
