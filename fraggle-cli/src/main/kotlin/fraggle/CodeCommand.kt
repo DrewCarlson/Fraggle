@@ -26,13 +26,16 @@ import fraggle.coding.prompt.DefaultSystemPrompt
 import fraggle.coding.prompt.PromptTemplateLoader
 import fraggle.coding.session.Session
 import fraggle.coding.session.SessionManager
+import fraggle.coding.session.loadPreviews
 import fraggle.coding.session.replayCurrentBranch
 import fraggle.coding.settings.CodingSettingsDefaults
 import fraggle.coding.settings.SettingsStore
 import fraggle.coding.tools.CodingToolRegistry
 import fraggle.coding.ui.HeaderInfo
+import fraggle.coding.ui.SessionPickerResult
 import fraggle.coding.ui.TuiToolPermissionHandler
 import fraggle.coding.ui.runCodingApp
+import fraggle.coding.ui.runSessionPicker
 import fraggle.executor.LocalToolExecutor
 import fraggle.executor.supervision.InteractiveToolSupervisor
 import fraggle.executor.supervision.NoOpToolSupervisor
@@ -50,7 +53,6 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import java.nio.file.Path
 import kotlin.io.path.Path
@@ -99,7 +101,7 @@ class CodeCommand : CliktCommand(name = "code") {
 
     private val resumeSession by option(
         "-r", "--resume",
-        help = "Resume the most recent session for this project (alias of --continue in MVP; picker UI is future work)",
+        help = "Open a picker of recent sessions and resume the one you choose",
     ).flag(default = false)
 
     private val sessionPath by option(
@@ -396,13 +398,29 @@ class CodeCommand : CliktCommand(name = "code") {
             return manager.fork(source, tip)
         }
 
-        if (continueSession || resumeSession) {
+        if (continueSession) {
             val latest = manager.mostRecent()
                 ?: run {
                     System.err.println("No previous session found for this project — starting a new one.")
                     return manager.createNew(model = model)
                 }
             return manager.open(latest.file)
+        }
+
+        if (resumeSession) {
+            val previews = manager.loadPreviews()
+            if (previews.isEmpty()) {
+                System.err.println("No previous sessions found for this project — starting a new one.")
+                return manager.createNew(model = model)
+            }
+            return when (val choice = runSessionPicker(previews)) {
+                is SessionPickerResult.Selected -> manager.open(choice.summary.file)
+                SessionPickerResult.NewSession -> manager.createNew(model = model)
+                SessionPickerResult.Cancelled -> {
+                    System.err.println("Cancelled.")
+                    exitProcess(0)
+                }
+            }
         }
 
         return manager.createNew(model = model)
