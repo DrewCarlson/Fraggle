@@ -38,6 +38,7 @@ import fraggle.scheduling.GetTaskTool
 import fraggle.scheduling.ListTasksTool
 import fraggle.scheduling.ScheduleTaskTool
 import fraggle.scheduling.ScheduledTask
+import fraggle.scheduling.SkipReplyTool
 import fraggle.scheduling.TaskScheduler
 import fraggle.tracing.TraceStore
 import org.slf4j.LoggerFactory
@@ -160,10 +161,20 @@ interface AssistantModule {
                 )
                 if (bridgeManager.hasConnectedBridge()) {
                     try {
+                        val framedAction = buildString {
+                            appendLine("[Scheduled task: ${task.name}]")
+                            appendLine(task.action)
+                            appendLine()
+                            append(
+                                "If the task or its result suggest there is no new information " +
+                                    "for the user to see, call skip_reply to end silently.",
+                            )
+                        }
                         bridgeManager.injectMessage(
                             qualifiedChatId = task.chatId,
-                            text = task.action,
+                            text = framedAction,
                             senderName = "Scheduled Task: ${task.name}",
+                            isScheduled = true,
                         )
                         assistantModuleLogger.info("Task action injected for ${task.chatId}: ${task.action}")
                     } catch (e: Exception) {
@@ -194,6 +205,7 @@ interface AssistantModule {
             ListTasksTool(taskScheduler),
             CancelTaskTool(taskScheduler),
             GetTaskTool(taskScheduler),
+            SkipReplyTool(),
         )
         return FraggleToolRegistry(baseRegistry.tools + schedulingTools)
     }

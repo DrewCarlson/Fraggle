@@ -7,7 +7,10 @@ import fraggle.agent.compaction.MessageCountCompactionPolicy
 import fraggle.agent.loop.AgentOptions
 import fraggle.agent.loop.LlmBridge
 import fraggle.agent.loop.ToolCallExecutor
+import fraggle.agent.loop.ToolCallResult
+import fraggle.agent.loop.ToolDefinition
 import fraggle.agent.message.AgentMessage
+import fraggle.agent.message.ToolCall
 import fraggle.agent.message.ContentPart.Text
 import fraggle.agent.skill.SkillPromptFormatter
 import fraggle.agent.skill.SkillRegistryLoader
@@ -32,6 +35,7 @@ import fraggle.memory.MemoryStore
 import fraggle.prompt.PromptManager
 import fraggle.provider.LMStudioProvider
 import fraggle.provider.Usage
+import fraggle.scheduling.SkipReplyTool
 import fraggle.tracing.TraceStore
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.offsetIn
@@ -122,12 +126,18 @@ class FraggleAgent(
                 }
             }
 
+            val turnToolExecutor = if (message.isScheduled) {
+                toolCallExecutor
+            } else {
+                HiddenToolExecutor(toolCallExecutor, hidden = setOf(SkipReplyTool.NAME))
+            }
+
             val agent = Agent(
                 AgentOptions(
                     systemPrompt = systemPrompt,
                     model = config.model,
                     llmBridge = llmBridge,
-                    toolExecutor = toolCallExecutor,
+                    toolExecutor = turnToolExecutor,
                     maxIterations = config.maxIterations,
                     chatId = message.chatId,
                     initialMessages = historyMessages,
@@ -158,14 +168,23 @@ class FraggleAgent(
                 .lastOrNull()
             val content = lastAssistant?.textContent.orEmpty()
 
-            if (config.autoMemory && content.isNotBlank()) {
-                scope.launch { extractMemoryViaLLM(message, content) }
-            }
+            val skipReplyInvoked = message.isScheduled && agent.state.messages
+                .filterIsInstance<AgentMessage.Assistant>()
+                .any { m -> m.toolCalls.any { it.name == SkipReplyTool.NAME } }
 
-            AgentResponse.Success(
-                content = content,
-                attachments = executionContext.attachments.toList(),
-            )
+            if (skipReplyInvoked) {
+                logger.info("Scheduled turn suppressed by skip_reply for chat ${message.chatId}")
+                AgentResponse.Silent
+            } else {
+                if (config.autoMemory && content.isNotBlank()) {
+                    scope.launch { extractMemoryViaLLM(message, content) }
+                }
+
+                AgentResponse.Success(
+                    content = content,
+                    attachments = executionContext.attachments.toList(),
+                )
+            }
         } catch (e: Exception) {
             logger.error("Agent error: ${e.message}", e)
             AgentResponse.Error("Failed to get response from LLM: ${e.message}")
@@ -574,6 +593,26 @@ private data class ReconciledFact(
 )
 
 /**
+ * Decorator that hides a subset of tools from the LLM for a single turn.
+ * Used to gate `skip_reply` behind scheduled-task turns so user messages
+ * never see it in the tool catalog.
+ */
+private class HiddenToolExecutor(
+    private val delegate: ToolCallExecutor,
+    private val hidden: Set<String>,
+) : ToolCallExecutor {
+    override suspend fun execute(toolCall: ToolCall, chatId: String): ToolCallResult =
+        if (toolCall.name in hidden) {
+            ToolCallResult("Error: Tool '${toolCall.name}' is not available on this turn.", isError = true)
+        } else {
+            delegate.execute(toolCall, chatId)
+        }
+
+    override fun getToolDefinitions(): List<ToolDefinition> =
+        delegate.getToolDefinitions().filterNot { it.name in hidden }
+}
+
+/**
  * Agent configuration.
  */
 data class AgentConfig(
@@ -635,13 +674,22 @@ sealed class AgentResponse {
         val message: String,
     ) : AgentResponse()
 
+    /**
+     * The agent chose to end this turn silently — produced by a scheduled-task
+     * turn when the model invoked `skip_reply`. Orchestrators should skip the
+     * outbound message send entirely.
+     */
+    data object Silent : AgentResponse()
+
     fun contentOrError(): String = when (this) {
         is Success -> content
         is Error -> "Error: $message"
+        is Silent -> ""
     }
 
     fun collectAttachments(): List<ResponseAttachment> = when (this) {
         is Success -> attachments
         is Error -> emptyList()
+        is Silent -> emptyList()
     }
 }

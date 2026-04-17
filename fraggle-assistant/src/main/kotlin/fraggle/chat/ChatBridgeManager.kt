@@ -178,7 +178,12 @@ class ChatBridgeManager(
      * @param text The message text to inject
      * @param senderName Display name for the synthetic sender
      */
-    suspend fun injectMessage(qualifiedChatId: String, text: String, senderName: String = "Scheduler") {
+    suspend fun injectMessage(
+        qualifiedChatId: String,
+        text: String,
+        senderName: String = "Scheduler",
+        isScheduled: Boolean = false,
+    ) {
         val (bridgeName, chatId) = parseQualifiedChatId(qualifiedChatId)
         val bridge = bridges[bridgeName]
             ?: throw IllegalArgumentException("Bridge '$bridgeName' not found for chatId: $qualifiedChatId")
@@ -190,6 +195,7 @@ class ChatBridgeManager(
             sender = Sender(id = "scheduler", name = senderName),
             content = MessageContent.Text(text),
             timestamp = Clock.System.now(),
+            isScheduled = isScheduled,
         )
 
         _messages.emit(

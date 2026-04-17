@@ -110,6 +110,13 @@ data class IncomingMessage(
     val replyTo: String? = null,
     val mentions: List<String> = emptyList(),
     val imageAttachments: List<ImageAttachment> = emptyList(),
+    /**
+     * True when this message was injected by the task scheduler rather than
+     * originating from a human. The assistant uses this to enable the
+     * `skip_reply` tool so the turn can end silently when the task produced
+     * nothing worth sending.
+     */
+    val isScheduled: Boolean = false,
 )
 
 /**

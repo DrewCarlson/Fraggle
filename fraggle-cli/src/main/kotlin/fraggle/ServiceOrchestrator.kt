@@ -365,6 +365,13 @@ class ServiceOrchestrator(
             typingJob.cancel()
             bridgeManager.setTyping(chatId, false)
 
+            // Silent response: scheduled task opted out via skip_reply. Nothing to send.
+            if (response is AgentResponse.Silent) {
+                logger.info("Scheduled task produced silent response for $chatId — no message sent")
+                conversations[chatId] = processResult.conversation
+                return
+            }
+
             // Get response text and attachments
             val responseText = response.contentOrError()
             val toolAttachments = response.collectAttachments()
