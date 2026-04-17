@@ -62,6 +62,39 @@ class Editor(
     /** True while a bracketed-paste block is being received. */
     private var inPaste: Boolean = false
 
+    // ─── Autocomplete ──────────────────────────────────────────────────────
+
+    private var autocompleteProvider: AutocompleteProvider? = null
+    private var autocompleteState: AutocompleteState? = null
+
+    /**
+     * Maximum rows shown in the autocomplete popup. The provider may return
+     * more entries than this; we truncate to fit. Also used as the `limit`
+     * argument passed to the provider.
+     */
+    private var autocompleteCap: Int = 8
+
+    /**
+     * Snapshot of an active autocomplete session.
+     *
+     * @property trigger The character that opened the popup — typically '@'.
+     * @property anchor Position of [trigger] within the buffer. The prefix
+     *   being completed is always `buffer.substring(anchor + 1, cursor)`.
+     *   When the buffer is edited such that this window is no longer valid
+     *   (cursor moves left of anchor, trigger char is deleted, whitespace
+     *   enters the prefix), the state is dismissed.
+     * @property prefix Text after the trigger up to the cursor.
+     * @property completions Provider-supplied completions for this prefix.
+     * @property selectedIndex Which completion is currently highlighted.
+     */
+    private data class AutocompleteState(
+        val trigger: Char,
+        val anchor: Int,
+        val prefix: String,
+        val completions: List<Autocompletion>,
+        val selectedIndex: Int,
+    )
+
     // ─── Public API ────────────────────────────────────────────────────────
 
     /** Current buffer content. */
@@ -107,6 +140,30 @@ class Editor(
         inPaste = active
     }
 
+    /**
+     * Install an [AutocompleteProvider]. When the user types a trigger
+     * character (say `@`) the provider is queried and a popup appears under
+     * the editor. Passing null disables autocomplete.
+     */
+    fun setAutocompleteProvider(provider: AutocompleteProvider?) {
+        autocompleteProvider = provider
+        autocompleteState = null
+    }
+
+    /** Visible row cap for the autocomplete popup. Defaults to 8. */
+    fun setAutocompleteCap(cap: Int) {
+        autocompleteCap = cap.coerceAtLeast(1)
+    }
+
+    /** True while the autocomplete popup is visible. Exposed for tests. */
+    internal fun isAutocompleteActive(): Boolean = autocompleteState != null
+
+    /** The currently-highlighted completion, or null when inactive. */
+    internal fun autocompleteSelection(): Autocompletion? {
+        val state = autocompleteState ?: return null
+        return state.completions.getOrNull(state.selectedIndex)
+    }
+
     /** Buffer length — exposed for tests. */
     internal fun cursorPos(): Int = cursor
 
@@ -117,6 +174,29 @@ class Editor(
     // ─── Input ─────────────────────────────────────────────────────────────
 
     override fun handleInput(key: KeyboardEvent): Boolean {
+        // Autocomplete intercepts navigation + accept keys when active.
+        // Other keystrokes fall through to the normal editing handlers
+        // below; buffer-mutating handlers end up calling
+        // [onEditMaybeAutocomplete] which re-queries the provider.
+        if (autocompleteState != null) {
+            when (key.codepoint) {
+                KeyboardEvent.Up -> { autocompleteMoveBy(-1); return true }
+                KeyboardEvent.Down -> { autocompleteMoveBy(+1); return true }
+            }
+            if (key.matches(9)) { // Tab — accept
+                acceptCompletion()
+                return true
+            }
+            if (key.matches(13) && !key.shift && !inPaste) { // Enter — accept, don't submit
+                acceptCompletion()
+                return true
+            }
+            if (key.codepoint == 27) { // Esc — dismiss without accepting
+                dismissAutocomplete()
+                return true
+            }
+        }
+
         // Enter + Shift+Enter handling depends on paste state. Check these
         // first so a paste-injected Enter never fires onSubmit.
         if (key.matches(13)) { // Enter / Return
@@ -184,28 +264,36 @@ class Editor(
     private fun insertChar(c: Char) {
         buffer.insert(cursor, c)
         cursor += 1
+        onEditMaybeAutocomplete(triggerCandidate = c)
     }
 
     private fun insertString(s: String) {
         if (s.isEmpty()) return
         buffer.insert(cursor, s)
         cursor += s.length
+        // Multi-char insert (paste or IME commit). We don't activate from
+        // here — only single-keystroke triggers count — but we refresh any
+        // active popup in case the buffer change invalidates it.
+        onEditMaybeAutocomplete(triggerCandidate = null)
     }
 
     private fun backspace() {
         if (cursor == 0) return
         buffer.deleteCharAt(cursor - 1)
         cursor -= 1
+        onEditMaybeAutocomplete(triggerCandidate = null)
     }
 
     private fun deleteForward() {
         if (cursor >= buffer.length) return
         buffer.deleteCharAt(cursor)
+        onEditMaybeAutocomplete(triggerCandidate = null)
     }
 
     private fun deleteToLineEnd() {
         val end = lineEndOffset(cursor)
         if (end > cursor) buffer.delete(cursor, end)
+        onEditMaybeAutocomplete(triggerCandidate = null)
     }
 
     private fun deleteToLineStart() {
@@ -214,6 +302,7 @@ class Editor(
             buffer.delete(start, cursor)
             cursor = start
         }
+        onEditMaybeAutocomplete(triggerCandidate = null)
     }
 
     private fun deleteWordBackward() {
@@ -227,6 +316,7 @@ class Editor(
             buffer.delete(target, cursor)
             cursor = target
         }
+        onEditMaybeAutocomplete(triggerCandidate = null)
     }
 
     /** Whitespace classification used by Ctrl+W. Treats `\n` as a word break. */
@@ -236,27 +326,36 @@ class Editor(
     // ─── Cursor movement ───────────────────────────────────────────────────
 
     private fun moveLeft() {
-        if (cursor > 0) cursor -= 1
+        if (cursor > 0) {
+            cursor -= 1
+            onEditMaybeAutocomplete(triggerCandidate = null)
+        }
     }
 
     private fun moveRight() {
-        if (cursor < buffer.length) cursor += 1
+        if (cursor < buffer.length) {
+            cursor += 1
+            onEditMaybeAutocomplete(triggerCandidate = null)
+        }
     }
 
     /** Move to column 0 within the current logical line. */
     private fun moveHome() {
         cursor = lineStartOffset(cursor)
+        onEditMaybeAutocomplete(triggerCandidate = null)
     }
 
     /** Move to the end of the current logical line (just before the next `\n`). */
     private fun moveEnd() {
         cursor = lineEndOffset(cursor)
+        onEditMaybeAutocomplete(triggerCandidate = null)
     }
 
     private fun moveUp() {
         val (row, col) = rowColAt(cursor)
         if (row == 0) return
         cursor = offsetAt(row - 1, col)
+        onEditMaybeAutocomplete(triggerCandidate = null)
     }
 
     private fun moveDown() {
@@ -264,6 +363,133 @@ class Editor(
         val lastRow = logicalLineCount() - 1
         if (row >= lastRow) return
         cursor = offsetAt(row + 1, col)
+        onEditMaybeAutocomplete(triggerCandidate = null)
+    }
+
+    // ─── Autocomplete logic ────────────────────────────────────────────────
+
+    /**
+     * Called after every buffer or cursor change. Routes to one of three
+     * states:
+     *  - No provider installed: do nothing.
+     *  - Already active: re-query the provider with the updated prefix, or
+     *    dismiss if the prefix is no longer valid (cursor jumped before the
+     *    trigger, trigger was deleted, whitespace entered the prefix).
+     *  - Inactive + [triggerCandidate] is a handled trigger in a valid
+     *    position (start of buffer or after whitespace): activate.
+     */
+    private fun onEditMaybeAutocomplete(triggerCandidate: Char?) {
+        val provider = autocompleteProvider ?: return
+        if (autocompleteState != null) {
+            refreshAutocomplete()
+            return
+        }
+        if (triggerCandidate != null &&
+            provider.handlesTrigger(triggerCandidate) &&
+            isAtValidTriggerPosition()
+        ) {
+            activateAutocomplete(triggerCandidate)
+        }
+    }
+
+    /**
+     * True if the char at `cursor - 1` (the just-inserted trigger) sits at
+     * the start of the buffer or immediately after whitespace. Mid-word
+     * triggers (`foo@bar`) don't activate autocomplete.
+     */
+    private fun isAtValidTriggerPosition(): Boolean {
+        val triggerPos = cursor - 1
+        if (triggerPos < 0) return false
+        if (triggerPos == 0) return true
+        return buffer[triggerPos - 1].isWhitespace()
+    }
+
+    private fun activateAutocomplete(trigger: Char) {
+        val provider = autocompleteProvider ?: return
+        val anchor = cursor - 1
+        val completions = provider.suggest(trigger, "", autocompleteCap)
+        if (completions.isEmpty()) return
+        autocompleteState = AutocompleteState(
+            trigger = trigger,
+            anchor = anchor,
+            prefix = "",
+            completions = completions,
+            selectedIndex = 0,
+        )
+    }
+
+    private fun refreshAutocomplete() {
+        val state = autocompleteState ?: return
+        val provider = autocompleteProvider ?: return
+
+        // Anchor is gone (buffer shrank), trigger char deleted, or cursor
+        // moved left of anchor — dismiss.
+        if (state.anchor >= buffer.length ||
+            buffer[state.anchor] != state.trigger ||
+            cursor <= state.anchor
+        ) {
+            dismissAutocomplete()
+            return
+        }
+
+        val prefix = buffer.substring(state.anchor + 1, cursor)
+        // Whitespace in the prefix ends the token — dismiss.
+        if (prefix.any { it.isWhitespace() }) {
+            dismissAutocomplete()
+            return
+        }
+
+        val completions = provider.suggest(state.trigger, prefix, autocompleteCap)
+        if (completions.isEmpty()) {
+            dismissAutocomplete()
+            return
+        }
+
+        autocompleteState = state.copy(
+            prefix = prefix,
+            completions = completions,
+            selectedIndex = state.selectedIndex.coerceIn(0, completions.lastIndex),
+        )
+    }
+
+    private fun dismissAutocomplete() {
+        autocompleteState = null
+    }
+
+    private fun autocompleteMoveBy(delta: Int) {
+        val state = autocompleteState ?: return
+        if (state.completions.isEmpty()) return
+        val newIdx = (state.selectedIndex + delta).coerceIn(0, state.completions.lastIndex)
+        if (newIdx == state.selectedIndex) return
+        autocompleteState = state.copy(selectedIndex = newIdx)
+    }
+
+    /**
+     * Apply the currently-highlighted completion: replace the buffer range
+     * `[anchor + 1, cursor)` with the completion's replacement (plus optional
+     * trailing space), then either dismiss the popup or continue completing
+     * (directory entries set `continueCompletion = true` so the popup stays
+     * open with the extended prefix).
+     */
+    private fun acceptCompletion() {
+        val state = autocompleteState ?: return
+        val choice = state.completions.getOrNull(state.selectedIndex) ?: return
+
+        val insertion = choice.replacement + if (choice.trailingSpace) " " else ""
+        val start = state.anchor + 1
+        val end = cursor.coerceAtLeast(start)
+        buffer.delete(start, end)
+        buffer.insert(start, insertion)
+        cursor = start + insertion.length
+
+        if (choice.continueCompletion && !choice.trailingSpace) {
+            // Re-query with the new prefix still anchored at the same trigger
+            // position. Typical case: selecting a directory like `src/` so the
+            // user can drill in without retyping the `@` trigger.
+            refreshAutocomplete()
+        } else {
+            dismissAutocomplete()
+        }
     }
 
     /** Offset of the start of the line containing [offset]. */
@@ -327,10 +553,60 @@ class Editor(
 
         val divider = renderDivider(width)
         val body = renderBody(width)
-        return buildList(body.size + 1) {
+        val popup = renderAutocompletePopup(width)
+        return buildList(body.size + popup.size + 1) {
             add(divider)
             addAll(body)
+            addAll(popup)
         }
+    }
+
+    /**
+     * Render the autocomplete popup, or an empty list when inactive.
+     *
+     * One row per visible completion, capped at [autocompleteCap]. The
+     * selected row gets a ▸ marker and inverse-video background. Label is
+     * rendered first; the optional description trails in dim color. If the
+     * combined line exceeds [width], the description is truncated (label
+     * never is — that would hide the completion target).
+     */
+    private fun renderAutocompletePopup(width: Int): List<String> {
+        val state = autocompleteState ?: return emptyList()
+        if (state.completions.isEmpty()) return emptyList()
+        val t = theme
+        val visible = state.completions.take(autocompleteCap)
+        val out = ArrayList<String>(visible.size)
+
+        for ((i, completion) in visible.withIndex()) {
+            val selected = i == state.selectedIndex
+            val marker = if (selected) "▸ " else "  "
+            val markerColor = if (selected) t.accent else t.veryDim
+            val labelColor = if (selected) t.foreground else t.dim
+            val descColor = t.veryDim
+
+            // Fixed left indent (2 cells) to align under the editor prompt,
+            // then marker, then label, then optional description. Everything
+            // in the pad column so highlight stripes extend edge-to-edge.
+            val leftPad = "  "
+            val labelCells = visibleWidth(completion.label)
+            val markerCells = visibleWidth(marker)
+            val headCells = leftPad.length + markerCells + labelCells
+            val descBudget = (width - headCells - 2).coerceAtLeast(0)
+
+            val descPart = completion.description?.let { desc ->
+                if (descBudget <= 0) ""
+                else {
+                    val truncated = truncateToWidth(desc, descBudget)
+                    "  $descColor$truncated${Ansi.RESET}"
+                }
+            } ?: ""
+
+            val row = "$leftPad$markerColor$marker${Ansi.RESET}$labelColor${completion.label}${Ansi.RESET}$descPart"
+            val clipped = if (visibleWidth(row) > width) truncateToWidth(row, width) else row
+            val padded = padRightToWidth(clipped, width)
+            out += if (selected) "${Ansi.INVERSE}$padded${Ansi.RESET}" else padded
+        }
+        return out
     }
 
     /**

@@ -178,8 +178,14 @@ class CodingApp(
             },
         )
 
-        // 6. Wire editor submission.
+        // 6. Wire editor submission + `@path` file autocomplete. Typing `@`
+        //    after whitespace (or at line start) opens a popup of files under
+        //    the working directory; accepting an entry replaces the prefix
+        //    with the full path. On submit, [AtFileExpander] inlines the
+        //    referenced file contents into the message before it reaches the
+        //    agent.
         editor.setOnSubmit { text -> onEditorSubmit(text) }
+        editor.setAutocompleteProvider(FileAutocompleteProvider(root = options.workDir))
 
         // 7. Focus the router (which wraps the editor + global key handling).
         tui.setFocus(inputRouter)
@@ -347,9 +353,18 @@ class CodingApp(
             }
         }
 
-        // 3. Plain prompt → agent.
+        // 3. Expand any `@path` file references into inlined content before
+        //    the agent sees the message. Local LLMs don't interpret `@path`
+        //    natively the way cloud assistants do, so we inline content
+        //    client-side. Unresolved references are left as plain text and
+        //    surfaced as a single-line warning.
+        val expansion = AtFileExpander.expand(trimmed, options.workDir)
         clearEphemeral()
-        sendToAgent(trimmed)
+        if (expansion.unresolved.isNotEmpty()) {
+            errorMessage = "couldn't resolve: ${expansion.unresolved.joinToString(", ") { "@$it" }}"
+            rebuildBottomChrome()
+        }
+        sendToAgent(expansion.expandedText)
     }
 
     private fun sendToAgent(text: String) {
