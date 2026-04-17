@@ -64,17 +64,56 @@ data class ChatRequest(
 
 /**
  * Requested reasoning/thinking intensity. Maps to provider-specific knobs:
- * - OpenAI: `reasoning_effort`
+ * - OpenAI: `reasoning_effort` (minimal/low/medium/high)
+ * - LM Studio: `reasoning` (off/low/medium/high/on) — see [asLmStudioReasoning]
  * - Anthropic: thinking budget tokens
  * - Gemini: thinking config
+ *
+ * `OFF` and `ON` are LM-Studio-specific levels exposed for the per-session
+ * `/think` slash command. On providers that don't support them they degrade
+ * to the nearest sensible value (OFF → null-send, ON → HIGH).
  */
 @Serializable
 enum class ThinkingLevel {
+    OFF,
     MINIMAL,
     LOW,
     MEDIUM,
     HIGH,
+    ON,
 }
+
+/**
+ * Map a [ThinkingLevel] to the string LM Studio's `reasoning` field expects.
+ * Returns null when the level doesn't correspond to a meaningful LM Studio
+ * value (currently only [ThinkingLevel.MINIMAL], which is OpenAI-specific).
+ */
+fun ThinkingLevel.asLmStudioReasoning(): String? = when (this) {
+    ThinkingLevel.OFF -> "off"
+    ThinkingLevel.LOW -> "low"
+    ThinkingLevel.MEDIUM -> "medium"
+    ThinkingLevel.HIGH -> "high"
+    ThinkingLevel.ON -> "on"
+    ThinkingLevel.MINIMAL -> "low" // Closest LM Studio equivalent.
+}
+
+/**
+ * Parse a user-facing string ("off", "low", "medium", "high", "on") into a
+ * [ThinkingLevel]. Case-insensitive. Returns null on empty input or the
+ * literal "default" / "auto" — the caller should interpret null as
+ * "clear the override and use the model's default".
+ */
+fun thinkingLevelFromUserInput(raw: String): ThinkingLevel? =
+    when (raw.trim().lowercase()) {
+        "", "default", "auto" -> null
+        "off" -> ThinkingLevel.OFF
+        "minimal" -> ThinkingLevel.MINIMAL
+        "low" -> ThinkingLevel.LOW
+        "medium" -> ThinkingLevel.MEDIUM
+        "high" -> ThinkingLevel.HIGH
+        "on" -> ThinkingLevel.ON
+        else -> error("unknown thinking level: $raw (expected off/low/medium/high/on or default)")
+    }
 
 /** Chat completion response. */
 @Serializable

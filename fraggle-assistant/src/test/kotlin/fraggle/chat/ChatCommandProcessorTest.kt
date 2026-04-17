@@ -3,12 +3,14 @@ package fraggle.chat
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
+import fraggle.agent.loop.ThinkingController
 import fraggle.agent.skill.InMemorySkillRegistry
 import fraggle.agent.skill.SkillCommandExpander
 import fraggle.agent.skill.SkillLoader
 import fraggle.agent.skill.SkillSource
 import fraggle.events.EventBus
 import fraggle.models.FraggleEvent
+import fraggle.provider.ThinkingLevel
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -18,6 +20,7 @@ import kotlin.io.path.writeText
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ChatCommandProcessorTest {
@@ -195,6 +198,86 @@ class ChatCommandProcessorTest {
             processor.trackPermissionRequest("chat1", "req-x")
             val result = processor.handleCommand("chat1", "/approve")
             assertIs<CommandResult.Approved>(result)
+        }
+    }
+
+    @Nested
+    inner class ThinkCommand {
+        @Test
+        fun `think with no controller falls through to Unknown`() = runTest {
+            val processor = ChatCommandProcessor(eventBus = eventBus, thinkingController = null)
+            val result = processor.handleCommand("chat1", "/think high")
+            assertIs<CommandResult.Unknown>(result)
+            assertEquals("/think", result.command)
+        }
+
+        @Test
+        fun `think with valid level mutates controller and returns ThinkingSet`() = runTest {
+            val controller = ThinkingController()
+            val processor = ChatCommandProcessor(eventBus = eventBus, thinkingController = controller)
+            val result = processor.handleCommand("chat1", "/think high")
+            assertIs<CommandResult.ThinkingSet>(result)
+            assertEquals("high", result.level)
+            assertEquals(ThinkingLevel.HIGH, controller.level)
+        }
+
+        @Test
+        fun `think off sets OFF level`() = runTest {
+            val controller = ThinkingController(ThinkingLevel.HIGH)
+            val processor = ChatCommandProcessor(eventBus = eventBus, thinkingController = controller)
+            val result = processor.handleCommand("chat1", "/think off")
+            assertIs<CommandResult.ThinkingSet>(result)
+            assertEquals("off", result.level)
+            assertEquals(ThinkingLevel.OFF, controller.level)
+        }
+
+        @Test
+        fun `think on sets ON level`() = runTest {
+            val controller = ThinkingController()
+            val processor = ChatCommandProcessor(eventBus = eventBus, thinkingController = controller)
+            val result = processor.handleCommand("chat1", "/think on")
+            assertIs<CommandResult.ThinkingSet>(result)
+            assertEquals("on", result.level)
+            assertEquals(ThinkingLevel.ON, controller.level)
+        }
+
+        @Test
+        fun `think default clears the override`() = runTest {
+            val controller = ThinkingController(ThinkingLevel.HIGH)
+            val processor = ChatCommandProcessor(eventBus = eventBus, thinkingController = controller)
+            val result = processor.handleCommand("chat1", "/think default")
+            assertIs<CommandResult.ThinkingSet>(result)
+            assertEquals("default", result.level)
+            assertNull(controller.level)
+        }
+
+        @Test
+        fun `think with no argument clears the override`() = runTest {
+            val controller = ThinkingController(ThinkingLevel.LOW)
+            val processor = ChatCommandProcessor(eventBus = eventBus, thinkingController = controller)
+            val result = processor.handleCommand("chat1", "/think")
+            assertIs<CommandResult.ThinkingSet>(result)
+            assertEquals("default", result.level)
+            assertNull(controller.level)
+        }
+
+        @Test
+        fun `think with bogus level returns ThinkingInvalid and leaves controller unchanged`() = runTest {
+            val controller = ThinkingController(ThinkingLevel.MEDIUM)
+            val processor = ChatCommandProcessor(eventBus = eventBus, thinkingController = controller)
+            val result = processor.handleCommand("chat1", "/think turbo")
+            assertIs<CommandResult.ThinkingInvalid>(result)
+            assertEquals("turbo", result.raw)
+            assertEquals(ThinkingLevel.MEDIUM, controller.level)
+        }
+
+        @Test
+        fun `think is case insensitive`() = runTest {
+            val controller = ThinkingController()
+            val processor = ChatCommandProcessor(eventBus = eventBus, thinkingController = controller)
+            val result = processor.handleCommand("chat1", "/Think HIGH")
+            assertIs<CommandResult.ThinkingSet>(result)
+            assertEquals(ThinkingLevel.HIGH, controller.level)
         }
     }
 

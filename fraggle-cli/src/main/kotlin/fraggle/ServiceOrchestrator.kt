@@ -275,6 +275,10 @@ class ServiceOrchestrator(
                                     is CommandResult.MalformedSkill -> "Malformed skill command: ${result.reason}"
                                     is CommandResult.SkillReadError ->
                                         "Failed to load skill **${result.name}**: ${result.reason}"
+                                    is CommandResult.ThinkingSet ->
+                                        "Reasoning level → ${result.level}"
+                                    is CommandResult.ThinkingInvalid ->
+                                        "Unknown reasoning level: ${result.raw} (expected off/low/medium/high/on or default)"
 
                                     is CommandResult.Expanded -> error("handled above")
                                 }

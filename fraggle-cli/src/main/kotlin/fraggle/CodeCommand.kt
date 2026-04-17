@@ -7,6 +7,7 @@ import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.split
 import fraggle.agent.loop.ProviderLlmBridge
+import fraggle.agent.loop.ThinkingController
 import fraggle.agent.loop.ToolCallExecutor
 import fraggle.agent.message.AgentMessage
 import fraggle.agent.skill.DefaultSkillExecutionContext
@@ -260,9 +261,14 @@ class CodeCommand : CliktCommand(name = "code") {
             httpClient = httpClient,
             apiKey = providerConfig.apiKey,
         )
+        // Session-scoped reasoning level. The `/think` slash command mutates
+        // this; the bridge reads it on every call. In-memory only — nothing
+        // is persisted across `fraggle code` invocations.
+        val thinkingController = ThinkingController()
         val llmBridge = ProviderLlmBridge(
             provider = provider,
             model = effectiveModel,
+            thinkingController = thinkingController,
         )
 
         // 11. Tool executor + registry + supervisor + permission handler
@@ -353,6 +359,7 @@ class CodeCommand : CliktCommand(name = "code") {
                         )
                     }
                 },
+                thinkingController = thinkingController,
                 onExitRequest = {
                     // Mosaic has no composition-level exit; shutdown hook above handles cleanup.
                     exitProcess(0)

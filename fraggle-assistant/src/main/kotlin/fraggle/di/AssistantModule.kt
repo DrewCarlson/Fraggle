@@ -11,6 +11,7 @@ import fraggle.agent.skill.SkillRegistryLoader
 import fraggle.agent.skill.SkillSecretsStore
 import fraggle.agent.loop.LlmBridge
 import fraggle.agent.loop.ProviderLlmBridge
+import fraggle.agent.loop.ThinkingController
 import fraggle.agent.loop.ToolCallExecutor
 import fraggle.agent.tool.FraggleToolRegistry
 import fraggle.agent.tool.SupervisedToolCallExecutor
@@ -76,15 +77,26 @@ interface AssistantModule {
         return manager
     }
 
+    /**
+     * Session-scoped handle for the `/think` slash command. Mutated by the
+     * chat-command processor, read by the LLM bridge. In-memory only —
+     * nothing is persisted and it resets when the process restarts.
+     */
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideThinkingController(): ThinkingController = ThinkingController()
+
     @Provides
     @SingleIn(AppScope::class)
     fun provideLlmBridge(
         provider: LMStudioProvider,
         runtimeConfig: RuntimeAgentConfig,
+        thinkingController: ThinkingController,
     ): LlmBridge = ProviderLlmBridge(
         provider = provider,
         model = runtimeConfig.model,
         temperature = runtimeConfig.temperature,
+        thinkingController = thinkingController,
     )
 
     @Provides
@@ -197,10 +209,12 @@ interface AssistantModule {
         eventBus: EventBus,
         skillRegistryLoader: SkillRegistryLoader,
         skillsConfig: SkillsConfig,
+        thinkingController: ThinkingController,
     ): ChatCommandProcessor = ChatCommandProcessor(
         eventBus = eventBus,
         skillExpander = SkillCommandExpander { skillRegistryLoader.load(skillsConfig) },
         skillCommandsEnabled = skillsConfig.enabled && skillsConfig.enableSlashCommands,
+        thinkingController = thinkingController,
     )
 
     @Provides

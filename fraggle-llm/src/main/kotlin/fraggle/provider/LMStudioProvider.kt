@@ -61,7 +61,10 @@ class LMStudioProvider(
     // ── OpenAI-Compatible: Chat Completions ─────────────────────────────
 
     override suspend fun chat(request: ChatRequest): ChatResponse {
-        val apiRequest = request.toOpenAIRequest(defaultModel)
+        val apiRequest = request.toOpenAIRequest(
+            defaultModel = defaultModel,
+            reasoningEffort = request.thinking?.asLmStudioReasoning(),
+        )
         val response = httpPost("$baseUrl/chat/completions", apiRequest)
         val apiResponse: OpenAIChatResponse = response.body()
         return apiResponse.toChatResponse()
@@ -125,7 +128,10 @@ class LMStudioProvider(
      * Returns a [Flow] of [ChatStreamEvent]s as they arrive via SSE.
      */
     fun chatStream(request: ChatRequest): Flow<ChatStreamEvent> = flow {
-        val apiRequest = request.toOpenAIRequest(defaultModel).copy(
+        val apiRequest = request.toOpenAIRequest(
+            defaultModel = defaultModel,
+            reasoningEffort = request.thinking?.asLmStudioReasoning(),
+        ).copy(
             stream = true,
             streamOptions = OpenAIStreamOptions(includeUsage = true),
         )

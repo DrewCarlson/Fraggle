@@ -5,9 +5,12 @@ import com.jakewharton.mosaic.terminal.Terminal
 import com.jakewharton.mosaic.tty.Tty
 import fraggle.agent.compaction.ContextUsage
 import fraggle.agent.event.AgentEvent
+import fraggle.agent.loop.ThinkingController
 import fraggle.agent.message.AgentMessage
 import fraggle.agent.message.ContentPart
 import fraggle.agent.skill.SkillCommandExpander
+import fraggle.provider.ThinkingLevel
+import fraggle.provider.thinkingLevelFromUserInput
 import fraggle.coding.CodingAgent
 import fraggle.coding.CodingAgentOptions
 import fraggle.tui.core.Component
@@ -81,6 +84,15 @@ class CodingApp(
      * and the autocomplete should reflect the same freshness.
      */
     private val skillCompletionsProvider: () -> List<Autocompletion> = { emptyList() },
+    /**
+     * Shared reasoning-level handle for the `/think` slash command. When
+     * non-null, the user can run `/think <off|low|medium|high|on|default>`
+     * to adjust the LM Studio reasoning field for subsequent turns. The same
+     * controller instance is held by the [fraggle.agent.loop.ProviderLlmBridge]
+     * so writes here take effect on the very next agent call. The override
+     * is in-memory only — nothing is persisted.
+     */
+    private val thinkingController: ThinkingController? = null,
     private val onExit: () -> Unit,
 ) {
     // ── Runtime ────────────────────────────────────────────────────────────
@@ -188,6 +200,9 @@ class CodingApp(
                         "file:       ${agent.sessionFile}",
                     ),
                 )
+            },
+            onThink = thinkingController?.let { controller ->
+                { args -> handleThinkCommand(args, controller) }
             },
         )
 
@@ -439,6 +454,29 @@ class CodingApp(
 
     private fun triggerExit() {
         onExit()
+    }
+
+    /**
+     * `/think <level>` handler. Parses the argument, mutates the shared
+     * [ThinkingController] for the next turn, and surfaces a notice row.
+     *
+     * Accepted levels: `off`, `low`, `medium`, `high`, `on`, `default`/`auto`.
+     * The override is in-memory only — nothing is written to disk and the
+     * setting resets when the user exits the session.
+     */
+    private fun handleThinkCommand(args: String, controller: ThinkingController) {
+        val trimmed = args.trim()
+        val parsed = try {
+            thinkingLevelFromUserInput(trimmed)
+        } catch (e: IllegalStateException) {
+            errorMessage = e.message ?: "unknown level"
+            rebuildBottomChrome()
+            requestRender()
+            return
+        }
+        controller.level = parsed
+        val display = parsed?.name?.lowercase() ?: "default (model-chosen)"
+        setNotice(listOf("thinking level → $display"))
     }
 
     /**

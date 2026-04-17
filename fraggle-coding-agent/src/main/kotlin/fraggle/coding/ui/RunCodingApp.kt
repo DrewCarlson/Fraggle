@@ -2,6 +2,7 @@ package fraggle.coding.ui
 
 import com.jakewharton.mosaic.tty.Tty
 import com.jakewharton.mosaic.tty.terminal.asTerminalIn
+import fraggle.agent.loop.ThinkingController
 import fraggle.agent.skill.SkillCommandExpander
 import fraggle.coding.CodingAgent
 import fraggle.coding.CodingAgentOptions
@@ -46,6 +47,13 @@ fun runCodingApp(
      * mid-session skill installs appear immediately.
      */
     skillCompletionsProvider: () -> List<Autocompletion> = { emptyList() },
+    /**
+     * Shared handle for the `/think` slash command. When non-null, the
+     * coding app registers `/think <level>` and mutations are read by the
+     * LLM bridge on subsequent calls. Pass the same instance the bridge
+     * was constructed with.
+     */
+    thinkingController: ThinkingController? = null,
     onExitRequest: () -> Unit,
     permissionHandler: TuiToolPermissionHandler? = null,
 ) {
@@ -71,6 +79,7 @@ fun runCodingApp(
                 skillExpander = skillExpander,
                 permissionHandler = permissionHandler,
                 skillCompletionsProvider = skillCompletionsProvider,
+                thinkingController = thinkingController,
                 onExit = {
                     onExitRequest()
                     exitSignal.complete(Unit)

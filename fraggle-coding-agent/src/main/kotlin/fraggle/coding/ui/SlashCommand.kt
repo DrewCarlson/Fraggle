@@ -58,29 +58,47 @@ class SlashCommandRegistry(commands: List<SlashCommand>) {
             onQuit: () -> Unit,
             onHotkeys: () -> Unit,
             onSessionInfo: () -> Unit,
+            onThink: ((String) -> Unit)? = null,
         ): SlashCommandRegistry = SlashCommandRegistry(
-            listOf(
-                SlashCommand(
-                    name = "new",
-                    description = "Start a new session",
-                    handler = { _ -> onNewSession() },
-                ),
-                SlashCommand(
-                    name = "quit",
-                    description = "Quit the coding agent",
-                    handler = { _ -> onQuit() },
-                ),
-                SlashCommand(
-                    name = "hotkeys",
-                    description = "Show keyboard shortcuts",
-                    handler = { _ -> onHotkeys() },
-                ),
-                SlashCommand(
-                    name = "session",
-                    description = "Show session info (id, file path, token count)",
-                    handler = { _ -> onSessionInfo() },
-                ),
-            ),
+            buildList {
+                add(
+                    SlashCommand(
+                        name = "new",
+                        description = "Start a new session",
+                        handler = { _ -> onNewSession() },
+                    ),
+                )
+                add(
+                    SlashCommand(
+                        name = "quit",
+                        description = "Quit the coding agent",
+                        handler = { _ -> onQuit() },
+                    ),
+                )
+                add(
+                    SlashCommand(
+                        name = "hotkeys",
+                        description = "Show keyboard shortcuts",
+                        handler = { _ -> onHotkeys() },
+                    ),
+                )
+                add(
+                    SlashCommand(
+                        name = "session",
+                        description = "Show session info (id, file path, token count)",
+                        handler = { _ -> onSessionInfo() },
+                    ),
+                )
+                if (onThink != null) {
+                    add(
+                        SlashCommand(
+                            name = "think",
+                            description = "Set reasoning level: off, low, medium, high, on, default",
+                            handler = { args -> onThink(args) },
+                        ),
+                    )
+                }
+            },
         )
     }
 }

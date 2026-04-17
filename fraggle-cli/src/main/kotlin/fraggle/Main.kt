@@ -227,6 +227,16 @@ class ChatCommand : CliktCommand(name = "chat") {
                         println()
                         continue
                     }
+                    is CommandResult.ThinkingSet -> {
+                        println("Reasoning level → ${result.level}")
+                        println()
+                        continue
+                    }
+                    is CommandResult.ThinkingInvalid -> {
+                        println("Unknown reasoning level: ${result.raw} (expected off/low/medium/high/on or default)")
+                        println()
+                        continue
+                    }
                 }
             }
 

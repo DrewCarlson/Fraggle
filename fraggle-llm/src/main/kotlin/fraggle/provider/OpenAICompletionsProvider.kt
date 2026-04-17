@@ -243,11 +243,16 @@ fun isOpenAIReasoningModel(modelId: String): Boolean {
 /**
  * Map the neutral [ThinkingLevel] to OpenAI's `reasoning_effort` string.
  * OpenAI recognises: "minimal", "low", "medium", "high".
+ *
+ * The LM-Studio-specific levels [ThinkingLevel.OFF] and [ThinkingLevel.ON]
+ * degrade to the nearest OpenAI equivalent: OFF is expressed by omitting
+ * the field entirely (there's no "disable reasoning" knob on OpenAI's API),
+ * and ON pins to "high".
  */
 internal fun mapReasoningEffort(level: ThinkingLevel?): String? = when (level) {
-    null -> null
+    null, ThinkingLevel.OFF -> null
     ThinkingLevel.MINIMAL -> "minimal"
     ThinkingLevel.LOW -> "low"
     ThinkingLevel.MEDIUM -> "medium"
-    ThinkingLevel.HIGH -> "high"
+    ThinkingLevel.HIGH, ThinkingLevel.ON -> "high"
 }

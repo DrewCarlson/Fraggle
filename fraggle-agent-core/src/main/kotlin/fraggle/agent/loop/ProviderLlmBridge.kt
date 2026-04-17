@@ -12,6 +12,7 @@ import fraggle.provider.ChatStreamEvent
 import fraggle.provider.LMStudioProvider
 import fraggle.provider.Message
 import fraggle.provider.FunctionCall
+import fraggle.provider.ThinkingLevel
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonElement
 
@@ -24,6 +25,14 @@ class ProviderLlmBridge(
     private val model: String = "",
     private val temperature: Double? = null,
     private val maxTokens: Int? = null,
+    /**
+     * Session-scoped reasoning-level override. Read on every request; `null`
+     * means "don't override — let the provider pick its default". The UI
+     * layer mutates [ThinkingController.level] when the user runs `/think`,
+     * which takes effect on the next call. Defaults to a fresh controller
+     * with no override if the caller doesn't supply one.
+     */
+    private val thinkingController: ThinkingController = ThinkingController(),
 ) : StreamingLlmBridge {
 
     override suspend fun call(
@@ -193,6 +202,7 @@ class ProviderLlmBridge(
             tools = if (tools.isNotEmpty()) tools.map { buildToolJson(it) } else null,
             temperature = temperature,
             maxTokens = maxTokens,
+            thinking = thinkingController.level,
         )
     }
 
