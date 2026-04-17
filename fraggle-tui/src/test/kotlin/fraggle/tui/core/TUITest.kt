@@ -279,7 +279,7 @@ class TUITest {
     @Nested
     inner class ResizeTriggersFullRedraw {
         @Test
-        fun `ResizeEvent clears viewport and re-renders but preserves scrollback`() {
+        fun `ResizeEvent clears viewport and scrollback then re-renders`() {
             val (tui, terminal, output) = newTUI()
             tui.addChild(StaticComponent(listOf("alpha", "beta")))
             tui.renderOnce()
@@ -292,15 +292,9 @@ class TUITest {
             tui.renderOnce(force = true)
 
             val second = output.combined
-            // Must home the cursor and clear the visible viewport.
             assertContains(second, Ansi.CURSOR_HOME)
             assertContains(second, Ansi.CLEAR_DISPLAY)
-            // MUST NOT clear scrollback — that would wipe the user's pre-TUI
-            // shell history and all older TUI frames.
-            assertFalse(
-                second.contains(Ansi.CLEAR_SCROLLBACK),
-                "resize must preserve scrollback so pre-TUI shell history survives",
-            )
+            assertContains(second, Ansi.CLEAR_SCROLLBACK)
             // Must re-emit the content from scratch.
             assertContains(second, "alpha")
             assertContains(second, "beta")
@@ -509,7 +503,7 @@ class TUITest {
     @Nested
     inner class ForceFullRedraw {
         @Test
-        fun `forceFullRedraw clears viewport and re-emits content without touching scrollback`() {
+        fun `forceFullRedraw clears viewport and scrollback then re-emits content`() {
             val (tui, _, output) = newTUI()
             tui.addChild(StaticComponent(listOf("hello")))
             tui.renderOnce()
@@ -520,12 +514,7 @@ class TUITest {
             val combined = output.combined
             assertContains(combined, Ansi.CURSOR_HOME)
             assertContains(combined, Ansi.CLEAR_DISPLAY)
-            // Explicitly NOT clearing scrollback — preserving Claude-style
-            // terminal history across force redraws.
-            assertFalse(
-                combined.contains(Ansi.CLEAR_SCROLLBACK),
-                "force redraw must preserve scrollback",
-            )
+            assertContains(combined, Ansi.CLEAR_SCROLLBACK)
             assertContains(combined, "hello", message = "force redraw must re-emit content")
         }
     }

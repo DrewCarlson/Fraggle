@@ -120,12 +120,22 @@ class TtyOutput(private val tty: Tty) : TerminalOutput {
  *
  * ## Resize handling
  *
- * On [ResizeEvent] the runtime emits `CSI H CSI 2J` (home + clear visible
- * viewport) and performs a full redraw at the new width. **Scrollback is not
- * cleared**: anything above the initial cursor position — the user's pre-TUI
- * shell history — survives resize, matching Claude-Code behavior. Older TUI
- * frames that previously scrolled into scrollback also remain, re-wrapped to
- * the new width by the terminal.
+ * On [ResizeEvent] the runtime emits `CSI H CSI 2J CSI 3J` (home + clear
+ * visible viewport + clear scrollback), invalidates width-dependent caches
+ * on every child, and performs a full redraw at the new width.
+ *
+ * The scrollback clear is load-bearing for pi-style rendering: because each
+ * full redraw re-emits the entire component tree with `\r\n` separators,
+ * content scrolls into scrollback storage whenever the frame exceeds the
+ * viewport. Without the scrollback clear, every resize would pile up another
+ * copy of the session history in scrollback storage (same content, different
+ * wrap). The clear keeps scrollback storage in lockstep with the just-emitted
+ * frame.
+ *
+ * Tradeoff: content that was in scrollback before the TUI started (the user's
+ * earlier shell prompts + output) is wiped on resize. Matches pi's behavior.
+ * Session history remains visible by scrolling up — what scrolled off the
+ * re-emitted frame naturally repopulates scrollback storage.
  *
  * ## Overflow safety
  *
@@ -420,16 +430,14 @@ class TUI(
         val sync = terminal.capabilities.synchronizedOutput
         if (sync) sb.append(Ansi.SYNC_BEGIN)
         if (clear) {
-            // Home + clear visible viewport. We intentionally do NOT clear the
-            // scrollback (CSI 3J): preserving it lets the user scroll up to
-            // pre-TUI shell history (the output of whatever they ran before
-            // `fraggle code`) and to older TUI frames from this session. The
-            // tradeoff is that post-resize scrollback may contain re-wrapped
-            // versions of older TUI state — not corruption, just "stale
-            // snapshots the terminal rewrapped for the new width" — which is
-            // a small UX cost for preserving history.
+            // Home + clear viewport + clear scrollback. This is pi's
+            // aggressive clear on resize. Without the scrollback clear, the
+            // full tree re-emission (via `\r\n` separators) scrolls content
+            // into scrollback storage, producing a new copy on every resize
+            // — multiple resizes pile up duplicate history.
             sb.append(Ansi.CURSOR_HOME)
             sb.append(Ansi.CLEAR_DISPLAY)
+            sb.append(Ansi.CLEAR_SCROLLBACK)
         }
         for (i in newLines.indices) {
             if (i > 0) sb.append("\r\n")

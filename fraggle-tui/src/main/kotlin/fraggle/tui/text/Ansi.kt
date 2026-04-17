@@ -46,8 +46,11 @@ object Ansi {
     const val CLEAR_DISPLAY: String = "\u001b[2J"
 
     /**
-     * Erase scrollback (xterm extension). **The TUI runtime does not emit this
-     * by default** — see the class docs on [fraggle.tui.core.TUI] for why.
+     * Erase scrollback (xterm extension). Emitted by the TUI runtime on every
+     * full redraw (resize / force) alongside [CLEAR_DISPLAY] because re-emitting
+     * the full tree with `\r\n` would otherwise add duplicate copies of history
+     * to scrollback storage. See the class docs on [fraggle.tui.core.TUI] for
+     * the rationale.
      */
     const val CLEAR_SCROLLBACK: String = "\u001b[3J"
 
