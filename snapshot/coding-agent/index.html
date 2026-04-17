@@ -656,6 +656,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#terminal-runtime" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Terminal runtime
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#tool-approval-ask-mode" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -810,6 +821,45 @@
     <span class="md-ellipsis">
       
         Disabling tools
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#skills" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Skills
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#markdown-rendering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Markdown rendering
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Markdown rendering">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#latex-math" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LaTeX math
       
     </span>
   </a>
@@ -1485,6 +1535,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#terminal-runtime" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Terminal runtime
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#tool-approval-ask-mode" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1639,6 +1700,45 @@
     <span class="md-ellipsis">
       
         Disabling tools
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#skills" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Skills
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#markdown-rendering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Markdown rendering
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Markdown rendering">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#latex-math" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LaTeX math
       
     </span>
   </a>
@@ -2016,8 +2116,28 @@
 <td>Move cursor up / down between lines (column preserved when possible).</td>
 </tr>
 <tr>
-<td><code>Home</code> / <code>End</code></td>
-<td>Start / end of the current line.</td>
+<td><code>Home</code> / <code>Ctrl+A</code></td>
+<td>Jump to the start of the current logical line.</td>
+</tr>
+<tr>
+<td><code>End</code> / <code>Ctrl+E</code></td>
+<td>Jump to the end of the current logical line.</td>
+</tr>
+<tr>
+<td><code>Ctrl+K</code></td>
+<td>Delete from the cursor to the end of the current line.</td>
+</tr>
+<tr>
+<td><code>Ctrl+U</code></td>
+<td>Delete from the cursor to the start of the current line.</td>
+</tr>
+<tr>
+<td><code>Ctrl+W</code></td>
+<td>Delete the word immediately before the cursor.</td>
+</tr>
+<tr>
+<td><code>Ctrl+H</code></td>
+<td>Alias for <code>Backspace</code>.</td>
 </tr>
 <tr>
 <td><code>Escape</code></td>
@@ -2033,6 +2153,39 @@
 </tr>
 </tbody>
 </table>
+<p>Slash commands and skill invocations are submitted via the editor. Typing
+<code>/hotkeys</code> shows this table in-session; <code>/session</code> prints the active session
+id and file path; <code>/skill:&lt;name&gt;</code> expands into the body of an installed skill
+(see <a href="#skills">Skills</a> below); and <code>/quit</code> exits.</p>
+<h3 id="terminal-runtime">Terminal runtime<a class="headerlink" href="#terminal-runtime" title="Permanent link">&para;</a></h3>
+<p>The TUI is built on <code>fraggle-tui</code>, a bespoke terminal runtime in this repo.
+It uses a differential renderer on top of
+<a href="https://github.com/JakeWharton/mosaic">Mosaic</a>'s lower-level TTY and event
+layers (raw-mode handling, ANSI/Kitty protocol parsing, in-band resize
+detection), but owns its own rendering pipeline:</p>
+<ul>
+<li><strong>Full-tree diff + line-level rewrite.</strong> Every frame, the whole component
+  tree renders to a flat line list. Only lines that changed between the
+  previous and new frame are written to the terminal. Appended rows flow
+  through <code>\r\n</code> so they scroll naturally into the terminal's native
+  scrollback.</li>
+<li><strong>Synchronized output mode (DEC 2026)</strong> wraps every write when supported,
+  so partial frames never appear.</li>
+<li><strong>Strict width contract.</strong> Any rendered line whose visible width exceeds
+  the current terminal width aborts the render with a diagnostic error —
+  wrap mismatch is the single largest source of ghost/trail bugs in TUIs,
+  so it's caught at the source.</li>
+<li><strong>Resize handling.</strong> On a resize event the runtime clears the viewport,
+  clears the scrollback, invalidates every component's width-dependent
+  caches, and redraws the full tree at the new width. This keeps scrollback
+  storage in lockstep with the on-screen frame instead of accumulating
+  duplicate copies of older wrap states.</li>
+</ul>
+<p>Tradeoff of the scrollback clear: any shell output that was in scrollback
+<em>before</em> you ran <code>fraggle code</code> (the prompt that launched the TUI, earlier
+commands) is wiped the first time you resize. Within-session history
+scrolls naturally back into scrollback as it overflows the viewport, so
+you can scroll up to see earlier messages without issue.</p>
 <h3 id="tool-approval-ask-mode">Tool approval (ask mode)<a class="headerlink" href="#tool-approval-ask-mode" title="Permanent link">&para;</a></h3>
 <p>When <code>supervision = ask</code> (the default), the TUI shows an approval overlay whenever the agent wants to run a tool:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>╭─── tool approval ───────────────────────────────────────╮
@@ -2214,60 +2367,135 @@
 <a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="c1"># No tools at all</span>
 <a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>fraggle<span class="w"> </span>code<span class="w"> </span>--no-tools
 </code></pre></div>
+<h2 id="skills">Skills<a class="headerlink" href="#skills" title="Permanent link">&para;</a></h2>
+<p>Skills are reusable prompt-plus-code bundles that ship their own instructions
+and, optionally, Python scripts and encrypted environment variables. A skill
+lives as a directory containing a <code>SKILL.md</code> file with YAML frontmatter and a
+markdown body.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>~/.fraggle/skills/code-review/
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>├── SKILL.md
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>├── requirements.txt      # optional Python deps; auto-installed into a venv
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>└── scripts/
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>    └── review.py
+</code></pre></div>
+<p>Skills are discovered from three locations, highest precedence first:</p>
+<ol>
+<li><code>--skill &lt;path&gt;</code> CLI flag or <code>skills.extra_paths</code> in <code>fraggle.yaml</code>
+   (explicit).</li>
+<li><code>&lt;cwd&gt;/.fraggle/skills/</code> (project).</li>
+<li><code>$FRAGGLE_ROOT/skills/</code> (global).</li>
+</ol>
+<p>When skills are enabled (the default), the coding agent injects a skill
+catalog into the system prompt so the model knows which skills are available
+by name + description. The full body of a skill is only read on demand —
+the model can request it with <code>read_file</code>, or the user can invoke it
+directly via <code>/skill:&lt;name&gt;</code>. Typing <code>/skill:code-review src/Foo.kt</code> expands
+to the SKILL.md body followed by the extra argument text and submits that as
+a single message.</p>
+<p>Skills that declare Python dependencies get their own virtual environment
+at <code>$FRAGGLE_ROOT/venvs/&lt;skill&gt;/</code>. When the agent runs <code>execute_command</code>
+with <code>skill = "&lt;name&gt;"</code>, the runtime activates that venv and injects any
+configured secrets as environment variables before execution. Secrets are
+stored at <code>$FRAGGLE_ROOT/secrets/&lt;skill&gt;/&lt;VAR&gt;</code> with restrictive POSIX
+permissions (700/600) and never pass through the model.</p>
+<p>Manage skills from the CLI:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>list<span class="w">                         </span><span class="c1"># show installed skills + source</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>add<span class="w"> </span>&lt;path-or-url&gt;<span class="w">            </span><span class="c1"># install a skill from disk or git</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>remove<span class="w"> </span>&lt;name&gt;<span class="w">                </span><span class="c1"># delete a skill</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>validate<span class="w">                     </span><span class="c1"># lint every SKILL.md</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>setup<span class="w"> </span>&lt;name&gt;<span class="w">                 </span><span class="c1"># (re)build the Python venv</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>secrets<span class="w"> </span><span class="nb">set</span><span class="w"> </span>&lt;name&gt;<span class="w"> </span>&lt;VAR&gt;<span class="w">     </span><span class="c1"># store a secret</span>
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>fraggle<span class="w"> </span>skills<span class="w"> </span>secrets<span class="w"> </span>list<span class="w"> </span>&lt;name&gt;<span class="w">          </span><span class="c1"># list configured secret names</span>
+</code></pre></div>
+<p>To disable skills entirely, set <code>skills.enabled: false</code> in <code>fraggle.yaml</code>.</p>
+<h2 id="markdown-rendering">Markdown rendering<a class="headerlink" href="#markdown-rendering" title="Permanent link">&para;</a></h2>
+<p>LLM output rendered in the TUI is parsed by the JetBrains CommonMark parser
+(GFM flavour) and emitted as ANSI-styled lines. Block handling:</p>
+<ul>
+<li><strong>Headings</strong> render as bold text with the accent color. Level 1 adds
+  reverse-video; level 2 adds underline. The leading <code>#</code> characters are
+  <em>not</em> rendered — terminals don't need the syntax markers to communicate
+  hierarchy.</li>
+<li><strong>Code blocks</strong> are drawn with a <code>┌─ lang ──┐ / │ … / └─</code> border in the
+  dim theme color. Content is hard-wrapped to fit inside the gutter.</li>
+<li><strong>Lists</strong> (unordered + ordered) wrap body text under the bullet with a
+  matching continuation indent.</li>
+<li><strong>Blockquotes</strong> use a <code>│</code> gutter in quote-accent color with italic body
+  text.</li>
+<li><strong>Horizontal rules</strong> render as <code>──────</code>.</li>
+<li>Inline <strong>bold / italic / strikethrough / inline-code / links</strong> are
+  preserved via ANSI styling.</li>
+</ul>
+<h3 id="latex-math">LaTeX math<a class="headerlink" href="#latex-math" title="Permanent link">&para;</a></h3>
+<p>LLMs routinely emit math fragments like <code>$\approx 70\%$</code> or
+<code>$\sum_{i=1}^{n} x_i$</code>. These are pre-processed before markdown parsing:</p>
+<ul>
+<li><code>$…$</code> and <code>$$…$$</code> pairs are unwrapped when the inner content contains
+  LaTeX markers (a <code>\command</code>, <code>^</code>, or <code>_</code>). Bare currency mentions like
+  <code>$5 to $10</code> are left alone.</li>
+<li>Common commands are substituted with Unicode equivalents: <code>\approx</code> → ≈,
+  <code>\leq</code> → ≤, <code>\pm</code> → ±, <code>\infty</code> → ∞, all Greek letters (<code>\alpha</code> → α,
+  <code>\Pi</code> → Π, etc.), arrows, set/logic operators. Escaped punctuation
+  (<code>\%</code> → %, <code>\$</code> → $, <code>\{</code> → {) is unescaped.</li>
+<li>Unknown commands pass through as literal text — the user at least sees a
+  readable approximation instead of garbled TeX.</li>
+</ul>
+<p>The substitution is not a full LaTeX renderer; complex expressions (nested
+fractions, matrices, integrals with bounds) survive as their command form.</p>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <h3 id="shared-config-fraggle_rootconfigfraggleyaml">Shared config: <code>$FRAGGLE_ROOT/config/fraggle.yaml</code><a class="headerlink" href="#shared-config-fraggle_rootconfigfraggleyaml" title="Permanent link">&para;</a></h3>
 <p>The LLM provider is configured once for all Fraggle apps:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nt">fraggle</span><span class="p">:</span>
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span><span class="nt">provider</span><span class="p">:</span>
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">lmstudio</span>
-<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">    </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http://localhost:1234/v1</span>
-<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">    </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">qwen3-coder-30b-a3b</span>
-<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">    </span><span class="nt">api_key</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nt">fraggle</span><span class="p">:</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="nt">provider</span><span class="p">:</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">lmstudio</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">    </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http://localhost:1234/v1</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">    </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">qwen3-coder-30b-a3b</span>
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">    </span><span class="nt">api_key</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
 </code></pre></div>
 <p><code>fraggle code</code>, <code>fraggle run</code>, and <code>fraggle chat</code> all read the same <code>provider</code> section.</p>
 <h3 id="coding-agent-settings-fraggle_rootcodingsettingsjson">Coding-agent settings: <code>$FRAGGLE_ROOT/coding/settings.json</code><a class="headerlink" href="#coding-agent-settings-fraggle_rootcodingsettingsjson" title="Permanent link">&para;</a></h3>
 <p>Coding-agent-specific behaviour lives in a JSON file:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="p">{</span>
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span><span class="nt">&quot;supervision&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ask&quot;</span><span class="p">,</span>
-<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span><span class="nt">&quot;contextWindowTokens&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">32000</span><span class="p">,</span>
-<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">  </span><span class="nt">&quot;compactionTriggerRatio&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.70</span><span class="p">,</span>
-<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">  </span><span class="nt">&quot;compactionKeepRecentMessages&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">12</span><span class="p">,</span>
-<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="w">  </span><span class="nt">&quot;maxIterations&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span>
-<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="w">  </span><span class="nt">&quot;model&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span>
-<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="p">{</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span><span class="nt">&quot;supervision&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ask&quot;</span><span class="p">,</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">  </span><span class="nt">&quot;contextWindowTokens&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">32000</span><span class="p">,</span>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">  </span><span class="nt">&quot;compactionTriggerRatio&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.70</span><span class="p">,</span>
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">  </span><span class="nt">&quot;compactionKeepRecentMessages&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">12</span><span class="p">,</span>
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="w">  </span><span class="nt">&quot;maxIterations&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span>
+<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="w">  </span><span class="nt">&quot;model&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span>
+<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a><span class="p">}</span>
 </code></pre></div>
 <p>All fields are optional. Missing fields fall back to built-in defaults. Unknown fields are ignored so settings files forward-compatibly survive Fraggle upgrades.</p>
 <h3 id="project-overrides-cwdfragglecodingsettingsjson">Project overrides: <code>&lt;cwd&gt;/.fraggle/coding/settings.json</code><a class="headerlink" href="#project-overrides-cwdfragglecodingsettingsjson" title="Permanent link">&para;</a></h3>
 <p>Drop a <code>settings.json</code> in your project's <code>.fraggle/coding/</code> directory to override globals for that project only. Project values win, field by field. Fields you don't set fall through to the global settings, then to the defaults.</p>
 <h3 id="cli-overrides">CLI overrides<a class="headerlink" href="#cli-overrides" title="Permanent link">&para;</a></h3>
 <p>Command-line flags win over every file:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>defaults  →  global settings.json  →  project settings.json  →  CLI flags
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>defaults  →  global settings.json  →  project settings.json  →  CLI flags
 </code></pre></div>
 <h2 id="directory-layout-summary">Directory layout summary<a class="headerlink" href="#directory-layout-summary" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>$FRAGGLE_ROOT/
-<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>├── config/
-<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>│   └── fraggle.yaml               # shared provider config
-<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>├── data/                          # messenger assistant (memory, db)
-<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>└── coding/
-<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>    ├── settings.json              # global coding-agent settings
-<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a>    ├── AGENTS.md                  # global AGENTS.md
-<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a>    ├── SYSTEM.md                  # optional global system prompt override
-<a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a>    ├── APPEND_SYSTEM.md           # optional global append
-<a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a>    ├── prompts/                   # global /name templates
-<a id="__codelineno-15-11" name="__codelineno-15-11" href="#__codelineno-15-11"></a>    │   ├── review.md
-<a id="__codelineno-15-12" name="__codelineno-15-12" href="#__codelineno-15-12"></a>    │   └── refactor.md
-<a id="__codelineno-15-13" name="__codelineno-15-13" href="#__codelineno-15-13"></a>    └── sessions/
-<a id="__codelineno-15-14" name="__codelineno-15-14" href="#__codelineno-15-14"></a>        └── &lt;project-hash&gt;/
-<a id="__codelineno-15-15" name="__codelineno-15-15" href="#__codelineno-15-15"></a>            ├── &lt;uuid&gt;.jsonl
-<a id="__codelineno-15-16" name="__codelineno-15-16" href="#__codelineno-15-16"></a>            └── &lt;uuid&gt;.jsonl
-<a id="__codelineno-15-17" name="__codelineno-15-17" href="#__codelineno-15-17"></a>
-<a id="__codelineno-15-18" name="__codelineno-15-18" href="#__codelineno-15-18"></a>&lt;project-root&gt;/
-<a id="__codelineno-15-19" name="__codelineno-15-19" href="#__codelineno-15-19"></a>└── .fraggle/
-<a id="__codelineno-15-20" name="__codelineno-15-20" href="#__codelineno-15-20"></a>    └── coding/
-<a id="__codelineno-15-21" name="__codelineno-15-21" href="#__codelineno-15-21"></a>        ├── settings.json          # project-specific settings
-<a id="__codelineno-15-22" name="__codelineno-15-22" href="#__codelineno-15-22"></a>        ├── SYSTEM.md              # project system prompt override
-<a id="__codelineno-15-23" name="__codelineno-15-23" href="#__codelineno-15-23"></a>        ├── APPEND_SYSTEM.md       # project append
-<a id="__codelineno-15-24" name="__codelineno-15-24" href="#__codelineno-15-24"></a>        └── prompts/               # project-specific templates
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>$FRAGGLE_ROOT/
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>├── config/
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>│   └── fraggle.yaml               # shared provider config
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>├── data/                          # messenger assistant (memory, db)
+<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>└── coding/
+<a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a>    ├── settings.json              # global coding-agent settings
+<a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a>    ├── AGENTS.md                  # global AGENTS.md
+<a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a>    ├── SYSTEM.md                  # optional global system prompt override
+<a id="__codelineno-17-9" name="__codelineno-17-9" href="#__codelineno-17-9"></a>    ├── APPEND_SYSTEM.md           # optional global append
+<a id="__codelineno-17-10" name="__codelineno-17-10" href="#__codelineno-17-10"></a>    ├── prompts/                   # global /name templates
+<a id="__codelineno-17-11" name="__codelineno-17-11" href="#__codelineno-17-11"></a>    │   ├── review.md
+<a id="__codelineno-17-12" name="__codelineno-17-12" href="#__codelineno-17-12"></a>    │   └── refactor.md
+<a id="__codelineno-17-13" name="__codelineno-17-13" href="#__codelineno-17-13"></a>    └── sessions/
+<a id="__codelineno-17-14" name="__codelineno-17-14" href="#__codelineno-17-14"></a>        └── &lt;project-hash&gt;/
+<a id="__codelineno-17-15" name="__codelineno-17-15" href="#__codelineno-17-15"></a>            ├── &lt;uuid&gt;.jsonl
+<a id="__codelineno-17-16" name="__codelineno-17-16" href="#__codelineno-17-16"></a>            └── &lt;uuid&gt;.jsonl
+<a id="__codelineno-17-17" name="__codelineno-17-17" href="#__codelineno-17-17"></a>
+<a id="__codelineno-17-18" name="__codelineno-17-18" href="#__codelineno-17-18"></a>&lt;project-root&gt;/
+<a id="__codelineno-17-19" name="__codelineno-17-19" href="#__codelineno-17-19"></a>└── .fraggle/
+<a id="__codelineno-17-20" name="__codelineno-17-20" href="#__codelineno-17-20"></a>    └── coding/
+<a id="__codelineno-17-21" name="__codelineno-17-21" href="#__codelineno-17-21"></a>        ├── settings.json          # project-specific settings
+<a id="__codelineno-17-22" name="__codelineno-17-22" href="#__codelineno-17-22"></a>        ├── SYSTEM.md              # project system prompt override
+<a id="__codelineno-17-23" name="__codelineno-17-23" href="#__codelineno-17-23"></a>        ├── APPEND_SYSTEM.md       # project append
+<a id="__codelineno-17-24" name="__codelineno-17-24" href="#__codelineno-17-24"></a>        └── prompts/               # project-specific templates
 </code></pre></div>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <h3 id="no-model-configured">"No model configured"<a class="headerlink" href="#no-model-configured" title="Permanent link">&para;</a></h3>
