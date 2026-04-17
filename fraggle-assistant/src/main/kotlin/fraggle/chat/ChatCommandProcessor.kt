@@ -68,10 +68,27 @@ class ChatCommandProcessor(
 
         val command = trimmed.substringBefore(' ').lowercase()
         return when (command) {
+            "/help" -> CommandResult.Help(buildHelpText())
             "/approve" -> resolvePermission(chatId, approved = true)
             "/deny" -> resolvePermission(chatId, approved = false)
             "/think" -> handleThink(trimmed)
             else -> CommandResult.Unknown(command)
+        }
+    }
+
+    private fun buildHelpText(): String = buildString {
+        appendLine("Available commands:")
+        appendLine("  /help — show this help")
+        appendLine("  /approve — approve the pending tool permission request")
+        appendLine("  /deny — deny the pending tool permission request")
+        if (thinkingController != null) {
+            appendLine("  /think <off|low|medium|high|on|default> — set reasoning level")
+        }
+        if (skillCommandsEnabled && skillExpander != null) {
+            append("  /skill:<name> [args] — invoke a loaded skill by name")
+        } else {
+            // drop the trailing newline left by the last appendLine
+            if (endsWith('\n')) deleteCharAt(length - 1)
         }
     }
 
@@ -142,4 +159,7 @@ sealed class CommandResult {
 
     /** `/think` with an argument that didn't parse as a level. */
     data class ThinkingInvalid(val raw: String) : CommandResult()
+
+    /** `/help` — pre-rendered help text listing the available slash commands. */
+    data class Help(val text: String) : CommandResult()
 }

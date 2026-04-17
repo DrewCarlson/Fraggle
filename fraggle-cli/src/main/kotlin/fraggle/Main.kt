@@ -237,6 +237,11 @@ class ChatCommand : CliktCommand(name = "chat") {
                         println()
                         continue
                     }
+                    is CommandResult.Help -> {
+                        println(result.text)
+                        println()
+                        continue
+                    }
                 }
             }
 

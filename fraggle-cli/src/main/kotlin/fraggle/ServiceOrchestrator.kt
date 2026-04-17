@@ -279,6 +279,7 @@ class ServiceOrchestrator(
                                         "Reasoning level → ${result.level}"
                                     is CommandResult.ThinkingInvalid ->
                                         "Unknown reasoning level: ${result.raw} (expected off/low/medium/high/on or default)"
+                                    is CommandResult.Help -> result.text
 
                                     is CommandResult.Expanded -> error("handled above")
                                 }
