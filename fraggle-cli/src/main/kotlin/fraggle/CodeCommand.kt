@@ -337,6 +337,21 @@ class CodeCommand : CliktCommand(name = "code") {
                 header = header,
                 supervisionLabel = supervisionLabel,
                 skillExpander = skillExpander,
+                skillCompletionsProvider = {
+                    // Re-read disk on every popup so newly-installed skills
+                    // appear without a session restart. Hidden skills
+                    // (disable-model-invocation: true) are still suggested
+                    // for `/skill:<name>` — that's the whole point of the
+                    // explicit-invocation fallback.
+                    skillRegistryLoader.load(skillsConfig).skills.map { skill ->
+                        fraggle.tui.ui.Autocompletion(
+                            label = "skill:${skill.name}",
+                            replacement = "skill:${skill.name}",
+                            description = skill.description,
+                            trailingSpace = true,
+                        )
+                    }
+                },
                 onExitRequest = {
                     // Mosaic has no composition-level exit; shutdown hook above handles cleanup.
                     exitProcess(0)

@@ -5,6 +5,7 @@ import com.jakewharton.mosaic.tty.terminal.asTerminalIn
 import fraggle.agent.skill.SkillCommandExpander
 import fraggle.coding.CodingAgent
 import fraggle.coding.CodingAgentOptions
+import fraggle.tui.ui.Autocompletion
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -39,6 +40,12 @@ fun runCodingApp(
     header: HeaderInfo,
     supervisionLabel: String,
     skillExpander: SkillCommandExpander? = null,
+    /**
+     * Live source for `/skill:<name>` completion entries. Invoked each time
+     * the user opens the `/` autocomplete popup — re-reads disk so
+     * mid-session skill installs appear immediately.
+     */
+    skillCompletionsProvider: () -> List<Autocompletion> = { emptyList() },
     onExitRequest: () -> Unit,
     permissionHandler: TuiToolPermissionHandler? = null,
 ) {
@@ -63,6 +70,7 @@ fun runCodingApp(
                 supervisionLabel = supervisionLabel,
                 skillExpander = skillExpander,
                 permissionHandler = permissionHandler,
+                skillCompletionsProvider = skillCompletionsProvider,
                 onExit = {
                     onExitRequest()
                     exitSignal.complete(Unit)

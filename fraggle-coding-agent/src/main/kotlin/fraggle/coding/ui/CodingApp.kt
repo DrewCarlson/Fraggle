@@ -21,6 +21,8 @@ import fraggle.tui.text.padRightToWidth
 import fraggle.tui.text.truncateToWidth
 import fraggle.tui.text.visibleWidth
 import fraggle.tui.text.wordWrap
+import fraggle.tui.ui.Autocompletion
+import fraggle.tui.ui.CompositeAutocompleteProvider
 import fraggle.tui.ui.Editor
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -68,6 +70,17 @@ class CodingApp(
     private val supervisionLabel: String,
     private val skillExpander: SkillCommandExpander? = null,
     private val permissionHandler: TuiToolPermissionHandler? = null,
+    /**
+     * Supplier for `/skill:<name>` autocomplete entries. Invoked every time
+     * the user opens the `/` popup, so newly-installed skills appear on the
+     * next keystroke without a restart. Return an empty list to disable
+     * skill completion.
+     *
+     * Kept as a live lambda (rather than a captured list) because the skill
+     * registry is loaded from disk on every message in the assistant path,
+     * and the autocomplete should reflect the same freshness.
+     */
+    private val skillCompletionsProvider: () -> List<Autocompletion> = { emptyList() },
     private val onExit: () -> Unit,
 ) {
     // ── Runtime ────────────────────────────────────────────────────────────
@@ -178,14 +191,25 @@ class CodingApp(
             },
         )
 
-        // 6. Wire editor submission + `@path` file autocomplete. Typing `@`
-        //    after whitespace (or at line start) opens a popup of files under
-        //    the working directory; accepting an entry replaces the prefix
-        //    with the full path. On submit, [AtFileExpander] inlines the
-        //    referenced file contents into the message before it reaches the
-        //    agent.
+        // 6. Wire editor submission + autocomplete. Two providers compose:
+        //    - `@path` opens a file picker rooted at [options.workDir]. On
+        //      submit, [AtFileExpander] inlines the referenced file contents
+        //      into the message before it reaches the agent.
+        //    - `/command` opens a slash-command picker showing built-in
+        //      commands (`/hotkeys`, `/quit`, …) and installed skills
+        //      (`/skill:<name>`). The skill list is fetched live from
+        //      [skillCompletionsProvider] so freshly-installed skills appear
+        //      immediately without a restart.
         editor.setOnSubmit { text -> onEditorSubmit(text) }
-        editor.setAutocompleteProvider(FileAutocompleteProvider(root = options.workDir))
+        val slashProvider = SlashCommandAutocompleteProvider(
+            completionsProvider = ::buildSlashCompletions,
+        )
+        editor.setAutocompleteProvider(
+            CompositeAutocompleteProvider(
+                FileAutocompleteProvider(root = options.workDir),
+                slashProvider,
+            ),
+        )
 
         // 7. Focus the router (which wraps the editor + global key handling).
         tui.setFocus(inputRouter)
@@ -415,6 +439,27 @@ class CodingApp(
 
     private fun triggerExit() {
         onExit()
+    }
+
+    /**
+     * Collect every valid `/…` completion — built-in commands from the
+     * active [SlashCommandRegistry] plus whatever [skillCompletionsProvider]
+     * returns right now. Called on each keystroke while the `/` popup is
+     * open; both sources are cheap to enumerate so there's no caching here.
+     */
+    private fun buildSlashCompletions(): List<Autocompletion> {
+        val out = ArrayList<Autocompletion>()
+        slashCommands?.commands?.forEach { cmd ->
+            out += Autocompletion(
+                label = cmd.name,
+                replacement = cmd.name,
+                description = cmd.description,
+                trailingSpace = false,
+                continueCompletion = false,
+            )
+        }
+        out += skillCompletionsProvider()
+        return out
     }
 
     // ── Tree mutations ──────────────────────────────────────────────────────
