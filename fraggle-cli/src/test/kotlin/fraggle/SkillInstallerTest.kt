@@ -201,7 +201,7 @@ class SkillInstallerTest {
             assertTrue(manifestPath.exists())
 
             val manifest = json.decodeFromString<SkillsManifest>(manifestPath.readText())
-            assertEquals(1, manifest.version)
+            assertEquals(SkillsManifest.VERSION, manifest.version)
             assertEquals(1, manifest.skills.size)
             val entry = manifest.skills.single()
             assertEquals("code-review", entry.name)
