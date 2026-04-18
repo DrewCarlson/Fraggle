@@ -73,6 +73,7 @@ object ScheduledTaskTable : Table("scheduled_tasks") {
     val repeatInterval = duration("repeat_interval").nullable()
     val status = enumerationByName<TaskStatus>("status", 20)
     val runCount = integer("run_count").default(0)
+    val skill = varchar("skill", 100).nullable()
 
     override val primaryKey = PrimaryKey(id)
 }

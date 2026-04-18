@@ -15,6 +15,13 @@ import kotlin.coroutines.CoroutineContext
 class ToolExecutionContext(
     val chatId: String,
     val userId: String? = null,
+    /**
+     * Skill name to use as the default for skill-aware tools (e.g. `execute_command`)
+     * when the tool call does not specify one. Set, for example, by the task scheduler
+     * so a scheduled task's shell commands inherit the task's configured skill
+     * environment without the model having to pass `skill` on every call.
+     */
+    val defaultSkill: String? = null,
 ) {
     /**
      * Thread-safe list of attachments collected during tool execution.

@@ -183,6 +183,7 @@ class ChatBridgeManager(
         text: String,
         senderName: String = "Scheduler",
         isScheduled: Boolean = false,
+        defaultSkill: String? = null,
     ) {
         val (bridgeName, chatId) = parseQualifiedChatId(qualifiedChatId)
         val bridge = bridges[bridgeName]
@@ -196,6 +197,7 @@ class ChatBridgeManager(
             content = MessageContent.Text(text),
             timestamp = Clock.System.now(),
             isScheduled = isScheduled,
+            defaultSkill = defaultSkill,
         )
 
         _messages.emit(

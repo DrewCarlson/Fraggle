@@ -37,6 +37,7 @@ import fraggle.scheduling.CancelTaskTool
 import fraggle.scheduling.GetTaskTool
 import fraggle.scheduling.ListTasksTool
 import fraggle.scheduling.ScheduleTaskTool
+import fraggle.scheduling.TriggerTaskTool
 import fraggle.scheduling.ScheduledTask
 import fraggle.scheduling.SkipReplyTool
 import fraggle.scheduling.TaskScheduler
@@ -175,6 +176,7 @@ interface AssistantModule {
                             text = framedAction,
                             senderName = "Scheduled Task: ${task.name}",
                             isScheduled = true,
+                            defaultSkill = task.skill,
                         )
                         assistantModuleLogger.info("Task action injected for ${task.chatId}: ${task.action}")
                     } catch (e: Exception) {
@@ -205,6 +207,7 @@ interface AssistantModule {
             ListTasksTool(taskScheduler),
             CancelTaskTool(taskScheduler),
             GetTaskTool(taskScheduler),
+            TriggerTaskTool(taskScheduler),
             SkipReplyTool(),
         )
         return FraggleToolRegistry(baseRegistry.tools + schedulingTools)

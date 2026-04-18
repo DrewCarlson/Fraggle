@@ -35,6 +35,7 @@ class ExposedScheduledTaskStore(
             it[repeatInterval] = task.repeatInterval
             it[status] = task.status
             it[runCount] = task.runCount
+            it[skill] = task.skill
         }
     }
 
@@ -44,6 +45,7 @@ class ExposedScheduledTaskStore(
             it[repeatInterval] = task.repeatInterval
             it[status] = task.status
             it[runCount] = task.runCount
+            it[skill] = task.skill
         }
     }
 
@@ -83,5 +85,6 @@ class ExposedScheduledTaskStore(
         repeatInterval = this[ScheduledTaskTable.repeatInterval],
         status = this[ScheduledTaskTable.status],
         runCount = this[ScheduledTaskTable.runCount],
+        skill = this[ScheduledTaskTable.skill],
     )
 }

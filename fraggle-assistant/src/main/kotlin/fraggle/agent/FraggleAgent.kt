@@ -95,6 +95,7 @@ class FraggleAgent(
         val executionContext = ToolExecutionContext(
             chatId = message.chatId,
             userId = message.sender.id,
+            defaultSkill = message.defaultSkill,
         )
 
         val response = try {

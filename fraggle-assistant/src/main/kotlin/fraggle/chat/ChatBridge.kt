@@ -117,6 +117,13 @@ data class IncomingMessage(
      * nothing worth sending.
      */
     val isScheduled: Boolean = false,
+    /**
+     * Default skill for skill-aware tools (e.g. `execute_command`). Propagated to
+     * [fraggle.agent.ToolExecutionContext] so scheduled tasks can run their shell
+     * actions in a pre-selected skill environment without the model having to pass
+     * `skill` on every call.
+     */
+    val defaultSkill: String? = null,
 )
 
 /**

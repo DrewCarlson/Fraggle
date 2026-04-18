@@ -5,6 +5,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.Serializable
+import fraggle.agent.ToolExecutionContext
 import fraggle.agent.skill.SkillExecutionContext
 import fraggle.agent.tool.AgentToolDef
 import fraggle.agent.tool.LLMDescription
@@ -57,7 +58,8 @@ Use this for running scripts, system commands, or other shell operations.""",
         return withContext(Dispatchers.IO) {
             try {
                 val maxOutputSize = 100_000
-                val skillEnv = args.skill?.let { skillContext?.resolveEnvironment(it) }
+                val effectiveSkill = args.skill ?: ToolExecutionContext.current()?.defaultSkill
+                val skillEnv = effectiveSkill?.let { skillContext?.resolveEnvironment(it) }
                 val workspaceDir = toolExecutor.workDir()
                 val workDir = skillEnv?.workDir?.toFile() ?: workspaceDir.toFile()
                 val processBuilder = ProcessBuilder("sh", "-c", args.command)

@@ -57,6 +57,11 @@ Only call this tool ONCE per task you want to create.""",
         val delay_seconds: Long,
         @param:LLMDescription("For recurring tasks, seconds between executions. 0 for one-time tasks.")
         val repeat_interval_seconds: Long = 0,
+        @param:LLMDescription(
+            "Optional skill name. When set, shell commands run by this task default to the " +
+                "skill's environment (venv + configured secrets) unless overridden at the tool call."
+        )
+        val skill: String? = null,
     )
 
     override suspend fun execute(args: Args): String {
@@ -80,6 +85,7 @@ Only call this tool ONCE per task you want to create.""",
             chatId = chatId,
             delay = delay,
             repeatInterval = repeatInterval.takeIf { it > ZERO },
+            skill = args.skill,
         )
 
         val nextRun = task.nextRunTime
@@ -93,6 +99,9 @@ Only call this tool ONCE per task you want to create.""",
             appendLine("  Next run: $nextRun")
             if (task.repeatInterval != null) {
                 appendLine("  Repeats every: ${task.repeatInterval} ")
+            }
+            if (task.skill != null) {
+                appendLine("  Skill: ${task.skill}")
             }
         }
     }
@@ -162,6 +171,24 @@ class CancelTaskTool(private val scheduler: TaskScheduler) : AgentToolDef<Cancel
     }
 }
 
+class TriggerTaskTool(private val scheduler: TaskScheduler) : AgentToolDef<TriggerTaskTool.Args>(
+    name = "trigger_task",
+    description = "Manually run a scheduled task immediately. Does not change its next scheduled run time.",
+    argsSerializer = Args.serializer(),
+) {
+    @Serializable
+    data class Args(
+        @param:LLMDescription("The ID of the task to trigger")
+        val task_id: String,
+    )
+
+    override suspend fun execute(args: Args): String {
+        val task = scheduler.triggerNow(args.task_id)
+            ?: return "Error: Task ${args.task_id} not found."
+        return "Triggered task ${task.id} (${task.name})."
+    }
+}
+
 class GetTaskTool(private val scheduler: TaskScheduler) : AgentToolDef<GetTaskTool.Args>(
     name = "get_task",
     description = "Get detailed information about a scheduled task.",
@@ -199,6 +226,9 @@ class GetTaskTool(private val scheduler: TaskScheduler) : AgentToolDef<GetTaskTo
             }
             if (task.repeatInterval != null) {
                 appendLine("  Repeat interval: ${task.repeatInterval}")
+            }
+            if (task.skill != null) {
+                appendLine("  Skill: ${task.skill}")
             }
             appendLine("  Run count: ${task.runCount}")
         }
@@ -265,6 +295,7 @@ class TaskScheduler(
         chatId: String,
         delay: Duration,
         repeatInterval: Duration? = null,
+        skill: String? = null,
     ): ScheduledTask {
         // Deduplicate: if an active task with the same name exists for this chat, return it
         val existing = tasks.values.find {
@@ -290,6 +321,7 @@ class TaskScheduler(
             repeatInterval = repeatInterval,
             status = TaskStatus.PENDING,
             runCount = 0,
+            skill = skill,
         )
 
         tasks[id] = task
@@ -381,6 +413,28 @@ class TaskScheduler(
     }
 
     /**
+     * Fire a task's action immediately without affecting its schedule.
+     * Used by the manual-trigger tool so users can ask the assistant to
+     * "run task X now" without waiting for the next scheduled time.
+     * Increments `runCount` and returns the task used for the trigger,
+     * or null if no task with that id exists.
+     */
+    fun triggerNow(taskId: String): ScheduledTask? {
+        val task = tasks[taskId] ?: return null
+        updateTask(taskId) { it.copy(runCount = it.runCount + 1) }
+        val fired = tasks[taskId] ?: task
+        scope.launch {
+            try {
+                onTaskTriggered(fired)
+                logger.info("Task manually triggered: ${fired.name}")
+            } catch (e: Exception) {
+                logger.error("Manual task trigger failed: ${e.message}", e)
+            }
+        }
+        return fired
+    }
+
+    /**
      * Get a task by ID.
      */
     fun getTask(taskId: String): ScheduledTask? = tasks[taskId]
@@ -446,6 +500,7 @@ data class ScheduledTask(
     val repeatInterval: Duration?,
     val status: TaskStatus,
     val runCount: Int,
+    val skill: String? = null,
 )
 
 /**
