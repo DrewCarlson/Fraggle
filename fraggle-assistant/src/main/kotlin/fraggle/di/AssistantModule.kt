@@ -38,6 +38,7 @@ import fraggle.scheduling.GetTaskTool
 import fraggle.scheduling.ListTasksTool
 import fraggle.scheduling.ScheduleTaskTool
 import fraggle.scheduling.TriggerTaskTool
+import fraggle.scheduling.UpdateTaskTool
 import fraggle.scheduling.ScheduledTask
 import fraggle.scheduling.SkipReplyTool
 import fraggle.scheduling.TaskScheduler
@@ -208,6 +209,7 @@ interface AssistantModule {
             CancelTaskTool(taskScheduler),
             GetTaskTool(taskScheduler),
             TriggerTaskTool(taskScheduler),
+            UpdateTaskTool(taskScheduler),
             SkipReplyTool(),
         )
         return FraggleToolRegistry(baseRegistry.tools + schedulingTools)

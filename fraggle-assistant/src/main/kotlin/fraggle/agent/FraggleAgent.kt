@@ -160,6 +160,9 @@ class FraggleAgent(
                         agent.prompt(listOf(AgentMessage.User(userInput)))
                     } finally {
                         tracerJob?.cancel()
+                        withContext(kotlinx.coroutines.NonCancellable) {
+                            tracer?.closeSessionIfOpen()
+                        }
                     }
                 }
             }

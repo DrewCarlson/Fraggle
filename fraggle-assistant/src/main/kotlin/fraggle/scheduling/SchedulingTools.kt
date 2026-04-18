@@ -171,6 +171,77 @@ class CancelTaskTool(private val scheduler: TaskScheduler) : AgentToolDef<Cancel
     }
 }
 
+class UpdateTaskTool(private val scheduler: TaskScheduler) : AgentToolDef<UpdateTaskTool.Args>(
+    name = "update_task",
+    description = """Edit an active scheduled task in place.
+Only provide fields you want to change — omit the rest to keep their current values.
+Use this instead of cancel + schedule when adjusting an existing task to avoid
+duplicate-named tasks piling up.""",
+    argsSerializer = Args.serializer(),
+) {
+    @Serializable
+    data class Args(
+        @param:LLMDescription("The ID of the task to update")
+        val task_id: String,
+        @param:LLMDescription("New action/message to run. Omit to leave unchanged.")
+        val action: String? = null,
+        @param:LLMDescription(
+            "New repeat interval in seconds. Omit to leave unchanged. " +
+                "Pass 0 to convert the task to one-time (clear recurring)."
+        )
+        val repeat_interval_seconds: Long? = null,
+        @param:LLMDescription(
+            "New skill name. Omit to leave unchanged. Pass an empty string to clear the skill."
+        )
+        val skill: String? = null,
+        @param:LLMDescription(
+            "If set, reschedule the next run to this many seconds from now. " +
+                "Omit to leave the existing next-run time untouched."
+        )
+        val next_run_delay_seconds: Long? = null,
+    )
+
+    override suspend fun execute(args: Args): String {
+        val repeat = args.repeat_interval_seconds?.toDuration(DurationUnit.SECONDS)
+        val delay = args.next_run_delay_seconds?.toDuration(DurationUnit.SECONDS)
+
+        if (repeat != null && repeat > ZERO && repeat < MIN_REPEAT_INTERVAL) {
+            return "Error: repeat_interval_seconds must be at least ${MIN_REPEAT_INTERVAL.inWholeSeconds} seconds"
+        }
+        if (delay != null && delay < ZERO) {
+            return "Error: next_run_delay_seconds must be non-negative"
+        }
+
+        val updated = scheduler.update(
+            taskId = args.task_id,
+            action = args.action,
+            repeatInterval = repeat,
+            skill = args.skill,
+            nextRunDelay = delay,
+        ) ?: return "Error: Task ${args.task_id} not found or not active."
+
+        val nextRun = updated.nextRunTime
+            .toLocalDateTime(TimeZone.currentSystemDefault())
+            .format(LocalDateTime.Formats.fullDataTime)
+
+        return buildString {
+            appendLine("Task updated.")
+            appendLine("  ID: ${updated.id}")
+            appendLine("  Name: ${updated.name}")
+            appendLine("  Action: ${updated.action}")
+            appendLine("  Next run: $nextRun")
+            if (updated.repeatInterval != null) {
+                appendLine("  Repeats every: ${updated.repeatInterval}")
+            } else {
+                appendLine("  Repeats: (one-time)")
+            }
+            if (updated.skill != null) {
+                appendLine("  Skill: ${updated.skill}")
+            }
+        }
+    }
+}
+
 class TriggerTaskTool(private val scheduler: TaskScheduler) : AgentToolDef<TriggerTaskTool.Args>(
     name = "trigger_task",
     description = "Manually run a scheduled task immediately. Does not change its next scheduled run time.",
@@ -395,6 +466,59 @@ class TaskScheduler(
         val updated = transform(current)
         tasks[id] = updated
         persistUpdate(updated)
+    }
+
+    /**
+     * Edit an existing active task in place without changing its id.
+     *
+     * Each non-null parameter updates the corresponding field; null leaves it alone.
+     * Sentinels: empty [skill] clears the task's skill; zero [repeatInterval] makes
+     * the task one-time (clears recurring). If [nextRunDelay] is provided, the task
+     * is rescheduled relative to now; otherwise the next run time is preserved.
+     *
+     * Returns the updated task, or null if no active task with [taskId] exists.
+     */
+    fun update(
+        taskId: String,
+        action: String? = null,
+        repeatInterval: Duration? = null,
+        skill: String? = null,
+        nextRunDelay: Duration? = null,
+    ): ScheduledTask? {
+        val current = tasks[taskId] ?: return null
+        if (current.status != TaskStatus.PENDING && current.status != TaskStatus.RUNNING) {
+            return null
+        }
+
+        val now = Clock.System.now()
+        val newRepeat = when {
+            repeatInterval == null -> current.repeatInterval
+            repeatInterval <= Duration.ZERO -> null
+            else -> repeatInterval
+        }
+        val newSkill = when (skill) {
+            null -> current.skill
+            "" -> null
+            else -> skill
+        }
+        val newNextRunTime = nextRunDelay?.let { now + it } ?: current.nextRunTime
+
+        val updated = current.copy(
+            action = action ?: current.action,
+            repeatInterval = newRepeat,
+            skill = newSkill,
+            nextRunTime = newNextRunTime,
+            status = TaskStatus.PENDING,
+        )
+        tasks[taskId] = updated
+        persistUpdate(updated)
+
+        jobs.remove(taskId)?.cancel()
+        val remaining = (updated.nextRunTime - now).coerceAtLeast(Duration.ZERO)
+        startJob(taskId, remaining, updated.repeatInterval)
+
+        logger.info("Updated task: ${updated.name} (id=$taskId)")
+        return updated
     }
 
     /**

@@ -35,6 +35,7 @@ class AgentEventTracer(
     private val chatId: String,
 ) {
     private var sessionId: String? = null
+    private var sessionCompleted = false
     private var turnCount = 0
 
     /**
@@ -91,6 +92,7 @@ class AgentEventTracer(
                     timestamp = end,
                 )
                 sessionId?.let { traceStore.completeSession(it) }
+                sessionCompleted = true
             }
 
             is AgentEvent.TurnStart -> {
@@ -272,6 +274,18 @@ class AgentEventTracer(
             sessionId = sid,
             event = record,
         ))
+    }
+
+    /**
+     * Mark the session complete if an [AgentEvent.AgentEnd] never reached this tracer
+     * (e.g. the collector was cancelled before the buffered event was drained). Safe
+     * to call multiple times; no-op if the session was already closed or never started.
+     */
+    suspend fun closeSessionIfOpen() {
+        if (sessionCompleted) return
+        val sid = sessionId ?: return
+        traceStore.completeSession(sid)
+        sessionCompleted = true
     }
 
     private fun messageType(message: AgentMessage): String = when (message) {

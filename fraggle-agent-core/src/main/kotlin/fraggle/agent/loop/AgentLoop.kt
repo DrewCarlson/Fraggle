@@ -4,11 +4,13 @@ import fraggle.agent.event.AgentEvent
 import fraggle.agent.message.AgentMessage
 import fraggle.agent.message.StopReason
 import fraggle.agent.message.ToolCall
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.withContext
 
 typealias EventSink = suspend (AgentEvent) -> Unit
 
@@ -42,7 +44,13 @@ suspend fun runAgentLoop(
         emit(AgentEvent.MessageRecord(prompt))
     }
 
-    runLoop(allMessages, newMessages, systemPrompt, chatId, config, emit)
+    try {
+        runLoop(allMessages, newMessages, systemPrompt, chatId, config, emit)
+    } finally {
+        withContext(NonCancellable) {
+            emit(AgentEvent.AgentEnd(newMessages.toList()))
+        }
+    }
     return newMessages
 }
 
@@ -67,7 +75,13 @@ suspend fun runAgentLoopContinue(
     emit(AgentEvent.AgentStart(systemPrompt))
     emit(AgentEvent.TurnStart)
 
-    runLoop(allMessages, newMessages, systemPrompt, chatId, config, emit)
+    try {
+        runLoop(allMessages, newMessages, systemPrompt, chatId, config, emit)
+    } finally {
+        withContext(NonCancellable) {
+            emit(AgentEvent.AgentEnd(newMessages.toList()))
+        }
+    }
     return newMessages
 }
 
@@ -101,7 +115,6 @@ private suspend fun runLoop(
                 newMessages.add(errorMsg)
                 emit(AgentEvent.MessageRecord(errorMsg))
                 emit(AgentEvent.TurnEnd(errorMsg, emptyList()))
-                emit(AgentEvent.AgentEnd(newMessages.toList()))
                 return
             }
 
@@ -128,7 +141,6 @@ private suspend fun runLoop(
                 assistantMsg.stopReason == StopReason.ABORTED
             ) {
                 emit(AgentEvent.TurnEnd(assistantMsg, emptyList()))
-                emit(AgentEvent.AgentEnd(newMessages.toList()))
                 return
             }
 
@@ -168,8 +180,6 @@ private suspend fun runLoop(
 
         break
     }
-
-    emit(AgentEvent.AgentEnd(newMessages.toList()))
 }
 
 /**
