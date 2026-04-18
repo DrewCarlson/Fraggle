@@ -37,19 +37,15 @@ import fraggle.scheduling.CancelTaskTool
 import fraggle.scheduling.GetTaskTool
 import fraggle.scheduling.ListTasksTool
 import fraggle.scheduling.ScheduleTaskTool
+import fraggle.scheduling.ScheduledTaskDispatcher
 import fraggle.scheduling.TriggerTaskTool
 import fraggle.scheduling.UpdateTaskTool
-import fraggle.scheduling.ScheduledTask
 import fraggle.scheduling.SkipReplyTool
 import fraggle.scheduling.TaskScheduler
 import fraggle.tracing.TraceStore
-import org.slf4j.LoggerFactory
 import kotlin.io.path.createDirectories
-import kotlin.time.Clock
 import fraggle.agent.AgentConfig as RuntimeAgentConfig
 import fraggle.models.AgentConfig as ModelsAgentConfig
-
-private val assistantModuleLogger = LoggerFactory.getLogger("fraggle.di.AssistantModule")
 
 /**
  * Provides assistant-specific services (memory, prompts, chat bridges, database,
@@ -143,63 +139,22 @@ interface AssistantModule {
 
     @Provides
     @SingleIn(AppScope::class)
-    fun provideTaskScheduler(
-        scope: CoroutineScope,
+    fun provideScheduledTaskDispatcher(
         bridgeManager: ChatBridgeManager,
         eventBus: EventBus,
+    ): ScheduledTaskDispatcher = ScheduledTaskDispatcher(bridgeManager, eventBus)
+
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideTaskScheduler(
+        scope: CoroutineScope,
         scheduledTaskStore: ScheduledTaskStore,
-    ): TaskScheduler {
-        val scheduler = TaskScheduler(
-            scope = scope,
-            store = scheduledTaskStore,
-            onTaskTriggered = { task: ScheduledTask ->
-                assistantModuleLogger.info("Task triggered: ${task.name} - ${task.action}")
-                eventBus.emit(
-                    FraggleEvent.TaskTriggered(
-                        timestamp = Clock.System.now(),
-                        taskId = task.id,
-                        taskName = task.name,
-                        chatId = task.chatId,
-                    )
-                )
-                if (bridgeManager.hasConnectedBridge()) {
-                    try {
-                        val framedAction = buildString {
-                            appendLine("[Scheduled task: ${task.name}]")
-                            appendLine(
-                                "Perform the following action now. Do not skip, summarize, or " +
-                                    "assume a result before executing it."
-                            )
-                            appendLine()
-                            appendLine("Action:")
-                            appendLine(task.action)
-                            appendLine()
-                            append(
-                                "After you have executed the action and inspected the real result, " +
-                                    "decide: if the result contains information the user needs to " +
-                                    "see, reply with that information; otherwise call skip_reply to " +
-                                    "end the turn silently."
-                            )
-                        }
-                        bridgeManager.injectMessage(
-                            qualifiedChatId = task.chatId,
-                            text = framedAction,
-                            senderName = "Scheduled Task: ${task.name}",
-                            isScheduled = true,
-                            defaultSkill = task.skill,
-                        )
-                        assistantModuleLogger.info("Task action injected for ${task.chatId}: ${task.action}")
-                    } catch (e: Exception) {
-                        assistantModuleLogger.error("Failed to inject task action: ${e.message}", e)
-                    }
-                } else {
-                    assistantModuleLogger.warn("Cannot inject task action: No chat bridge connected")
-                }
-            },
-        )
-        scheduler.restoreFromStore()
-        return scheduler
-    }
+        dispatcher: ScheduledTaskDispatcher,
+    ): TaskScheduler = TaskScheduler(
+        scope = scope,
+        store = scheduledTaskStore,
+        onTaskTriggered = dispatcher::dispatch,
+    ).also { it.restoreFromStore() }
 
     /**
      * Final [FraggleToolRegistry] for the messenger assistant — the base registry
