@@ -22,9 +22,9 @@ class ExecuteCommandTool(
     description = $$"""Execute a shell command and return the output.
 By default the command runs in the workspace directory.
 When `skill` is provided, the command runs in that skill's directory instead; the
-workspace path is available to the command as the `WORKSPACE_DIR` env var and the
-skill's own directory as `SKILL_DIR`. Reference user-supplied files via
-`$WORKSPACE_DIR/<path>` so they resolve regardless of CWD.
+skill's own directory is exposed as `SKILL_DIR`.
+The workspace path is always exposed as `WORKSPACE_DIR`. Reference user-supplied
+files via `$WORKSPACE_DIR/<path>` so they resolve regardless of CWD.
 Use this for running scripts, system commands, or other shell operations.""",
     argsSerializer = Args.serializer(),
 ) {
@@ -66,10 +66,10 @@ Use this for running scripts, system commands, or other shell operations.""",
                     .directory(workDir)
                     .redirectErrorStream(false)
 
+                val env = processBuilder.environment()
+                env["WORKSPACE_DIR"] = workspaceDir.toString()
                 if (skillEnv != null) {
-                    val env = processBuilder.environment()
                     env.putAll(skillEnv.envVars)
-                    env["WORKSPACE_DIR"] = workspaceDir.toString()
                     env["SKILL_DIR"] = skillEnv.workDir.toString()
                     if (skillEnv.venvBinDir != null) {
                         env["PATH"] = "${skillEnv.venvBinDir}:${env["PATH"] ?: ""}"

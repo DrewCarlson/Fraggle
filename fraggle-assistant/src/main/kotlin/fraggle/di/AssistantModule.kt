@@ -45,6 +45,7 @@ import fraggle.scheduling.TaskScheduler
 import fraggle.tracing.TraceStore
 import org.slf4j.LoggerFactory
 import kotlin.io.path.createDirectories
+import kotlin.time.Clock
 import fraggle.agent.AgentConfig as RuntimeAgentConfig
 import fraggle.models.AgentConfig as ModelsAgentConfig
 
@@ -155,7 +156,7 @@ interface AssistantModule {
                 assistantModuleLogger.info("Task triggered: ${task.name} - ${task.action}")
                 eventBus.emit(
                     FraggleEvent.TaskTriggered(
-                        timestamp = kotlin.time.Clock.System.now(),
+                        timestamp = Clock.System.now(),
                         taskId = task.id,
                         taskName = task.name,
                         chatId = task.chatId,
@@ -165,11 +166,19 @@ interface AssistantModule {
                     try {
                         val framedAction = buildString {
                             appendLine("[Scheduled task: ${task.name}]")
+                            appendLine(
+                                "Perform the following action now. Do not skip, summarize, or " +
+                                    "assume a result before executing it."
+                            )
+                            appendLine()
+                            appendLine("Action:")
                             appendLine(task.action)
                             appendLine()
                             append(
-                                "If the task or its result suggest there is no new information " +
-                                    "for the user to see, call skip_reply to end silently.",
+                                "After you have executed the action and inspected the real result, " +
+                                    "decide: if the result contains information the user needs to " +
+                                    "see, reply with that information; otherwise call skip_reply to " +
+                                    "end the turn silently."
                             )
                         }
                         bridgeManager.injectMessage(
